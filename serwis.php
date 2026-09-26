@@ -3855,12 +3855,6 @@ $authenticated = auth_is_authenticated();
             }
             db.unshift(data.data);
             renderServicesList();
-            if (files && files.length) {
-                // Po wgrywaniu zdjęć na przyjęciu: komunikat o progu80% limitu
-                const st = await photoStatsNow();
-                const warn = st ? fotoWarnText(st.bytes) : null;
-                if (warn) showToast('⚠ ' + warn, 'error');
-            }
             return data.data;
         }
 
@@ -4165,8 +4159,10 @@ $authenticated = auth_is_authenticated();
                     // Telefon: pełnoekranowy monit zamiast toastu; kalendarz
                     // i wydruk uruchomi potwierdzenie na komputerze.
                     showPhoneSuccess(photoCount);
+                    if (photoCount) notifyFotoWarn(); // toast o progu80% limitu
                 } else {
                     showToast('Zapisano zgłoszenie rowerowe w bazie!');
+                    if (photoCount) notifyFotoWarn(); // po „Zapisano”, nie przed
 
                     // Zapisz, Drukuj i Dodaj do Kalendarza - jedna wspólna akcja
                     printAndAddToCalendar(saved);
@@ -4190,8 +4186,10 @@ $authenticated = auth_is_authenticated();
                     renderPhotoPreviews();
                     if (IS_MOBILE) {
                         showPhoneSuccess(photoCount);
+                        if (photoCount) notifyFotoWarn(); // toast o progu80% limitu
                     } else {
                         showToast('Zapisano zgłoszenie w bazie serwisu!');
+                        if (photoCount) notifyFotoWarn(); // po „Zapisano”, nie przed
                     }
                 } catch (err) {
                     showUploading(false);
@@ -5890,6 +5888,16 @@ $authenticated = auth_is_authenticated();
             } catch (e) {
                 return null;
             }
+        }
+
+        // Toast o przekroczeniu progu80% — wywoływany po zapisaniu zgłoszenia
+        // ze zdjęciami (musi być PO toaście „Zapisano”, bo nowszy toast
+        // zastępuje poprzedni); poniżej progu nic nie pokazuje
+        async function notifyFotoWarn() {
+            const st = await photoStatsNow();
+            const warn = st ? fotoWarnText(st.bytes) : null;
+            if (warn) showToast('⚠ ' + warn, 'error');
+            return warn;
         }
 
         async function loadPhotoStats() {
