@@ -38,7 +38,7 @@ declare(strict_types=1);
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
  --------------------------------------------------------------- */
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.8';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne

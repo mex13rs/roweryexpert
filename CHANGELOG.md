@@ -11,6 +11,20 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.8 — 2026-09-26 (serwis2, serwis)
+
+### Zmienione — kliknięcie w kartę na liście otwiera kartę zgłoszenia
+- Kliknięcie w treść dowolnej karty na **liście zgłoszeń** otwiera
+  podgląd „Karta zgłoszenia” (dotychczas tylko kalendarz, QR i wyszukiwarka
+  na telefonie).
+- Przyciski i linki na karcie (Edytuj, Zdjęcia, Kalendarz, Drukuj, kosz,
+  odznaka statusu, telefon, miniatury zdjęć, „Potwierdź”) zachowują
+  swoją dotychczasową rolę — nie otwierają podglądu.
+- Kursor nad kartą: pointer (sygnał, że karta jest klikalna).
+- Na telefonie bez zmian — tam lista i tak nie jest pokazywana.
+
+---
+
 ## 2.7 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane — wykonane czynności (checkboxy) + karta wydania roweru

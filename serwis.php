@@ -1101,6 +1101,8 @@ $authenticated = auth_is_authenticated();
             flex-direction: column;
             gap: 1rem;
             transition: var(--transition);
+            /* Kliknięcie w treść karty otwiera kartę zgłoszenia */
+            cursor: pointer;
         }
 
         body.light-theme .service-item-card {
@@ -4312,6 +4314,7 @@ $authenticated = auth_is_authenticated();
                 card.className = 'service-item-card card-' + item.status
                     + (isPending ? ' pending-card' : '')
                     + (item.deleted ? ' is-deleted' : '');
+                card.dataset.id = item.id;
                 
                 let statusLabel = '';
                 if (item.deleted) statusLabel = 'W koszu';
@@ -4451,6 +4454,18 @@ $authenticated = auth_is_authenticated();
                 servicesListContainer.appendChild(card);
             });
         }
+
+        // Kliknięcie w treść karty na liście otwiera kartę zgłoszenia.
+        // Przyciski, linki, odznaka statusu i maska potwierdzenia zachowują
+        // swoją dotychczasową rolę (są pomijane przez closest()).
+        servicesListContainer.addEventListener('click', (e) => {
+            if (e.target.closest('a, button, .status-badge, .pending-mask, input, label')) return;
+            const card = e.target.closest('.service-item-card');
+            if (!card) return;
+            const id = parseInt(card.dataset.id, 10);
+            if (Number.isNaN(id)) return;
+            openDetailModal(id);
+        });
 
         // Potwierdzenie zgłoszenia z mobile: odblokowanie + kalendarz + druk
         window.confirmItem = async function(id) {
