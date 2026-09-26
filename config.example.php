@@ -386,6 +386,38 @@ function db(): PDO
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN services_done TEXT DEFAULT NULL AFTER service_notes');
     }
 
+    // Wersje 2.7/2.8 zapisywały zaznaczone przy przyjęciu usługi od razu jako
+    // wykonane. Jednorazowa korekta (marker w ustawieniach, żeby nie kasować
+    // nowych zaznaczeń): jeśli cały stan zgadza się z zakresem z opisu
+    // (linie „- ”), czyścimy go do null — karta pokaże puste checkboxy.
+    $mk = $pdo->prepare('SELECT wartosc FROM ustawienia WHERE klucz = ?');
+    $mk->execute(['korekta_2_9_uslugi']);
+    $mkRow = $mk->fetch();
+    if (!$mkRow || (string) $mkRow['wartosc'] !== '1') {
+        $fix = $pdo->prepare('UPDATE zgloszenia SET services_done = NULL WHERE id = ?');
+        foreach ($pdo->query('SELECT id, fault_description, services_done FROM zgloszenia WHERE services_done IS NOT NULL') as $r) {
+            $done = json_decode((string) $r['services_done'], true);
+            if (!is_array($done) || $done === []) {
+                continue;
+            }
+            $lines = [];
+            foreach (explode("\n", (string) $r['fault_description']) as $ln) {
+                $ln = trim($ln);
+                if (str_starts_with($ln, '- ')) {
+                    $lines[] = trim(substr($ln, 2));
+                }
+            }
+            $poza = array_filter($done, fn ($n) => !in_array($n, $lines, true));
+            if ($poza === []) {
+                $fix->execute([$r['id']]);
+            }
+        }
+        $pdo->prepare(
+            'INSERT INTO ustawienia (klucz, wartosc) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE wartosc = VALUES(wartosc)'
+        )->execute(['korekta_2_9_uslugi', '1']);
+    }
+
     if (!in_array('deleted_at', $zgCols, true)) {
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL AFTER created_at');
     }
@@ -575,7 +607,7 @@ function map_zgloszenie(array $row): array
         'confirmed'        => !empty($row['confirmed']),
         'serviceNo'        => $row['service_no'] ?? '',
         'serviceNotes'     => (string) ($row['service_notes'] ?? ''),
-        // NULL = jeszcze nie zapisywano (frontend liczy wtedy z opisu),
+        // NULL = jeszcze nie zapisywano (frontend pokazuje pusto),
         // [] = zapisano i nic nie jest zaznaczone
         'servicesDone'     => array_key_exists('services_done', $row) && $row['services_done'] !== null
             ? (json_decode((string) $row['services_done'], true) ?: [])
