@@ -307,19 +307,25 @@
             <h2><span class="num">8</span>Karta zgłoszenia (podgląd)</h2>
             <p>Otwiera się po kliknięciu wpisu w <a href="#kalendarz">kalendarzu</a>, po
             <a href="#skaner">zeskanowaniu kodu QR</a> albo po wpisaniu czegokolwiek
-            w wyszukiwarkę na telefonie. To widok <strong>tylko do odczytu</strong>:
-            numer serwisowy, rower, status, daty, klikalny telefon, opis usterki i wykonane czynności.
+            w wyszukiwarkę na telefonie. Widzi tu numer serwisowy, rower, status, daty,
+            klikalny telefon, opis usterki oraz <strong>wykonane czynności</strong> — checkboxy
+            z katalogu usług, wstępnie zaznaczone tymi samymi, które wybrano
+            <a href="#przyjecie">przy przyjęciu</a>. Zaznaczenia zapisują się same; po wydaniu
+            roweru (i w koszu) checkboxy zostają tylko do podglądu. Niżej widnieje pole
+            <strong>„Notatki”</strong> z wolnym tekstem z <a href="#edycja">edycji</a>.
             Zgłoszenie z telefonu pokaże tu też info, że wymaga potwierdzenia na komputerze.</p>
             <p>Na dole jest przycisk <span class="tag ok">Wydaj rower</span> — jednym kliknięciem
             zmienia status na „Odebrany” (po wydaniu przycisk zmienia się w „Rower już wydany”
-            i gaśnie).</p>
+            i gaśnie). Na komputerze, przy włączonym module druku, <strong>wydanie od razu drukuje
+            Kartę Wydania Roweru</strong> z zaznaczonymi wykonanymi czynnościami.</p>
         </section>
 
         <section id="edycja">
             <h2><span class="num">9</span>Edycja i zdjęcia</h2>
             <p>Przycisk <strong>Edytuj</strong> na karcie otwiera formularz z danymi zgłoszenia
-            — nazwa, daty, telefon, opis usterki oraz pole <strong>„Wykonane czynności”</strong>
-            (notatka serwisowa, widoczna na karcie i na wydruku).</p>
+            — nazwa, daty, telefon, opis usterki oraz pole <strong>„Notatki”</strong>
+            (wolny tekst, widoczny na karcie zgłoszenia i na wydruku — na wydruku tylko
+            po uzupełnieniu).</p>
             <p>Przycisk <strong>Zdjęcia</strong> pokazuje podgląd wszystkich fotografii —
             z tego poziomu dodasz kolejne lub usuniesz zbędne.</p>
         </section>
@@ -341,18 +347,19 @@
             <p>Na każdej karcie (na komputerze) są przyciski:</p>
             <ul>
                 <li><span class="tag info">Kalendarz</span> — dodaje termin odbioru do Twojego Kalendarza Google (z przypomnieniem),</li>
-                <li><span class="tag">Drukuj</span> — drukuje potwierdzenie przyjęcia.</li>
+                <li><span class="tag">Drukuj</span> — drukuje potwierdzenie przyjęcia, a po wydaniu roweru Kartę Wydania.</li>
             </ul>
         </section>
 
         <section id="wydruk">
-            <h2><span class="num">12</span>Wydruk potwierdzenia</h2>
+            <h2><span class="num">12</span>Wydruk potwierdzenia i karty wydania</h2>
             <p>Jedna strona A4 (poziomo), dwie kolumny do rozdania:</p>
             <ul>
-                <li><strong>lewa — egzemplarz dla klienta</strong>: dane roweru, telefon, numer serwisowy, opis usterki, podpis klienta i pieczątka serwisu (umieszczone tuż nad kreską z adresem) oraz QR z linkiem do oceny w Google,</li>
-                <li><strong>prawa — egzemplarz serwisu</strong>: te same dane + duży blok
-                <strong>„Wykonane czynności”</strong> wypełniający całą wolną wysokość (wpisywane ręcznie przy odbiorze)
-                oraz QR z numerem serwisowym na samym dole do naklejenia na rower.</li>
+                <li><strong>lewa — egzemplarz dla klienta</strong>: dane roweru, telefon, numer serwisowy, opis usterki, na karcie wydania także lista <strong>wykonanych czynności</strong>, podpis klienta i pieczątka serwisu (umieszczone tuż nad kreską z adresem) oraz QR z linkiem do oceny w Google,</li>
+                <li><strong>prawa — egzemplarz serwisu</strong>: te same dane + sekcja
+                <strong>„Wykonane czynności”</strong> z listą usług i zaznaczeniami (tylko na karcie wydania; gdy nic nie zaznaczono — znika)
+                oraz blok <strong>„Notatki”</strong> widoczny wyłącznie po uzupełnieniu
+                i QR z numerem serwisowym na samym dole do naklejenia na rower.</li>
             </ul>
         </section>
 

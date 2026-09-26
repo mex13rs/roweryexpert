@@ -8,6 +8,7 @@ declare(strict_types=1);
  |  POST   action=status                     -> zmiana statusu
  |  POST   action=confirm                    -> potwierdzenie zgloszenia z mobile (PC)
  |  POST   action=update                     -> edycja danych zgloszenia
+ |  POST   action=services                    -> zapis wykonanych czynnosci (checkboxy)
  |  POST   action=restore                    -> przywrocenie z kosza
  |  DELETE /api/zgloszenia.php?id=N          -> przeniesienie do kosza (soft delete)
  |  DELETE /api/zgloszenia.php?id=N&purge=1  -> trwale usuniecie ze zdjeciami
@@ -44,13 +45,19 @@ try {
                 json_fail('Moduł zdjęć jest wyłączony w ustawieniach panelu.');
             }
 
+            // Zaznaczone usługi z przyjęcia trafiają od razu jako wykonane czynności
+            $servicesDone = validate_services_done((string) ($_POST['services_done'] ?? ''));
+            $servicesJson = $servicesDone
+                ? json_encode($servicesDone, JSON_UNESCAPED_UNICODE)
+                : null;
+
             $stmt = db()->prepare(
                 'INSERT INTO zgloszenia
                     (bike_name, date_in, date_planned, customer_phone,
-                     fault_description, status, confirmed)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+                     fault_description, status, confirmed, services_done)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $confirmed]);
+            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $confirmed, $servicesJson]);
             $id = (int) db()->lastInsertId();
 
             // Numer serwisowy: RO-ROK-NUMER_ID (etykieta QR na rowerze)
@@ -128,6 +135,31 @@ try {
                   WHERE id = ?'
             );
             $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $notes ?: null, $id]);
+
+            $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
+            $row->execute([$id]);
+
+            json_out(['success' => true, 'data' => map_zgloszenie($row->fetch())]);
+        }
+
+        if ($action === 'services') {
+            // Zapis zaznaczonych checkboxów "Wykonane czynności" z karty zgłoszenia
+            $id = (int) ($_POST['id'] ?? 0);
+            if ($id <= 0) {
+                json_fail('Brak identyfikatora zgłoszenia.');
+            }
+            if (!record_exists($id)) {
+                json_fail('Zgłoszenie nie istnieje.', 404);
+            }
+
+            $servicesDone = validate_services_done((string) ($_POST['services_done'] ?? ''));
+            // '[]' = zapisano i nic nie zaznaczono; null = jeszcze nie zapisywano
+            $servicesJson = $servicesDone
+                ? json_encode($servicesDone, JSON_UNESCAPED_UNICODE)
+                : '[]';
+
+            db()->prepare('UPDATE zgloszenia SET services_done = ? WHERE id = ?')
+                ->execute([$servicesJson, $id]);
 
             $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
             $row->execute([$id]);

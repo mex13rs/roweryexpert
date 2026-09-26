@@ -2971,7 +2971,7 @@ $authenticated = auth_is_authenticated();
                     <textarea id="edit-fault"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="edit-service-notes">Wykonane czynności</label>
+                    <label for="edit-service-notes">Notatki</label>
                     <textarea id="edit-service-notes" style="min-height: 80px;" placeholder="np. Wymiana dętki, regulacja przerzutek, smarowanie łańcucha…"></textarea>
                 </div>
                 <div class="button-group">
@@ -3057,7 +3057,9 @@ $authenticated = auth_is_authenticated();
                 <span class="d-val" id="detail-phone">—</span>
                 <span class="d-label">Opis usterki:</span>
                 <span class="d-val" id="detail-fault">—</span>
-                <span class="d-label">Wykonane czynności:</span>
+                <span class="d-label" id="detail-done-label">Wykonane czynności:</span>
+                <span class="d-val" id="detail-done-list">—</span>
+                <span class="d-label" id="detail-notes-label">Notatki:</span>
                 <span class="d-val" id="detail-notes">—</span>
             </div>
             <div class="pending-detail" id="detail-pending" hidden>
@@ -3178,7 +3180,7 @@ $authenticated = auth_is_authenticated();
                 <h1>RoweryExpert</h1>
             </div>
 
-            <div class="receipt-title">Potwierdzenie Przyjęcia Roweru</div>
+            <div class="receipt-title" id="print-title-client">Potwierdzenie Przyjęcia Roweru</div>
 
             <table class="receipt-details">
                 <tr class="receipt-row">
@@ -3203,6 +3205,15 @@ $authenticated = auth_is_authenticated();
                 <tr>
                     <td colspan="2">
                         <div class="receipt-value-desc" id="print-fault-description">Wymiana napędu, regulacja przerzutek.</div>
+                    </td>
+                </tr>
+                <!-- Wykonane czynności: zaznaczone checkboxy; sekcja znika, gdy nic nie zaznaczono -->
+                <tr id="print-done-row-client">
+                    <td colspan="2" class="receipt-label" style="padding-top: 8px; padding-bottom: 4px;">Wykonane czynności:</td>
+                </tr>
+                <tr id="print-done-cell-client">
+                    <td colspan="2">
+                        <div class="receipt-value-desc" id="print-done-client"></div>
                     </td>
                 </tr>
             </table>
@@ -3241,7 +3252,7 @@ $authenticated = auth_is_authenticated();
                 <h1>RoweryExpert</h1>
             </div>
 
-            <div class="receipt-title">Zlecenie Serwisowe - Egzemplarz Serwisu</div>
+            <div class="receipt-title" id="print-title-service">Zlecenie Serwisowe - Egzemplarz Serwisu</div>
 
             <table class="receipt-details">
                 <tr class="receipt-row">
@@ -3270,9 +3281,18 @@ $authenticated = auth_is_authenticated();
                 </tr>
             </table>
 
-            <!-- Wykonane czynności: wypełnia całą wolną wysokość kolumny serwisu -->
-            <div class="service-notes-title" style="margin-top: 0;">Wykonane czynności:</div>
-            <div class="receipt-value-desc" id="print-service-notes" style="flex: 1 1 auto; min-height: 60px; margin-top: 0; margin-bottom: 0;">—</div>
+            <!-- Wykonane czynności: zaznaczone checkboxy (puste = sekcja znika) -->
+            <div class="service-notes-title" id="print-done-title-service" style="margin-top: 0;">Wykonane czynności:</div>
+            <div class="receipt-value-desc" id="print-done-service" style="margin-top: 0; margin-bottom: 0;"></div>
+
+            <!-- Notatki: na wydruku pojawiają się tylko po uzupełnieniu -->
+            <div id="print-notes-block" style="flex: 1 1 auto; flex-direction: column;">
+                <div class="service-notes-title">Notatki:</div>
+                <div class="receipt-value-desc" id="print-service-notes" style="flex: 1 1 auto; min-height: 60px; margin-top: 0; margin-bottom: 0;">—</div>
+            </div>
+
+            <!-- Wypełniacz wysokości, gdy notatek nie ma — QR trzyma się dołu kolumny -->
+            <div id="print-notes-spacer" style="flex: 1 1 auto;"></div>
 
             <!-- Etykieta QR z numerem serwisowym — sam dół -->
             <div style="display: flex; justify-content: flex-start; margin-top: 6px;">
@@ -3753,6 +3773,7 @@ $authenticated = auth_is_authenticated();
             formData.append('fault_description', item.faultDescription);
             formData.append('status', item.status);
             formData.append('source', IS_MOBILE ? 'mobile' : 'desktop');
+            formData.append('services_done', JSON.stringify(item.servicesDone || []));
 
             if (files && files.length) {
                 for (const file of files) {
@@ -3786,7 +3807,8 @@ $authenticated = auth_is_authenticated();
                 datePlanned: datePlannedInput.value,
                 customerPhone: customerPhoneInput.value.trim(),
                 faultDescription: description,
-                status: 'in_progress' // Domyślny status: 'in_progress', 'completed', 'picked_up'
+                status: 'in_progress', // Domyślny status: 'in_progress', 'completed', 'picked_up'
+                servicesDone: checked  // te same checkboxy trafiają jako wykonane czynności
             };
         }
 
@@ -3857,7 +3879,18 @@ $authenticated = auth_is_authenticated();
         }
 
         // --- MECHANIZM DRUKOWANIA POTWIERDZENIA ---
-        function triggerPrint(item) {
+        // tryb: 'przyjecie' (domyślnie) — potwierdzenie przyjęcia roweru,
+        //       'wydanie'  — karta wydania roweru (drukowana przy wydaniu)
+        function triggerPrint(item, tryb) {
+            const isIssue = tryb === 'wydanie';
+
+            // Tytuł zależy od okazji
+            document.getElementById('print-title-client').textContent =
+                isIssue ? 'Karta Wydania Roweru' : 'Potwierdzenie Przyjęcia Roweru';
+            document.getElementById('print-title-service').textContent =
+                isIssue ? 'Karta Wydania Roweru - Egzemplarz Serwisu'
+                        : 'Zlecenie Serwisowe - Egzemplarz Serwisu';
+
             // Wypełnij template wydruku A4 (dane roweru, telefonu, opis usterki)
             document.getElementById('print-bike-name').textContent = item.bikeName;
             document.getElementById('print-date-in').textContent = formatDateForUser(item.dateIn);
@@ -3871,7 +3904,25 @@ $authenticated = auth_is_authenticated();
             document.getElementById('print-customer-phone-service').textContent = item.customerPhone;
             document.getElementById('print-fault-description-service').textContent = item.faultDescription;
             document.getElementById('print-service-no-service').textContent = item.serviceNo || '—';
-            document.getElementById('print-service-notes').textContent = item.serviceNotes || '—';
+
+            // Wykonane czynności: na karcie wydania lista zaznaczonych checkboxów (☑),
+            // gdy nic nie zaznaczono — sekcja na wydruku się nie pojawia
+            const doneList = (modulOn('uslugi') && isIssue) ? getDoneServices(item) : [];
+            const doneHtml = doneList.map(n => '☑ ' + escapeHtml(n)).join('<br>');
+            const showDone = doneList.length > 0;
+            document.getElementById('print-done-row-client').hidden = !showDone;
+            document.getElementById('print-done-cell-client').hidden = !showDone;
+            document.getElementById('print-done-client').innerHTML = showDone ? doneHtml : '';
+            document.getElementById('print-done-title-service').hidden = !showDone;
+            document.getElementById('print-done-service').hidden = !showDone;
+            document.getElementById('print-done-service').innerHTML = showDone ? doneHtml : '';
+
+            // Notatki: na wydruku tylko po uzupełnieniu (puste pole znika)
+            const notes = (item.serviceNotes || '').trim();
+            document.getElementById('print-service-notes').textContent = notes || '—';
+            // display zamiast hidden: block ma inline flex, przez który [hidden] nie zadziała
+            document.getElementById('print-notes-block').style.display = notes ? 'flex' : 'none';
+            document.getElementById('print-notes-spacer').hidden = !!notes;
 
             // Elementy kodu QR
             const qrCanvas = document.getElementById('qr-code-canvas');
@@ -4183,7 +4234,8 @@ $authenticated = auth_is_authenticated();
                 || item.customerPhone.toLowerCase().includes(query)
                 || item.faultDescription.toLowerCase().includes(query)
                 || (item.serviceNo || '').toLowerCase().includes(query)
-                || (item.serviceNotes || '').toLowerCase().includes(query);
+                || (item.serviceNotes || '').toLowerCase().includes(query)
+                || (item.servicesDone || []).join(' ').toLowerCase().includes(query);
         }
 
         function renderServicesList() {
@@ -4368,7 +4420,7 @@ $authenticated = auth_is_authenticated();
                             <span class="detail-val">${formatDateForUser(item.datePlanned)}${overdue ? ' <span class="overdue-badge">Po terminie</span>' : ''}</span>
                         </div>` : ''}
                         <div class="fault-desc">${escapeHtml(item.faultDescription)}</div>
-                        ${item.serviceNotes ? `<div class="detail-row" style="grid-column: span 2;"><span class="detail-label">Wykonane czynności:</span><span class="detail-val" style="white-space: pre-wrap;">${escapeHtml(item.serviceNotes)}</span></div>` : ''}
+                        ${item.serviceNotes ? `<div class="detail-row" style="grid-column: span 2;"><span class="detail-label">Notatki:</span><span class="detail-val" style="white-space: pre-wrap;">${escapeHtml(item.serviceNotes)}</span></div>` : ''}
                         ${thumbs ? `<div class="item-photos">${thumbs}</div>` : ''}
                     </div>
                     
@@ -4450,6 +4502,11 @@ $authenticated = auth_is_authenticated();
                 item.status = next;
                 renderServicesList();
                 showToast(`Zmieniono status roweru: ${item.bikeName}`);
+
+                // Wydanie roweru z listy — tak samo drukuj kartę wydania
+                if (next === 'picked_up' && modulOn('druk') && !IS_MOBILE) {
+                    triggerPrint(item, 'wydanie');
+                }
             } catch (err) {
                 showToast(err.message, 'error');
             }
@@ -4463,7 +4520,8 @@ $authenticated = auth_is_authenticated();
 
         window.printFromId = function(id) {
             const item = db.find(item => item.id === id);
-            if (item) triggerPrint(item);
+            // Po wydaniu przycisk drukuje kartę wydania, wcześniej — potwierdzenie przyjęcia
+            if (item) triggerPrint(item, item.status === 'picked_up' ? 'wydanie' : 'przyjecie');
         };
 
         window.deleteItem = async function(id) {
@@ -4614,6 +4672,60 @@ $authenticated = auth_is_authenticated();
             if (e.target === editModal) closeEditModal();
         });
 
+        // --- WYKONANE CZYNNOŚCI (checkboxy z katalogu usług) ---
+        // Lista nazw zapisanych w bazie; dla starych zgłoszeń (null)
+        // liczymy ją z linii „- Usługa” wklejonych do opisu przy przyjęciu.
+        function getDoneServices(item) {
+            if (Array.isArray(item.servicesDone)) return item.servicesDone;
+            const lines = (item.faultDescription || '').split('\n')
+                .map(l => l.trim())
+                .filter(l => l.startsWith('- '))
+                .map(l => l.slice(2).trim());
+            const names = services.map(s => s.nazwa);
+            return names.length ? lines.filter(l => names.includes(l)) : lines;
+        }
+
+        // Zapis zaznaczeń z karty zgłoszenia (debounce: jeden request na serię kliknięć)
+        let doneSaveTimer = null;
+        const donePending = new Map();   // id zgłoszenia -> { item, values, prev }
+        function onDoneToggle(item) {
+            const before = donePending.get(item.id);
+            const values = Array.from(
+                document.querySelectorAll('#detail-done-list input:checked')
+            ).map(cb => cb.value);
+            // prev = stan sprzed całej serii kliknięć (do wycofania przy błędzie)
+            donePending.set(item.id, {
+                item,
+                values,
+                prev: before ? before.prev : item.servicesDone
+            });
+            item.servicesDone = values;
+
+            clearTimeout(doneSaveTimer);
+            doneSaveTimer = setTimeout(flushDoneSaves, 450);
+        }
+
+        async function flushDoneSaves() {
+            const entries = Array.from(donePending.values());
+            donePending.clear();
+            for (const e of entries) {
+                try {
+                    const fd = new FormData();
+                    fd.append('action', 'services');
+                    fd.append('id', e.item.id);
+                    fd.append('services_done', JSON.stringify(e.values));
+                    const res = await apiFetch(API_ZGLOSZENIA, { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Nie udało się zapisać wykonanych czynności.');
+                    e.item.servicesDone = data.data.servicesDone;
+                } catch (err) {
+                    e.item.servicesDone = e.prev;   // wycofanie optymistycznej zmiany
+                    if (detailModalId === e.item.id) fillDetailModal(e.item);
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+
         // --- MODAL PODGLĄDU ZGŁOSZENIA (bez edycji, z wydaniem roweru) ---
         const detailModal = document.getElementById('detail-modal');
         const detailIssueBtn = document.getElementById('detail-issue-btn');
@@ -4653,6 +4765,36 @@ $authenticated = auth_is_authenticated();
             const canIssue = !item.deleted && item.status !== 'picked_up';
             detailIssueBtn.disabled = !canIssue;
             detailIssueBtn.textContent = canIssue ? 'Wydaj rower' : 'Rower już wydany';
+
+            // Wykonane czynności: te same checkboxy co przy przyjęciu, wstępnie
+            // zaznaczone; po wydaniu/z kosza tylko podgląd. Moduł usług wyłączony
+            // albo pusty katalog — wiersz znika.
+            const doneListEl = document.getElementById('detail-done-list');
+            const showDone = modulOn('uslugi') && services.length > 0;
+            document.getElementById('detail-done-label').hidden = !showDone;
+            doneListEl.hidden = !showDone;
+            doneListEl.textContent = '';
+            if (showDone) {
+                const checked = getDoneServices(item);
+                const wrap = document.createElement('span');
+                wrap.className = 'service-checkbox-list';
+                wrap.style.marginTop = '0';
+                services.forEach(s => {
+                    const label = document.createElement('label');
+                    label.className = 'service-check';
+                    const cb = document.createElement('input');
+                    cb.type = 'checkbox';
+                    cb.className = 'service-checkbox';
+                    cb.value = s.nazwa;
+                    cb.checked = checked.includes(s.nazwa);
+                    cb.disabled = !canIssue;
+                    cb.addEventListener('change', () => onDoneToggle(item));
+                    label.appendChild(cb);
+                    label.appendChild(document.createTextNode(' ' + s.nazwa));
+                    wrap.appendChild(label);
+                });
+                doneListEl.appendChild(wrap);
+            }
 
             // Info o zgłoszeniu z telefonu: na mobile lista z maską jest ukryta,
             // więc stan „wymaga potwierdzenia" pokazujemy też w karcie.
@@ -4696,6 +4838,9 @@ $authenticated = auth_is_authenticated();
                 fillDetailModal(item);
                 renderServicesList();
                 showToast(`Rower wydany klientowi: ${item.bikeName}`);
+
+                // Karta wydania roweru: druk od razu (komputer + włączony moduł druku)
+                if (modulOn('druk') && !IS_MOBILE) triggerPrint(item, 'wydanie');
             } catch (err) {
                 showToast(err.message, 'error');
             }

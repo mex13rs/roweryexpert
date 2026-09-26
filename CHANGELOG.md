@@ -11,6 +11,28 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.7 — 2026-09-26 (serwis2, serwis)
+
+### Dodane — wykonane czynności (checkboxy) + karta wydania roweru
+- **Karta zgłoszenia (podgląd)** ma teraz sekcję „Wykonane czynności" z tymi
+  samymi checkboxami co przy przyjęciu — wstępnie zaznaczane tymi samymi
+  usługami; zaznaczenia **zapisują się same** (nowe `action=services`,
+  debounce). Po wydaniu/z kosza checkboxy tylko do podglądu.
+- Dotychczasowe wolne pole tekstowe przemianowane na **„Notatki"**
+  (karta, edycja, lista) — dane `service_notes` bez zmian.
+- **Karta Wydania Roweru**: przy wydaniu roweru (przycisk „Wydaj rower"
+  albo status „Odebrany" z listy) na komputerze drukuje się od razu
+  karta z tytułem „Karta Wydania Roweru" i listą zaznaczonych czynności (☑);
+  wyłączony moduł druku albo telefon → bez druku.
+- Na wydruku: sekcja „Wykonane czynności" pojawia się tylko na karcie wydania
+  i tylko gdy coś zaznaczono; **blok „Notatki" nie pojawia się, gdy tekst
+  nie jest uzupełniony**.
+- Baza: nowa kolumna `services_done` (JSON z nazwami usług, migracja przez
+  `db()`); zgłoszenia sprzed zmiany liczą zaznaczenia z linii „- Usługa"
+  w opisie. Tworzenie zgłoszenia zapisuje zaznaczone usługi od razu.
+- Szukajka uwzględnia nazwy wykonanych czynności.
+- Instrukcja: sekcje8 (karta),9 (edycja),11 (druk),12 (wydruk).
+
 ## 2.6 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane — powitanie po zalogowaniu (podsumowanie dnia)

@@ -36,8 +36,9 @@ declare(strict_types=1);
  |   2.4  -> akcent: przełącznik koloru akcentu przy motywie (zolty ME, zielony, czerwony, niebieski, pomaranczowy)
  |   2.5  -> akcent: rower w logo i faviconka tez zmieniaja kolor razem z akcentem (warianty logo-*/favicon-*.png)
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
+ |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
  --------------------------------------------------------------- */
-const APP_VERSION = '2.6';
+const APP_VERSION = '2.7';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -282,6 +283,7 @@ function db(): PDO
             customer_phone    VARCHAR(32)  NOT NULL,
             fault_description TEXT NOT NULL,
             service_notes     TEXT DEFAULT NULL,
+            services_done     TEXT DEFAULT NULL,
             status            ENUM("in_progress","completed","picked_up")
                               NOT NULL DEFAULT "in_progress",
             service_no        VARCHAR(32) DEFAULT NULL,
@@ -348,7 +350,8 @@ function db(): PDO
     // Migracje tabeli zgloszenia (wykrywanie kolumn przez SHOW COLUMNS):
     // confirmed  - potwierdzenie zgloszenia z mobile na PC
     // service_no - numer serwisowy (etykieta QR na rowerze)
-    // service_notes - wykonane czynnosci zapisane w bazie
+    // service_notes - notatki serwisowe (tekst)
+    // services_done - wykonane czynnosci jako JSON z nazwami uslug (checkboxy)
     // deleted_at - kosz (soft delete zamiast twardego usuwania)
     $zgCols = [];
     foreach ($pdo->query('SHOW COLUMNS FROM zgloszenia') as $col) {
@@ -377,6 +380,10 @@ function db(): PDO
 
     if (!in_array('service_notes', $zgCols, true)) {
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN service_notes TEXT DEFAULT NULL AFTER fault_description');
+    }
+
+    if (!in_array('services_done', $zgCols, true)) {
+        $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN services_done TEXT DEFAULT NULL AFTER service_notes');
     }
 
     if (!in_array('deleted_at', $zgCols, true)) {
@@ -568,6 +575,11 @@ function map_zgloszenie(array $row): array
         'confirmed'        => !empty($row['confirmed']),
         'serviceNo'        => $row['service_no'] ?? '',
         'serviceNotes'     => (string) ($row['service_notes'] ?? ''),
+        // NULL = jeszcze nie zapisywano (frontend liczy wtedy z opisu),
+        // [] = zapisano i nic nie jest zaznaczone
+        'servicesDone'     => array_key_exists('services_done', $row) && $row['services_done'] !== null
+            ? (json_decode((string) $row['services_done'], true) ?: [])
+            : null,
         'deleted'          => !empty($row['deleted_at']),
         'createdAt'        => $row['created_at'],
         'photos'           => photos_for($id),
@@ -629,4 +641,37 @@ function validate_zgloszenie(array $in): array
         $fault,
         $status,
     ];
+}
+
+/**
+ * Walidacja listy wykonanych czynnosci (checkboxy z katalogu uslug).
+ * Wejscie: string JSON z tablica nazw. Zwraca oczyszczona tablice nazw.
+ */
+function validate_services_done(string $raw): array
+{
+    if (trim($raw) === '') {
+        return [];
+    }
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        json_fail('Nieprawidłowa lista wykonanych czynności.');
+    }
+    $clean = [];
+    foreach ($decoded as $name) {
+        if (!is_string($name)) {
+            continue;
+        }
+        $name = trim($name);
+        if ($name === '') {
+            continue;
+        }
+        if (mb_strlen($name) > 200) {
+            json_fail('Nazwa wykonanej czynności jest za długa (max 200 znaków).');
+        }
+        $clean[] = $name;
+        if (count($clean) > 50) {
+            json_fail('Za dużo wykonanych czynności (max 50).');
+        }
+    }
+    return array_values(array_unique($clean));
 }
