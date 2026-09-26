@@ -34,7 +34,7 @@ declare(strict_types=1);
  |   2.2  -> mobile: szukanie po numerze serwisowym od 4 znakow (tylko konkretne zgl.), przycisk "Wydaj rower"
  |   2.3  -> moduly: uzytkownik wylacza opcje w Ustawieniach (kalendarz, zdjecia, skaner, uslugi, druk, kosz)
  |   2.4  -> akcent: przełącznik koloru akcentu przy motywie (zolty ME, zielony, czerwony, niebieski, pomaranczowy)
- |   2.5  -> akcent: rower w logo i faviconka tez zmieniaja kolor razem z akcentem (warianty logo-*/favicon-*.png)
+ |   2.5  -> akcent: rower w logo i faviconka tez zmieniaja kolor razem z akcentem (warianty: logo-* oraz favicon-*.png)
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
  --------------------------------------------------------------- */
