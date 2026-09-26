@@ -39,6 +39,11 @@ try {
             $source   = (string) ($_POST['source'] ?? 'desktop');
             $confirmed = $source === 'mobile' ? 0 : 1;
 
+            // Moduł "zdjęcia" wyłączony: przyjęcie ze zdjęciami jest odrzucane
+            if (!modul('zdjecia') && !empty($_FILES['photos'])) {
+                json_fail('Moduł zdjęć jest wyłączony w ustawieniach panelu.');
+            }
+
             $stmt = db()->prepare(
                 'INSERT INTO zgloszenia
                     (bike_name, date_in, date_planned, customer_phone,
@@ -113,9 +118,11 @@ try {
                 json_fail('Notatka „wykonane czynności" jest za długa (max 6000 znaków).');
             }
 
+            // date_planned: NULL = pusty termin (modul kalendarza wylaczony);
+            // COALESCE zachowuje stary termin, gdy nowy nie przychodzi
             $stmt = db()->prepare(
                 'UPDATE zgloszenia
-                    SET bike_name = ?, date_in = ?, date_planned = ?,
+                    SET bike_name = ?, date_in = ?, date_planned = COALESCE(?, date_planned),
                         customer_phone = ?, fault_description = ?,
                         status = ?, service_notes = ?
                   WHERE id = ?'
@@ -129,6 +136,9 @@ try {
         }
 
         if ($action === 'restore') {
+            if (!modul('kosz')) {
+                json_fail('Moduł kosza jest wyłączony w ustawieniach panelu.', 403);
+            }
             $id = (int) ($_POST['id'] ?? 0);
             if ($id <= 0) {
                 json_fail('Brak identyfikatora zgłoszenia.');
@@ -147,6 +157,10 @@ try {
     }
 
     if ($method === 'DELETE') {
+        // Kasowanie (kosz i trwałe) wymaga wlaczonego modulu kosza
+        if (!modul('kosz')) {
+            json_fail('Moduł kosza jest wyłączony w ustawieniach panelu.', 403);
+        }
         $id = (int) ($_GET['id'] ?? 0);
         if ($id <= 0) {
             json_fail('Brak identyfikatora zgłoszenia.');

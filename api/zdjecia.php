@@ -14,6 +14,10 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 try {
     auth_require();
+    // Moduł "zdjęcia" wyłączony przez użytkownika = całe API zdjęć nieczynne
+    if (!modul('zdjecia')) {
+        json_fail('Moduł zdjęć jest wyłączony w ustawieniach panelu.', 403);
+    }
     if ($method === 'GET') {
         $zgloszenieId = (int) ($_GET['zgloszenie_id'] ?? 0);
         if ($zgloszenieId <= 0) {

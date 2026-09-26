@@ -32,8 +32,9 @@ declare(strict_types=1);
  |   2.0  -> wariant kolorystyczny Media Expert (zolty #FFDD00 + czern), podtytul "Panel Serwisowy"
  |   2.1  -> mobile: ukryta lista/kafle/filtry, wynik wyszukiwania = karta zgloszenia, monit "potwierdz na PC"
  |   2.2  -> mobile: szukanie po numerze serwisowym od 4 znakow (tylko konkretne zgl.), przycisk "Wydaj rower"
+ |   2.3  -> moduly: uzytkownik wylacza opcje w Ustawieniach (kalendarz, zdjecia, skaner, uslugi, druk, kosz)
  --------------------------------------------------------------- */
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -99,6 +100,60 @@ function change_app_password(string $current, string $next): ?string
     db()->prepare('UPDATE ustawienia SET wartosc = ? WHERE klucz = ?')
         ->execute([$newHash, 'app_password_hash']);
     return null;
+}
+
+// --- USTAWIENIA I MODUŁY PANELU ---
+// Tabela ustawienia (klucz -> wartosc) juz istnieje (trzyma m.in. hash hasla).
+
+/** Odczyt ustawienia z bazy; brak klucza = wartosc domyslna. */
+function setting_get(string $klucz, string $domyslna = ''): string
+{
+    $stmt = db()->prepare('SELECT wartosc FROM ustawienia WHERE klucz = ?');
+    $stmt->execute([$klucz]);
+    $row = $stmt->fetch();
+    return $row ? (string) $row['wartosc'] : $domyslna;
+}
+
+/** Zapis ustawienia (nadpisanie istniejacego). */
+function setting_set(string $klucz, string $wartosc): void
+{
+    db()->prepare(
+        'INSERT INTO ustawienia (klucz, wartosc) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE wartosc = VALUES(wartosc)'
+    )->execute([$klucz, $wartosc]);
+}
+
+/** Pelna lista modulow, ktore moga byc wylaczone przez uzytkownika. */
+function moduly_dostepne(): array
+{
+    return ['kalendarz', 'zdjecia', 'skaner', 'uslugi', 'druk', 'kosz'];
+}
+
+/**
+ * Wlączone moduly (nazwa => bool). Odczyt z cache - jedno zapytanie na żądanie.
+ * Brak klucza w bazie = modul wlaczony (kompatybilnosc wstecz: przed 2.3 wszystko bylo widoczne).
+ */
+function moduly(bool $refresh = false): array
+{
+    static $cache = null;
+    if ($refresh) {
+        $cache = null;
+    }
+    if ($cache === null) {
+        $raw = setting_get('moduly', '');
+        $saved = $raw !== '' ? (json_decode($raw, true) ?: []) : [];
+        $cache = [];
+        foreach (moduly_dostepne() as $m) {
+            $cache[$m] = array_key_exists($m, $saved) ? (bool) $saved[$m] : true;
+        }
+    }
+    return $cache;
+}
+
+/** Czy dany modul jest wlaczony? */
+function modul(string $nazwa): bool
+{
+    return (bool) (moduly()[$nazwa] ?? false);
 }
 
 /** Statystyki zdjęć: liczba oraz zajęte miejsce (w bajtach). */
@@ -325,6 +380,14 @@ function db(): PDO
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL AFTER created_at');
     }
 
+    // Modul "kalendarz" moze byc wylaczony przez uzytkownika - wtedy termin
+    // odbioru jest pusty, wiec kolumna musi dopuszczac NULL.
+    foreach ($pdo->query("SHOW COLUMNS FROM zgloszenia LIKE 'date_planned'") as $col) {
+        if (($col['Null'] ?? 'NO') === 'NO') {
+            $pdo->exec('ALTER TABLE zgloszenia MODIFY COLUMN date_planned DATE DEFAULT NULL');
+        }
+    }
+
     if (!is_dir(UPLOAD_DIR)) {
         mkdir(UPLOAD_DIR, 0755, true);
     }
@@ -495,7 +558,7 @@ function map_zgloszenie(array $row): array
         'id'               => $id,
         'bikeName'         => $row['bike_name'],
         'dateIn'           => $row['date_in'],
-        'datePlanned'      => $row['date_planned'],
+        'datePlanned'      => (string) ($row['date_planned'] ?? ''),
         'customerPhone'    => $row['customer_phone'],
         'faultDescription' => $row['fault_description'],
         'status'           => $row['status'],
@@ -531,12 +594,18 @@ function validate_zgloszenie(array $in): array
     )) {
         json_fail('Nieprawidłowa data przyjęcia.');
     }
-    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $datePlanned) || !checkdate(
+    $plannedOk = preg_match('/^\d{4}-\d{2}-\d{2}$/', $datePlanned) === 1 && checkdate(
         (int) substr($datePlanned, 5, 2),
         (int) substr($datePlanned, 8, 2),
         (int) substr($datePlanned, 0, 4)
-    )) {
-        json_fail('Nieprawidłowa data planowanego odbioru.');
+    );
+    if (modul('kalendarz')) {
+        if (!$plannedOk) {
+            json_fail('Nieprawidłowa data planowanego odbioru.');
+        }
+    } elseif (!$plannedOk) {
+        // Modul kalendarza wylaczony: pusty termin dozwolony (NULL w bazie)
+        $datePlanned = '';
     }
     $phoneDigits = preg_replace('/\D/', '', $phone) ?? '';
     if (strlen($phoneDigits) < 9) {
@@ -552,7 +621,7 @@ function validate_zgloszenie(array $in): array
     return [
         $bikeName,
         $dateIn,
-        $datePlanned,
+        $datePlanned !== '' ? $datePlanned : null,   // null = brak terminu (modul kalendarza wylaczony)
         $phone,
         $fault,
         $status,

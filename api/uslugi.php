@@ -12,6 +12,10 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
+    // Moduł "katalog usług" wyłączony = zapis i usuwanie nieczynne
+    if (!modul('uslugi')) {
+        json_fail('Moduł katalogu usług jest wyłączony w ustawieniach panelu.', 403);
+    }
     $action = (string) ($_POST['action'] ?? '');
 
     if ($action === 'add') {

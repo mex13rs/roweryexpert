@@ -11,6 +11,35 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.3 — 2026-09-26 (serwis2, serwis)
+
+### Dodane — moduły (wyłączanie opcji przez użytkownika)
+- **Zakładka „Moduły" w Ustawieniach** — 6 przełączników: Kalendarz, Zdjęcia,
+  Skaner QR, Katalog usług, Drukowanie, Kosz. Flagi żyją w tabeli `ustawienia`
+  (wspólne dla PC i telefonu), domyślnie wszystko włączone — brak klucza =
+  zachowanie sprzed 2.3. Nowy endpoint `api/ustawienia.php` (GET/POST).
+- **Wyłączone = ukryte i zablokowane**: reguły CSS (`body.off-nazwa`),
+  warunkowania w JS (przyciski na liście, monit telefoniczny, etykieta
+  zapisu) **oraz guardy API** (`api/zdjecia.php` cały, `api/uslugi.php` zapis,
+  kosz = `action=restore` + `DELETE`, przyjęcie ze zdjęciami przy wyłączonych
+  zdjęciach). Ukończone moduły nie da się obsłużyć „na skróty" przez API.
+- **Kalendarz full off** (decyzja): znika też pole „Planowany odbiór"
+  (formularz + edycja + karta), kafle „Po terminie/Odbiory dziś/jutro",
+  sortowanie po terminie. `date_planned` → kolumna nullable (migracja w
+  `db()`), pusty termin = NULL; edycja bez terminu **zachowuje stary**
+  (`COALESCE`), więc dane nie ubywają.
+- **Kosz off = kasowanie całkiem ukryte** (decyzja): filtr Kosz + przyciski
+  przenoszenia znikają, endpointy kasowania zwracają403 — nic nie da się
+  skasować przez pomyłkę.
+- Etykieta przycisku zapisu budowana z dwóch flag (matryca4 wariantów:
+  „Zapisz, Drukuj i Dodaj do Kalendarza" / „Zapisz i drukuj" /
+  „Zapisz i dodaj do kalendarza" / „Zapisz").
+- Monit telefoniczny po zapisie: wzmianka o kalendarzu/druku pojawia się
+  tylko, gdy dany moduł jest włączony.
+- Instrukcja: sekcja15 „Moduły" + spis treści; sekcja14 z trzecią zakładką.
+- Poprawka: `isOverdue/isPlannedToday/isPlannedTomorrow` ignorują pusty
+  termin (wcześniej pusty ciąg daty liczył się jako „po terminie").
+
 ## 2.2 — 2026-09-25 (serwis2, serwis)
 
 ### Zmienione — poprawki widoku mobilnego (feedback z telefonu)

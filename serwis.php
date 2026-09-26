@@ -1921,6 +1921,57 @@ $authenticated = auth_is_authenticated();
             display: none;
         }
 
+        /* --- MODUŁY WŁĄCZONE/WYŁĄCZONE (Ustawienia -> Moduły) ---
+           Reguły ukrywają elementy statyczne; elementy renderowane przez JS
+           warunkują się obecnością flag w MODULY. Wyłączone moduły dostają
+           na <body> klasę "off-nazwa". */
+        body.off-kalendarz #open-calendar-btn,
+        body.off-kalendarz #date-planned-group,
+        body.off-kalendarz #edit-date-planned-group,
+        body.off-kalendarz #detail-date-planned-label,
+        body.off-kalendarz #detail-date-planned,
+        body.off-kalendarz .dash-tile[data-filter="overdue"],
+        body.off-kalendarz .dash-tile[data-filter="today"],
+        body.off-kalendarz .dash-tile[data-filter="tomorrow"],
+        body.off-zdjecia #photo-upload-group,
+        body.off-zdjecia #photos-modal-input-group,
+        body.off-zdjecia #photos-stats-group,
+        body.off-skaner #scan-qr-btn,
+        body.off-uslugi #service-checkbox-list,
+        body.off-uslugi #tab-btn-uslugi,
+        body.off-kosz .filter-btn[data-filter="trash"] {
+            display: none !important;
+        }
+
+        /* Wiersz przełącznika w zakładce Moduły */
+        .mod-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--card-lighter);
+            margin-bottom: 0.6rem;
+            cursor: pointer;
+        }
+
+        .mod-row input[type="checkbox"] {
+            margin-top: 0.2rem;
+            accent-color: var(--primary);
+            width: 18px;
+            height: 18px;
+            flex: 0 0 auto;
+        }
+
+        .mod-row small {
+            color: var(--text-secondary);
+        }
+
+        .mod-row:has(input:checked) {
+            border-color: var(--primary);
+        }
+
         /* Info o zgloszeniu z telefonu w karcie podgladu (lista z maska ukryta) */
         .pending-detail {
             display: flex;
@@ -2470,7 +2521,7 @@ $authenticated = auth_is_authenticated();
                             <input type="date" id="date-in" required>
                         </div>
                         
-                        <div class="form-group">
+                        <div class="form-group" id="date-planned-group">
                             <label for="date-planned">Planowany odbiór (kalendarz)</label>
                             <input type="date" id="date-planned" required>
                         </div>
@@ -2513,7 +2564,7 @@ $authenticated = auth_is_authenticated();
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 18px; height: 18px;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 1.252a1.125 1.125 0 0 1-1.107 1.328H7.218a1.125 1.125 0 0 1-1.107-1.328L6.34 18m11.32 0H6.34m0 0h11.32M18 10.5h.008v.008H18V10.5Zm-1.8-6.177a1.95 1.95 0 0 1 2.593 0c.38.347.607.82.607 1.32V9.75H4.5V5.643c0-.5.227-.973.607-1.32a1.95 1.95 0 0 1 2.593 0L8.53 5.4a1.95 1.95 0 0 0 2.593 0l.707-.643a1.95 1.95 0 0 1 2.593 0l.707.643a1.95 1.95 0 0 0 2.593 0l.707-.643Z" />
                                 </svg>
-                                Zapisz, Drukuj i Dodaj do Kalendarza
+                                <span id="save-btn-label">Zapisz, Drukuj i Dodaj do Kalendarza</span>
                             </button>
                             <button type="button" class="btn btn-secondary" id="save-only-btn">
                                 Zapis do bazy
@@ -2609,11 +2660,12 @@ $authenticated = auth_is_authenticated();
             <div class="settings-tabs">
                 <button class="settings-tab active" id="tab-btn-general" data-tab="general">Ogólne</button>
                 <button class="settings-tab" id="tab-btn-uslugi" data-tab="uslugi">Dodaj usługi</button>
+                <button class="settings-tab" id="tab-btn-moduly" data-tab="moduly">Moduły</button>
             </div>
 
             <!-- ZAKŁADKA: OGÓLNE -->
             <div class="settings-tab-content" id="tab-content-general">
-                <div class="form-group">
+                <div class="form-group" id="photos-stats-group">
                     <label>Zdjęcia rowerów w bazie</label>
                     <div class="stats-box" id="stats-box" style="background: var(--card-lighter); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem;">
                         <p style="margin: 0; display: flex; justify-content: space-between;">
@@ -2660,6 +2712,40 @@ $authenticated = auth_is_authenticated();
                 </div>
                 <ul class="service-list" id="service-list"></ul>
             </div>
+
+            <!-- ZAKŁADKA: MODUŁY -->
+            <div class="settings-tab-content" id="tab-content-moduly" hidden>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">
+                    Wyłącz nieużywane części panelu — znikną z komputera i z telefonu,
+                    a ich funkcje zablokują się także po stronie serwera.
+                    Zmiana zapisuje się natychmiast.
+                </p>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="kalendarz" checked>
+                    <span><strong>Kalendarz</strong><br><small>Widok kalendarza, terminy odbioru, kafle „Odbiory" i linki do Kalendarza Google</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="zdjecia" checked>
+                    <span><strong>Zdjęcia</strong><br><small>Wgrywanie i podgląd zdjęć z telefonu oraz miniatury na liście</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="skaner" checked>
+                    <span><strong>Skaner QR</strong><br><small>Przycisk skanera kodów QR przy wyszukiwarce</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="uslugi" checked>
+                    <span><strong>Katalog usług</strong><br><small>Checkboxy usług w formularzu i zakładka „Dodaj usługi"</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="druk" checked>
+                    <span><strong>Drukowanie</strong><br><small>Wydruk potwierdzenia przyjęcia dla klienta</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="kosz" checked>
+                    <span><strong>Kosz</strong><br><small>Filtr Kosz, przenoszenie do kosza i przywracanie zgłoszeń</small></span>
+                </label>
+                <p class="settings-hint" id="moduly-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
+            </div>
         </div>
     </div>
 
@@ -2702,7 +2788,7 @@ $authenticated = auth_is_authenticated();
                         <label for="edit-date-in">Data przyjęcia</label>
                         <input type="date" id="edit-date-in" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="edit-date-planned-group">
                         <label for="edit-date-planned">Planowany odbiór</label>
                         <input type="date" id="edit-date-planned" required>
                     </div>
@@ -2796,7 +2882,7 @@ $authenticated = auth_is_authenticated();
                 <span class="d-val" id="detail-status">—</span>
                 <span class="d-label">Przyjęto:</span>
                 <span class="d-val" id="detail-date-in">—</span>
-                <span class="d-label">Termin:</span>
+                <span class="d-label" id="detail-date-planned-label">Termin:</span>
                 <span class="d-val" id="detail-date-planned">—</span>
                 <span class="d-label">Telefon:</span>
                 <span class="d-val" id="detail-phone">—</span>
@@ -3042,6 +3128,7 @@ $authenticated = auth_is_authenticated();
         const API_ZDJECIA = 'api/zdjecia.php';
         const API_KONTO = 'api/konto.php';
         const API_USLUGI = 'api/uslugi.php';
+        const API_USTAWIENIA = 'api/ustawienia.php';
 
         // Wrapper fetch z obsługą wygasłej autoryzacji (401)
         async function apiFetch(url, options) {
@@ -3052,6 +3139,104 @@ $authenticated = auth_is_authenticated();
                 throw new Error('Unauthorized');
             }
             return res;
+        }
+
+        // --- MODUŁY PANELU (Ustawienia -> Moduły) ---
+        // Użytkownik może wyłączyć nieużywane opcje; flagi żyją w bazie,
+        // więc PC i telefon widzą to samo. Domyślnie wszystko włączone.
+        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true };
+
+        function modulOn(nazwa) {
+            return MODULY[nazwa] !== false;
+        }
+
+        async function loadModules() {
+            try {
+                const res = await apiFetch(API_USTAWIENIA);
+                const data = await res.json();
+                if (data.success && data.data && data.data.moduly) {
+                    MODULY = data.data.moduly;
+                }
+            } catch (err) {
+                // Brak API: zostają flagi domyślne (wszystko włączone)
+            }
+        }
+
+        // Zapis zmienionych modułów do bazy
+        async function saveModules() {
+            const formData = new FormData();
+            formData.append('action', 'modules');
+            formData.append('moduly', JSON.stringify(MODULY));
+            const res = await apiFetch(API_USTAWIENIA, { method: 'POST', body: formData });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Nie udało się zapisać modułów.');
+            if (data.data && data.data.moduly) MODULY = data.data.moduly;
+        }
+
+        // Etykiety przycisków zapisu zależą od modułów druku i kalendarza
+        function updateSaveButtons() {
+            const mainBtn = document.getElementById('save-print-calendar-btn');
+            const onlyBtn = document.getElementById('save-only-btn');
+            const btnLabel = document.getElementById('save-btn-label');
+            if (!mainBtn || !onlyBtn || !btnLabel) return;
+            const druk = modulOn('druk');
+            const kalendarz = modulOn('kalendarz');
+
+            if (IS_MOBILE) {
+                mainBtn.hidden = true;
+                onlyBtn.hidden = false;
+            } else {
+                mainBtn.hidden = false;
+                onlyBtn.hidden = true;
+                if (druk && kalendarz) btnLabel.textContent = 'Zapisz, Drukuj i Dodaj do Kalendarza';
+                else if (druk) btnLabel.textContent = 'Zapisz i drukuj';
+                else if (kalendarz) btnLabel.textContent = 'Zapisz i dodaj do kalendarza';
+                else btnLabel.textContent = 'Zapisz';
+            }
+        }
+
+        // Zastosowanie flag modułów: klasy na <body> (CSS ukrywa elementy
+        // statyczne), przełączniki required przy datach, reset niewidocznych
+        // filtrów/sortowań oraz etykiety przycisków.
+        function applyModules() {
+            Object.keys(MODULY).forEach(function (nazwa) {
+                document.body.classList.toggle('off-' + nazwa, !modulOn(nazwa));
+            });
+
+            const kalendarz = modulOn('kalendarz');
+
+            // (datePlannedInput istnieje zawsze - applyModules wywoływane
+            // dopiero po wczytaniu skryptu, w DOMContentLoaded lub z Ustawień)
+            datePlannedInput.required = kalendarz;
+            if (!kalendarz) datePlannedInput.value = '';
+            const editPlanned = document.getElementById('edit-date-planned');
+            if (editPlanned) editPlanned.required = kalendarz;
+
+            // Filtry, które zniknęły, resetujemy do bezpiecznego stanu
+            if (currentFilter === 'trash' && !modulOn('kosz')) currentFilter = 'all';
+            if (!kalendarz && ['today', 'tomorrow', 'overdue'].includes(currentFilter)) currentFilter = 'all';
+
+            // Opcje sortowania po terminie tylko z włączonym kalendarzem
+            const sortEl = document.getElementById('sort-select');
+            if (sortEl) {
+                sortEl.querySelectorAll('option').forEach(opt => {
+                    if (opt.value.indexOf('planned') === 0) opt.hidden = !kalendarz;
+                });
+                if (currentSort.indexOf('planned') === 0 && !kalendarz) {
+                    currentSort = 'dateIn_desc';
+                    sortEl.value = 'dateIn_desc';
+                    try { localStorage.setItem('re_sort', currentSort); } catch (e) { /* ignore */ }
+                }
+            }
+
+            applyDeviceLayout();
+            updateSaveButtons();
+
+            // Stan aktywnych filtrów po resecie
+            document.querySelectorAll('.filter-btn').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.filter === currentFilter));
+            document.querySelectorAll('.dash-tile').forEach(tile =>
+                tile.classList.toggle('active', tile.dataset.filter === currentFilter));
         }
 
         // Nakładka "Zapisywanie" + blokada przycisków (zapobiega podwójnemu kliknięciu)
@@ -3144,8 +3329,10 @@ $authenticated = auth_is_authenticated();
 
         const tabGeneralBtn = document.getElementById('tab-btn-general');
         const tabUslugiBtn = document.getElementById('tab-btn-uslugi');
+        const tabModulyBtn = document.getElementById('tab-btn-moduly');
         const tabGeneralContent = document.getElementById('tab-content-general');
         const tabUslugiContent = document.getElementById('tab-content-uslugi');
+        const tabModulyContent = document.getElementById('tab-content-moduly');
         const newServiceInput = document.getElementById('new-service-input');
         const addServiceBtn = document.getElementById('add-service-btn');
         const serviceListEl = document.getElementById('service-list');
@@ -3204,16 +3391,20 @@ $authenticated = auth_is_authenticated();
             const savedTheme = localStorage.getItem('theme') || (prefersDark ? 'dark-theme' : 'light-theme');
             setTheme(savedTheme);
 
+            // Moduły panelu: pobierz flagi z bazy i zastosuj (Ustawienia -> Moduły)
+            await loadModules();
+            applyModules();
+
             // Automatyczne ustawienie dat w formularzu
             const now = new Date();
             const planned = new Date();
             planned.setDate(now.getDate() + 3); // Domyślnie termin za 3 dni
             
             dateInInput.value = formatDateForInput(now);
-            datePlannedInput.value = formatDateForInput(planned);
+            datePlannedInput.value = modulOn('kalendarz') ? formatDateForInput(planned) : '';
 
-            // Załaduj katalog usług (checkboxy w formularzu)
-            loadServices();
+            // Załaduj katalog usług (checkboxy w formularzu) - tylko gdy włączony
+            if (modulOn('uslugi')) loadServices();
 
             // Załaduj zgłoszenia z bazy MySQL przez API
             try {
@@ -3385,7 +3576,7 @@ $authenticated = auth_is_authenticated();
             const planned = new Date();
             planned.setDate(now.getDate() + 2);
             dateInInput.value = formatDateForInput(now);
-            datePlannedInput.value = formatDateForInput(planned);
+            datePlannedInput.value = modulOn('kalendarz') ? formatDateForInput(planned) : '';
         }
 
         // --- INTEGRACJA GOOGLE CALENDAR ---
@@ -3431,9 +3622,11 @@ $authenticated = auth_is_authenticated();
         }
 
         // --- WSPÓLNA AKCJA: DRUKUJ + DODAJ DO KALENDARZA ---
+        // Kolejność działań zależy od modułów: gdy któreś wyłączone,
+        // pomijamy tylko tę część.
         function printAndAddToCalendar(item) {
-            openGoogleCalendar(item);
-            triggerPrint(item);
+            if (modulOn('kalendarz')) openGoogleCalendar(item);
+            if (modulOn('druk')) triggerPrint(item);
         }
 
         // --- MECHANIZM DRUKOWANIA POTWIERDZENIA ---
@@ -3583,9 +3776,16 @@ $authenticated = auth_is_authenticated();
             const zdjeciaTxt = photoCount > 0
                 ? `Dodano ${photoCount} ${photoCount === 1 ? 'zdjęcie' : (photoCount < 5 ? 'zdjęcia' : 'zdjęć')}.<br><br>`
                 : '';
+            // Część po potwierdzeniu zależy od włączonych modułów
+            const poPotwierdzeniu = [];
+            if (modulOn('kalendarz')) poPotwierdzeniu.push('kalendarz');
+            if (modulOn('druk')) poPotwierdzeniu.push('wydruk potwierdzenia dla klienta');
+            const ogon = poPotwierdzeniu.length
+                ? ` — tam uruchomi się też ${poPotwierdzeniu.join(' i ')}.`
+                : '.';
             phoneSuccessMsg.innerHTML = zdjeciaTxt
                 + 'Zgłoszenie jest zamazane na liście do czasu <strong>potwierdzenia na komputerze</strong>'
-                + ' — tam uruchomi się też kalendarz i wydruk potwierdzenia dla klienta.';
+                + ogon;
             phoneSuccessModal.classList.add('active');
         }
 
@@ -3669,16 +3869,19 @@ $authenticated = auth_is_authenticated();
         // --- TERMINY: zgłoszenia spóźnione i zaplanowane na jutro ---
         function isOverdue(item) {
             if (item.deleted || item.status === 'picked_up') return false;
+            if (!item.datePlanned) return false;   // brak terminu (moduł kalendarza)
             return item.datePlanned < formatDateForInput(new Date());
         }
 
         function isPlannedToday(item) {
             if (item.deleted || item.status === 'picked_up') return false;
+            if (!item.datePlanned) return false;
             return item.datePlanned === formatDateForInput(new Date());
         }
 
         function isPlannedTomorrow(item) {
             if (item.deleted || item.status === 'picked_up') return false;
+            if (!item.datePlanned) return false;
             const t = new Date();
             t.setDate(t.getDate() + 1);
             return item.datePlanned === formatDateForInput(t);
@@ -3816,22 +4019,22 @@ $authenticated = auth_is_authenticated();
                     ? `<span class="status-badge status-picked_up">${statusLabel}</span>`
                     : `<span class="status-badge status-${escapeHtml(item.status)}" onclick="cycleStatus(${item.id})" title="Kliknij, aby zmienić status">${statusLabel}</span>`;
 
-                // Miniatury zdjęć na karcie
-                const thumbs = photos.map(p => `
+                // Miniatury zdjęć na karcie (moduł zdjęć może być wyłączony)
+                const thumbs = modulOn('zdjecia') ? photos.map(p => `
                     <button class="photo-thumb" onclick="openLightbox('${escapeHtml(p.url)}')" title="${escapeHtml(p.name)}">
                         <img src="${escapeHtml(p.url)}" alt="Zdjęcie zgłoszenia">
                     </button>
-                `).join('');
+                `).join('') : '';
 
                 // Kalendarz/Drukuj dostępne tylko na komputerze (na mobile nie ma przycisków druku/API)
-                const calendarBtn = IS_MOBILE ? '' : `
+                const calendarBtn = (IS_MOBILE || !modulOn('kalendarz')) ? '' : `
                         <button class="btn-action action-calendar" onclick="openGoogleCalendarFromId(${item.id})" title="Udostępnij do Kalendarza Google">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-3-9v.008H12V9.75h3.75Z" />
                             </svg>
                             Kalendarz
                         </button>`;
-                const printBtn = IS_MOBILE ? '' : `
+                const printBtn = (IS_MOBILE || !modulOn('druk')) ? '' : `
                         <button class="btn-action" onclick="printFromId(${item.id})" title="Drukuj potwierdzenie">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829a42.409 42.409 0 0 0 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 1.252a1.125 1.125 0 0 1-1.107 1.328H7.218a1.125 1.125 0 0 1-1.107-1.328L6.34 18m11.32 0H6.34m0 0h11.32M18 10.5h.008v.008H18V10.5Zm-1.8-6.177a1.95 1.95 0 0 1 2.593 0c.38.347.607.82.607 1.32V9.75H4.5V5.643c0-.5.227-.973.607-1.32a1.95 1.95 0 0 1 2.593 0" />
@@ -3839,13 +4042,13 @@ $authenticated = auth_is_authenticated();
                             Drukuj
                         </button>`;
 
-                const photosBtn = `
+                const photosBtn = modulOn('zdjecia') ? `
                         <button class="btn-action" onclick="openPhotosModal(${item.id})" title="Zobacz i dodaj zdjęcia">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 15.75 5.159-5.159a2.25 2.25 0 0 1 3.182 0l5.159 5.159m-1.5-1.5 1.409-1.409a2.25 2.25 0 0 1 3.182 0l2.909 2.909M12 18.75V21m0 0h12M21 12V8.25m0 0h-3.75m3.75 0V4.5m-3.75 3.75h3.75M14.25 7.5h.008v.008h-.008V7.5Z" />
                             </svg>
                             Zdjęcia (${photos.length})
-                        </button>`;
+                        </button>` : '';
 
                 const editBtn = `
                         <button class="btn-action" onclick="openEditModal(${item.id})" title="Edytuj zgłoszenie">
@@ -3878,10 +4081,11 @@ $authenticated = auth_is_authenticated();
                         </button>`;
 
                 // W koszu tylko podgląd i przywrócenie; poza koszem pełne akcje
+                // (kosz może być wyłączony modułem - wtedy nie ma też koszenia)
                 const actionsHtml = `<div class="item-actions">${
                     item.deleted
                         ? `${photosBtn}${restoreBtn}${purgeBtn}`
-                        : `${photosBtn}${editBtn}${calendarBtn}${printBtn}${trashBtn}`
+                        : `${photosBtn}${editBtn}${calendarBtn}${printBtn}${modulOn('kosz') ? trashBtn : ''}`
                 }</div>`;
 
                 card.innerHTML = `
@@ -3903,10 +4107,11 @@ $authenticated = auth_is_authenticated();
                             <span class="detail-label">Przyjęto:</span>
                             <span class="detail-val">${formatDateForUser(item.dateIn)}</span>
                         </div>
+                        ${modulOn('kalendarz') ? `
                         <div class="detail-row">
                             <span class="detail-label">Termin:</span>
                             <span class="detail-val">${formatDateForUser(item.datePlanned)}${overdue ? ' <span class="overdue-badge">Po terminie</span>' : ''}</span>
-                        </div>
+                        </div>` : ''}
                         <div class="fault-desc">${escapeHtml(item.faultDescription)}</div>
                         ${item.serviceNotes ? `<div class="detail-row" style="grid-column: span 2;"><span class="detail-label">Wykonane czynności:</span><span class="detail-val" style="white-space: pre-wrap;">${escapeHtml(item.serviceNotes)}</span></div>` : ''}
                         ${thumbs ? `<div class="item-photos">${thumbs}</div>` : ''}
@@ -3959,8 +4164,8 @@ $authenticated = auth_is_authenticated();
                 showToast('Zgłoszenie potwierdzone i odblokowane!');
 
                 // Jednocześnie: dodanie do kalendarza + wydruk potwierdzenia
-                openGoogleCalendar(item);
-                triggerPrint(item);
+                // (części wyłączone modułami pomijane)
+                printAndAddToCalendar(item);
             } catch (err) {
                 showToast(err.message, 'error');
             }
@@ -4007,6 +4212,7 @@ $authenticated = auth_is_authenticated();
         };
 
         window.deleteItem = async function(id) {
+            if (!modulOn('kosz')) return;   // moduł kosza wyłączony
             const item = db.find(item => item.id === id);
             const bikeLabel = item ? `„${item.bikeName}”` : 'to zlecenie';
             const confirmed = await showConfirmModal(
@@ -4030,6 +4236,7 @@ $authenticated = auth_is_authenticated();
 
         // Przywrócenie zgłoszenia z kosza
         window.restoreItem = async function(id) {
+            if (!modulOn('kosz')) return;   // moduł kosza wyłączony
             try {
                 const formData = new FormData();
                 formData.append('action', 'restore');
@@ -4050,6 +4257,7 @@ $authenticated = auth_is_authenticated();
 
         // Trwałe usunięcie z kosza (wraz ze zdjęciami)
         window.purgeItem = async function(id) {
+            if (!modulOn('kosz')) return;   // moduł kosza wyłączony
             const item = db.find(item => item.id === id);
             const bikeLabel = item ? `„${item.bikeName}”` : 'to zlecenie';
             const confirmed = await showConfirmModal(
@@ -4376,6 +4584,7 @@ $authenticated = auth_is_authenticated();
         }
 
         window.openScanModal = async function() {
+            if (!modulOn('skaner')) return;   // moduł skanera wyłączony
             // Wyczyść poprzednie wyszukiwanie, żeby wynik skanu był czysty
             searchQuery = '';
             searchInput.value = '';
@@ -4896,6 +5105,7 @@ $authenticated = auth_is_authenticated();
         openSettingsBtn.addEventListener('click', () => {
             settingsModal.classList.add('active');
             loadPhotoStats();
+            syncModuleToggles();   // zakładka Moduły: odbij aktualne flagi
         });
 
         closeSettingsBtn.addEventListener('click', () => {
@@ -4913,16 +5123,64 @@ $authenticated = auth_is_authenticated();
 
         // PRZEŁĄCZANIE ZAKŁADEK USTAWIEŃ
         function switchSettingsTab(tabName) {
-            const isUslugi = tabName === 'uslugi';
-            tabGeneralBtn.classList.toggle('active', !isUslugi);
-            tabUslugiBtn.classList.toggle('active', isUslugi);
-            tabGeneralContent.hidden = isUslugi;
-            tabUslugiContent.hidden = !isUslugi;
-            if (isUslugi) renderServiceList();
+            // Zakładka usług nie istnieje, gdy moduł wyłączony
+            if (tabName === 'uslugi' && !modulOn('uslugi')) tabName = 'general';
+            tabGeneralBtn.classList.toggle('active', tabName === 'general');
+            tabUslugiBtn.classList.toggle('active', tabName === 'uslugi');
+            tabModulyBtn.classList.toggle('active', tabName === 'moduly');
+            tabGeneralContent.hidden = tabName !== 'general';
+            tabUslugiContent.hidden = tabName !== 'uslugi';
+            tabModulyContent.hidden = tabName !== 'moduly';
+            if (tabName === 'uslugi') renderServiceList();
+            if (tabName === 'moduly') syncModuleToggles();
         }
 
         tabGeneralBtn.addEventListener('click', () => switchSettingsTab('general'));
         tabUslugiBtn.addEventListener('click', () => switchSettingsTab('uslugi'));
+        tabModulyBtn.addEventListener('click', () => switchSettingsTab('moduly'));
+
+        // --- MODUŁY: przełączniki w zakładce Ustawienia -> Moduły ---
+        const MODUL_NAZWA = {
+            kalendarz: 'Kalendarz', zdjecia: 'Zdjęcia', skaner: 'Skaner QR',
+            uslugi: 'Katalog usług', druk: 'Drukowanie', kosz: 'Kosz'
+        };
+        const modToggles = document.querySelectorAll('.mod-toggle');
+        const modulyHint = document.getElementById('moduly-hint');
+
+        function syncModuleToggles() {
+            modToggles.forEach(cb => { cb.checked = modulOn(cb.dataset.mod); });
+            modulyHint.textContent = '';
+        }
+
+        modToggles.forEach(cb => cb.addEventListener('change', async () => {
+            const nazwa = cb.dataset.mod;
+            const poprzedni = MODULY[nazwa];
+            MODULY[nazwa] = cb.checked;
+            modulyHint.textContent = 'Zapisywanie…';
+
+            try {
+                await saveModules();
+                applyModules();
+                renderServicesList();
+                updateDashboard();
+
+                // Włączenie kalendarza: przywróć domyślny termin, gdy pusty
+                if (nazwa === 'kalendarz' && cb.checked && !datePlannedInput.value) {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 3);
+                    datePlannedInput.value = formatDateForInput(d);
+                }
+
+                modulyHint.textContent = `Moduł „${MODUL_NAZWA[nazwa] || nazwa}” `
+                    + (cb.checked ? 'włączony.' : 'wyłączony.');
+                showToast('Zapisano ustawienia modułów.');
+            } catch (err) {
+                MODULY[nazwa] = poprzedni;
+                cb.checked = poprzedni;
+                modulyHint.textContent = '';
+                showToast(err.message, 'error');
+            }
+        }));
 
         // --- USŁUGI (katalog usług w checkboxach) ---
         let services = [];
