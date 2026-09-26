@@ -3556,15 +3556,32 @@ $authenticated = auth_is_authenticated();
         // Domyślnie żółty Media Expert; wybór zapisywany w localStorage
         // (jak motyw - ustawienie per urządzenie).
         const ACCENT_KLASY = ['accent-zielony', 'accent-czerwony', 'accent-niebieski', 'accent-pomaranczowy'];
+        // Warianty logo i faviconki przekolorowane na kolor akcentu
+        // (żółty #FFDD00 z oryginałów → kolor akcentu, generowane z logo.png/favicon.png)
+        const ACCENT_PLIKI = {
+            zolty:        { logo: 'logo.png',              fav: 'favicon.png' },
+            zielony:      { logo: 'logo-zielony.png',      fav: 'favicon-zielony.png' },
+            czerwony:     { logo: 'logo-czerwony.png',     fav: 'favicon-czerwony.png' },
+            niebieski:    { logo: 'logo-niebieski.png',    fav: 'favicon-niebieski.png' },
+            pomaranczowy: { logo: 'logo-pomaranczowy.png', fav: 'favicon-pomaranczowy.png' }
+        };
         const paletteBtn = document.getElementById('palette-btn');
         const accentPicker = document.getElementById('accent-picker');
 
         function setAccent(accent) {
+            const a = accent || 'zolty';
             ACCENT_KLASY.forEach(k => document.body.classList.remove(k));
-            if (accent && accent !== 'zolty') document.body.classList.add('accent-' + accent);
+            if (a !== 'zolty') document.body.classList.add('accent-' + a);
             document.querySelectorAll('.accent-swatch').forEach(sw =>
-                sw.classList.toggle('active', sw.dataset.accent === (accent || 'zolty')));
-            localStorage.setItem('accent', accent || 'zolty');
+                sw.classList.toggle('active', sw.dataset.accent === a));
+            // logo w nagłówku i na loginie + faviconka zmieniają kolor z akcentem
+            const plik = ACCENT_PLIKI[a] || ACCENT_PLIKI.zolty;
+            document.querySelectorAll('.logo-img').forEach(img => {
+                if (!img.src.endsWith(plik.logo)) img.src = plik.logo;
+            });
+            const fav = document.querySelector('link[rel="icon"]');
+            if (fav && !fav.href.endsWith(plik.fav)) fav.href = plik.fav;
+            localStorage.setItem('accent', a);
         }
 
         // Wybór zapisany przy starcie (przed pierwszym odrysowaniem)

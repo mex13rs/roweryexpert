@@ -11,6 +11,20 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.5 — 2026-09-26 (serwis2, serwis)
+
+### Dodane — akcent w logo i faviconce
+- **Rower w logo i ikonka strony (faviconka) zmieniają kolor razem z akcentem**
+  z palety w nagłówku — także na ekranie logowania (oba `<img class="logo-img">`).
+- Nowe pliki wariantów (4 szt. każdy, generowane z `logo.png`/`favicon.png`
+  przez ImageMagick — podmiana żółtego `#FFDD00` na kolor akcentu, krawędzie
+  i krycie bez zmian): `logo-zielony/czerwony/niebieski/pomaranczowy.png`,
+  `favicon-zielony/czerwony/niebieski/pomaranczowy.png`.
+- Domyślny żółty Media Expert bez zmian — oryginalne `logo.png` i `favicon.png`.
+- Podmiana w `setAccent()` (jak motyw i klasy `body.accent-*`, per urządzenie
+  w `localStorage`); motyw jasny bez zmian — logo dalej czarne (`brightness(0)`).
+- Instrukcja: sekcja14 dopisuje o kolorze logo i faviconki.
+
 ## 2.4 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane — przełącznik koloru akcentu
