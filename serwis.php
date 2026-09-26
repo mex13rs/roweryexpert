@@ -5915,7 +5915,7 @@ $authenticated = auth_is_authenticated();
                 const warn = fotoWarnText(bytes);
                 statsWarnEl.hidden = !warn;
                 statsWarnEl.textContent = warn ? '⚠ ' + warn : '';
-                statsSizeEl.style.color = warn ? 'var(--danger)' : '';
+                statsSizeEl.style.color = warn ? 'var(--danger)' : 'var(--primary-text)';
             } catch (err) {
                 statsPhotosEl.textContent = '—';
                 statsSizeEl.textContent = '—';
