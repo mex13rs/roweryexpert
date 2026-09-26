@@ -11,6 +11,30 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.10 — 2026-09-26 (serwis2, serwis)
+
+### Dodane —3 nowe przełączniki w Ustawieniach → Moduły (domyślnie włączone)
+- **Kolorystyka** (2.4 + 2.5) — po wyłączeniu znika paleta koloru w nagłówku,
+  a logo i faviconka wracają do domyślnego żółtego. Wybrany kolor zostaje
+  w `localStorage` i wraca po ponownym włączeniu (`setAccent` nie kasuje
+  wyboru przy wymuszeniu).
+- **Powitanie** (2.6) — okno „Podsumowanie dnia” po zalogowaniu tylko przy
+  włączonym module; nadal wymaga Kalendarza (bez terminów nie ma czego
+  podsumowywać).
+- **Karta wydania** (2.7) — automatyczny druk Karty Wydania Roweru przy
+  wydaniu (z listy i z karty) tylko przy włączonych modułach druku
+  i Karty wydania; sam przycisk „Wydaj rower” i ręczny druk zostają
+  bez zmian.
+
+### Zmienione
+- `moduly_dostepne()` w `config.php` (+ `config.example.php`) z6 na9 kluczy;
+  brak flagi w bazie = moduł włączony, więc nic się nie zmienia, dopóki
+  czegoś nie wyłączysz. Nowe przełączniki blokowane też po stronie API
+  (`api/ustawienia.php` waliduje listę).
+- Instrukcja §15 (Moduły) i §8 (Karta wydania) zaktualizowane.
+
+---
+
 ## 2.9 — 2026-09-26 (serwis2, serwis)
 
 ### Zmienione — karta pokazuje tylko zakres z przyjęcia, checkboxy puste na starcie

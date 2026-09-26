@@ -2079,6 +2079,8 @@ $authenticated = auth_is_authenticated();
         body.off-skaner #scan-qr-btn,
         body.off-uslugi #service-checkbox-list,
         body.off-uslugi #tab-btn-uslugi,
+        body.off-kolorystyka #palette-btn,
+        body.off-kolorystyka #accent-picker,
         body.off-kosz .filter-btn[data-filter="trash"] {
             display: none !important;
         }
@@ -2901,6 +2903,18 @@ $authenticated = auth_is_authenticated();
                     <input type="checkbox" class="mod-toggle" data-mod="kosz" checked>
                     <span><strong>Kosz</strong><br><small>Filtr Kosz, przenoszenie do kosza i przywracanie zgłoszeń</small></span>
                 </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="kolorystyka" checked>
+                    <span><strong>Kolorystyka</strong><br><small>Paleta koloru akcentu w nagłówku; po wyłączeniu logo i faviconka wracają do domyślnego żółtego</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="powitanie" checked>
+                    <span><strong>Powitanie</strong><br><small>Okno „Podsumowanie dnia” po zalogowaniu (wymaga modułu Kalendarza)</small></span>
+                </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="karta_wydania" checked>
+                    <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania Roweru przy wydaniu; sam przycisk „Wydaj rower” zostaje</small></span>
+                </label>
                 <p class="settings-hint" id="moduly-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>
         </div>
@@ -3355,7 +3369,7 @@ $authenticated = auth_is_authenticated();
         // --- MODUŁY PANELU (Ustawienia -> Moduły) ---
         // Użytkownik może wyłączyć nieużywane opcje; flagi żyją w bazie,
         // więc PC i telefon widzą to samo. Domyślnie wszystko włączone.
-        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true };
+        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true, kolorystyka: true, powitanie: true, karta_wydania: true };
 
         function modulOn(nazwa) {
             return MODULY[nazwa] !== false;
@@ -3413,6 +3427,12 @@ $authenticated = auth_is_authenticated();
             Object.keys(MODULY).forEach(function (nazwa) {
                 document.body.classList.toggle('off-' + nazwa, !modulOn(nazwa));
             });
+
+            // Kolorystyka: przy wyłączonym module wymuszony domyślny żółty
+            // (bez zapisu — wybrany kolor zostaje w localStorage i wraca
+            // po ponownym włączeniu modułu)
+            setAccent(modulOn('kolorystyka') ? (localStorage.getItem('accent') || 'zolty') : 'zolty',
+                      modulOn('kolorystyka'));
 
             const kalendarz = modulOn('kalendarz');
 
@@ -3637,7 +3657,9 @@ $authenticated = auth_is_authenticated();
             // okna ponownie.
             if (document.body.dataset.powitanie) {
                 history.replaceState(null, '', location.pathname);
-                if (modulOn('kalendarz')) pokazPowitanie();
+                // Moduł Powitanie decyduje o oknie; Kalendarz pozostaje
+                // wymagany (bez terminów nie ma czego podsumowywać)
+                if (modulOn('powitanie') && modulOn('kalendarz')) pokazPowitanie();
             }
         });
 
@@ -3679,7 +3701,7 @@ $authenticated = auth_is_authenticated();
         const paletteBtn = document.getElementById('palette-btn');
         const accentPicker = document.getElementById('accent-picker');
 
-        function setAccent(accent) {
+        function setAccent(accent, zapisz) {
             const a = accent || 'zolty';
             ACCENT_KLASY.forEach(k => document.body.classList.remove(k));
             if (a !== 'zolty') document.body.classList.add('accent-' + a);
@@ -3692,7 +3714,9 @@ $authenticated = auth_is_authenticated();
             });
             const fav = document.querySelector('link[rel="icon"]');
             if (fav && !fav.href.endsWith(plik.fav)) fav.href = plik.fav;
-            localStorage.setItem('accent', a);
+            // Zapis tylko przy świadomej zmianie — wymuszenie koloru
+            // przy wyłączonym module kolorystyki nie kasuje wyboru
+            if (zapisz !== false) localStorage.setItem('accent', a);
         }
 
         // Wybór zapisany przy starcie (przed pierwszym odrysowaniem)
@@ -4540,8 +4564,9 @@ $authenticated = auth_is_authenticated();
                 renderServicesList();
                 showToast(`Zmieniono status roweru: ${item.bikeName}`);
 
-                // Wydanie roweru z listy — tak samo drukuj kartę wydania
-                if (next === 'picked_up' && modulOn('druk') && !IS_MOBILE) {
+                // Wydanie roweru z listy — druk karty wydania, gdy włączone
+                // moduły druku i Karty wydania
+                if (next === 'picked_up' && modulOn('druk') && modulOn('karta_wydania') && !IS_MOBILE) {
                     triggerPrint(item, 'wydanie');
                 }
             } catch (err) {
@@ -4932,8 +4957,9 @@ $authenticated = auth_is_authenticated();
                 renderServicesList();
                 showToast(`Rower wydany klientowi: ${item.bikeName}`);
 
-                // Karta wydania roweru: druk od razu (komputer + włączony moduł druku)
-                if (modulOn('druk') && !IS_MOBILE) triggerPrint(item, 'wydanie');
+                // Karta wydania roweru: druk od razu (komputer + moduły
+                // druku i Karta wydania)
+                if (modulOn('druk') && modulOn('karta_wydania') && !IS_MOBILE) triggerPrint(item, 'wydanie');
             } catch (err) {
                 showToast(err.message, 'error');
             }
@@ -5635,7 +5661,8 @@ $authenticated = auth_is_authenticated();
         // --- MODUŁY: przełączniki w zakładce Ustawienia -> Moduły ---
         const MODUL_NAZWA = {
             kalendarz: 'Kalendarz', zdjecia: 'Zdjęcia', skaner: 'Skaner QR',
-            uslugi: 'Katalog usług', druk: 'Drukowanie', kosz: 'Kosz'
+            uslugi: 'Katalog usług', druk: 'Drukowanie', kosz: 'Kosz',
+            kolorystyka: 'Kolorystyka', powitanie: 'Powitanie', karta_wydania: 'Karta wydania'
         };
         const modToggles = document.querySelectorAll('.mod-toggle');
         const modulyHint = document.getElementById('moduly-hint');
