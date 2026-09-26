@@ -1,0 +1,7 @@
+# Nigdy do gita (sekrety i pliki z maszyny/serwera):
+.env
+# hasla DB + haslo aplikacji -> w repo jest config.example.php
+config.php
+# zdjecia zgloszen (zyja tylko na serwerze)
+uploads/
+*.log

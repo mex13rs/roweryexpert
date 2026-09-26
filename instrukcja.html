@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Instrukcja panelu — RoweryExpert</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        :root {
+            --bg: #f4f4f4;
+            --card: #ffffff;
+            --text: #0d0d0d;
+            --text-secondary: #575757;
+            --border: #e4e4e4;
+            --primary: #ffdd00;
+            --primary-text: #8a7300;
+            --primary-light: rgba(255, 221, 0, 0.16);
+            --success: #10b981;
+            --danger: #e2001a;
+            --calendar: #3587ea;
+            --radius-lg: 10px;
+            --radius-md: 8px;
+            --radius-sm: 6px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Barlow', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.55;
+            min-height: 100vh;
+        }
+
+        .wrap {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem 3rem;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            letter-spacing: -0.5px;
+        }
+
+        header h1 span { color: var(--primary-text); }
+
+        header p { color: var(--text-secondary); font-size: 0.9rem; }
+
+        .back-btn {
+            display: inline-block;
+            padding: 0.55rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: var(--card);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .back-btn:hover { border-color: var(--primary-text); color: var(--primary-text); }
+
+        .toc {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            columns: 2;
+            column-gap: 2rem;
+            font-size: 0.92rem;
+        }
+
+        .toc a {
+            display: block;
+            color: var(--text);
+            text-decoration: none;
+            padding: 0.18rem 0;
+            break-inside: avoid;
+        }
+
+        .toc a:hover { color: var(--primary-text); }
+
+        .toc a::before {
+            content: "→ ";
+            color: var(--primary-text);
+        }
+
+        section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.35rem 1.5rem;
+            margin-bottom: 1.1rem;
+        }
+
+        section h2 {
+            font-size: 1.12rem;
+            margin-bottom: 0.65rem;
+            letter-spacing: -0.2px;
+        }
+
+        section h2 .num {
+            display: inline-block;
+            min-width: 26px;
+            height: 26px;
+            line-height: 26px;
+            text-align: center;
+            background: var(--primary-light);
+            color: var(--primary-text);
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-right: 0.45rem;
+            vertical-align: 1px;
+        }
+
+        section p { margin-bottom: 0.55rem; color: var(--text); }
+
+        section p:last-child { margin-bottom: 0; }
+
+        ul { margin: 0.35rem 0 0.6rem 1.2rem; }
+
+        li { margin-bottom: 0.25rem; }
+
+        .tag {
+            display: inline-block;
+            padding: 0.05rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            background: var(--bg);
+        }
+
+        .tag.ok { color: var(--success); border-color: rgba(16, 185, 129, 0.4); }
+        .tag.warn { color: var(--danger); border-color: rgba(226, 0, 26, 0.4); }
+        .tag.info { color: var(--calendar); border-color: rgba(53, 135, 234, 0.4); }
+        .tag.orange { color: var(--primary-text); border-color: rgba(255, 221, 0, 0.4); }
+
+        .hint {
+            background: var(--primary-light);
+            border-left: 3px solid var(--primary);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.9rem;
+            margin-top: 0.6rem;
+        }
+
+        footer {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border);
+            margin-top: 1.5rem;
+        }
+
+        footer a { color: var(--primary-text); text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 640px) {
+            .toc { columns: 1; }
+            section { padding: 1.1rem 1rem; }
+            header h1 { font-size: 1.35rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <div>
+                <h1>Instrukcja panelu <span>RoweryExpert</span></h1>
+                <p>Krótki przewodnik po obsłudze zgłoszeń serwisowych — krok po kroku.</p>
+            </div>
+            <a class="back-btn" href="serwis.php">← Wróć do panelu</a>
+        </header>
+
+        <nav class="toc">
+            <a href="#logowanie">Logowanie</a>
+            <a href="#przyjecie">Przyjęcie roweru</a>
+            <a href="#statusy">Statusy zgłoszeń</a>
+            <a href="#mobile">Zgłoszenia z telefonu</a>
+            <a href="#lista">Lista, filtry i wyszukiwanie</a>
+            <a href="#skaner">Skaner kodu QR</a>
+            <a href="#numer">Numer serwisowy i naklejka QR</a>
+            <a href="#karta">Karta zgłoszenia (podgląd)</a>
+            <a href="#edycja">Edycja i zdjęcia</a>
+            <a href="#kalendarz">Kalendarz w panelu</a>
+            <a href="#kalendarz-google">Kalendarz Google i druk</a>
+            <a href="#wydruk">Wydruk potwierdzenia</a>
+            <a href="#kosz">Kosz</a>
+            <a href="#ustawienia">Ustawienia</a>
+        </nav>
+
+        <section id="logowanie">
+            <h2><span class="num">1</span>Logowanie</h2>
+            <p>Panel loguje się jednym hasłem — wystarczy wpisać je raz dziennie
+            (sesja działa do końca dnia). Przy wygaśnięciu strona sama poprosi o ponowne zalogowanie.</p>
+        </section>
+
+        <section id="przyjecie">
+            <h2><span class="num">2</span>Przyjęcie roweru</h2>
+            <p>Formularz „Przyjmij nowy rower” (lewa kolumna) to punkt startowy pracy:</p>
+            <ul>
+                <li><strong>Nazwa roweru</strong> — np. „Kross Hexagon”, wpisywana ręcznie.</li>
+                <li><strong>Data przyjęcia</strong> i <strong>planowany odbiór</strong> — termin odbioru widać potem na liście i w kalendarzu.</li>
+                <li><strong>Telefon klienta</strong> — formatowanie dzieje się samo (9 cyfr minimum).</li>
+                <li><strong>Opis usterki</strong> — co klient zgłasza.</li>
+                <li><strong>Zdjęcia</strong> — na komputerze można od razu dołączyć zdjęcia.</li>
+            </ul>
+            <p>
+                <span class="tag orange">Zapisz, Drukuj i Dodaj do Kalendarza</span>
+                — zapis w bazie + wydruk potwierdzenia + dodanie terminu do Kalendarza Google (PC).<br>
+                <span class="tag info">Zapisz tylko w bazie</span>
+                — szybkie zapisanie bez druku i kalendarza (na telefonie).
+            </p>
+        </section>
+
+        <section id="statusy">
+            <h2><span class="num">3</span>Statusy zgłoszeń</h2>
+            <p>Każde zgłoszenie przechodzi przez trzy statusy — zmienia się je <strong>klikając odznakę na karcie</strong>:</p>
+            <ul>
+                <li><span class="tag orange">W serwisie</span> — rower czeka na naprawę,</li>
+                <li><span class="tag ok">Gotowy</span> — gotowy do odbioru,</li>
+                <li><span class="tag">Odebrany</span> — klient zabrał rower.</li>
+            </ul>
+            <p>Najszybciej rower wydaje się z <a href="#karta">karty podglądu</a> przyciskiem „Wydaj rower”.</p>
+        </section>
+
+        <section id="mobile">
+            <h2><span class="num">4</span>Zgłoszenia z telefonu</h2>
+            <p>Zgłoszenie dodane z telefonu jest do czasu <strong>potwierdzenia zamazane</strong> na liście —
+            to zabezpieczenie przed pomyłkami przy szybkim wpisywaniu „z drogi”.</p>
+            <p>Po zapisie z telefonu od razu pojawia się <strong>pełnoekranowy monit</strong>
+            z informacją, że zgłoszenie wymaga potwierdzenia na komputerze (gdy były zdjęcia,
+            monit podaje też ich liczbę). Zamyka się go przyciskiem <span class="tag">OK</span>.</p>
+            <p>Na komputerze klik <span class="tag ok">Potwierdź</span> odblokowuje zgłoszenie
+            i od razu uruchamia kalendarz + wydruk potwierdzenia dla klienta.</p>
+        </section>
+
+        <section id="lista">
+            <h2><span class="num">5</span>Lista, filtry i wyszukiwanie</h2>
+            <p><strong>Kafle podsumowań</strong> nad listą pokazują na żywo: ile rowerów jest
+            w serwisie, gotowych do odbioru, po terminie oraz ile odbiorów przypada dziś
+            i jutro — <strong>kliknięcie kafla od razu włącza odpowiedni widok</strong>
+            (podświetlony kafel = aktywny filtr). To główny sposób segregacji zgłoszeń.</p>
+            <p>Pod kaflami zostały trzy przyciski filtrów:</p>
+            <ul>
+                <li><strong>Wszystkie</strong> — pełna lista zgłoszeń,</li>
+                <li><strong>Odebrane</strong> — historia rowerów oddanych klientom,</li>
+                <li><strong>Kosz</strong> — usunięte zgłoszenia z licznikiem (patrz <a href="#kosz">Kosz</a>).</li>
+            </ul>
+            <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą): termin odbioru
+            (najbliższy/odległy), data przyjęcia (najnowsze/najstarsze), nazwa roweru lub status —
+            domyślnie najbliższe terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
+            <p>Pole wyszukiwania szuka po <strong>nazwie roweru, telefonie, opisie usterki,
+            numerze serwisowym i wykonanych czynnościach</strong> — wystarczy wpisać fragment,
+            np. <code>RO-2026</code> albo ostatnie 4 cyfry telefonu.</p>
+            <p><strong>Na telefonie</strong> lista, kafle podsumowań, filtry i sortowanie są
+            ukryte — telefon służy do przyjęcia i wydania roweru. Wyszukiwanie wymaga
+            <strong>min. 4 znaków numeru serwisowego</strong> (np. ostatnie cyfry
+            <code>RO-2026-0042</code>) i pokazuje <strong>tylko to jedno zgłoszenie</strong> —
+            przy kilku dopasowaniach pojawia się prośba o wpisanie więcej cyfr,
+            przy braku — komunikat. Skan QR wpisuje cały numer i od razu otwiera kartę.</p>
+        </section>
+
+        <section id="skaner">
+            <h2><span class="num">6</span>Skaner kodu QR (telefon)</h2>
+            <p>Obok pola wyszukiwania na telefonie jest <strong>ikonka aparatu</strong>:
+            klik ją, skieruj obiektyw na naklejkę z kodem QR na rowerze, a panel sam
+            wpisze numer do wyszukiwarki i <strong>otworzy kartę zgłoszenia</strong>.</p>
+            <div class="hint">Skaner działa przez HTTPS i wymaga zgody na kamerę.
+            Jeśli aparat nie wystartuje (np. zablokowany CDN z biblioteką skanera),
+            wystarczy przepisać numer ręcznie — tak samo się znajdzie.</div>
+        </section>
+
+        <section id="numer">
+            <h2><span class="num">7</span>Numer serwisowy i naklejka QR</h2>
+            <p>Każde zgłoszenie dostaje automatycznie numer w formacie <strong>RO-ROK-ID</strong>
+            (np. <code>RO-2026-0042</code>) — widać go na karcie, na wydruku i w karcie podglądu.</p>
+            <p>Na wydruku (egzemplarz serwisu) jest też <strong>kwadratowy kod QR z tym numerem</strong> —
+            wytnij go i naklej na ramę roweru, żeby potem zeskanować go telefonem i od razu otworzyć zgłoszenie.</p>
+        </section>
+
+        <section id="karta">
+            <h2><span class="num">8</span>Karta zgłoszenia (podgląd)</h2>
+            <p>Otwiera się po kliknięciu wpisu w <a href="#kalendarz">kalendarzu</a>, po
+            <a href="#skaner">zeskanowaniu kodu QR</a> albo po wpisaniu czegokolwiek
+            w wyszukiwarkę na telefonie. To widok <strong>tylko do odczytu</strong>:
+            numer serwisowy, rower, status, daty, klikalny telefon, opis usterki i wykonane czynności.
+            Zgłoszenie z telefonu pokaże tu też info, że wymaga potwierdzenia na komputerze.</p>
+            <p>Na dole jest przycisk <span class="tag ok">Wydaj rower</span> — jednym kliknięciem
+            zmienia status na „Odebrany” (po wydaniu przycisk zmienia się w „Rower już wydany”
+            i gaśnie).</p>
+        </section>
+
+        <section id="edycja">
+            <h2><span class="num">9</span>Edycja i zdjęcia</h2>
+            <p>Przycisk <strong>Edytuj</strong> na karcie otwiera formularz z danymi zgłoszenia
+            — nazwa, daty, telefon, opis usterki oraz pole <strong>„Wykonane czynności”</strong>
+            (notatka serwisowa, widoczna na karcie i na wydruku).</p>
+            <p>Przycisk <strong>Zdjęcia</strong> pokazuje podgląd wszystkich fotografii —
+            z tego poziomu dodasz kolejne lub usuniesz zbędne.</p>
+        </section>
+
+        <section id="kalendarz">
+            <h2><span class="num">10</span>Kalendarz w panelu</h2>
+            <p>Ikona kalendarza w nagłówku otwiera <strong>widok miesięczny</strong> terminów:</p>
+            <ul>
+                <li>chipy pokazują zgłoszenia od przyjęcia do planowanego odbioru — <strong>każdego dnia z tego okresu</strong> (np. 25 → 27 widnieje na 25, 26 i 27),</li>
+                <li>żółty chip = w serwisie, zielony = gotowy do odbioru, czerwona ramka = po terminie, <strong>szary = już odebrany</strong>,</li>
+                <li>przyciski <strong>‹ ›</strong> przeskakują po miesiącach, dzisiejsza data jest podświetlona,</li>
+                <li><strong>kliknięcie chipu otwiera kartę zgłoszenia</strong> — można od razu wydać rower,</li>
+                <li><strong>„+N więcej”</strong> — gdy w dniu nie mieści się wszystko, najedź kursorem (na telefonie dotknij) na ten napis; wyskakuje <strong>dymek z pełną listą zgłoszeń danego dnia</strong> ze statusami i terminami, a kliknięcie pozycji otwiera jej kartę.</li>
+            </ul>
+        </section>
+
+        <section id="kalendarz-google">
+            <h2><span class="num">11</span>Kalendarz Google i druk</h2>
+            <p>Na każdej karcie (na komputerze) są przyciski:</p>
+            <ul>
+                <li><span class="tag info">Kalendarz</span> — dodaje termin odbioru do Twojego Kalendarza Google (z przypomnieniem),</li>
+                <li><span class="tag">Drukuj</span> — drukuje potwierdzenie przyjęcia.</li>
+            </ul>
+        </section>
+
+        <section id="wydruk">
+            <h2><span class="num">12</span>Wydruk potwierdzenia</h2>
+            <p>Jedna strona A4 (poziomo), dwie kolumny do rozdania:</p>
+            <ul>
+                <li><strong>lewa — egzemplarz dla klienta</strong>: dane roweru, telefon, numer serwisowy, opis usterki, podpis klienta i pieczątka serwisu (umieszczone tuż nad kreską z adresem) oraz QR z linkiem do oceny w Google,</li>
+                <li><strong>prawa — egzemplarz serwisu</strong>: te same dane + duży blok
+                <strong>„Wykonane czynności”</strong> wypełniający całą wolną wysokość (wpisywane ręcznie przy odbiorze)
+                oraz QR z numerem serwisowym na samym dole do naklejenia na rower.</li>
+            </ul>
+        </section>
+
+        <section id="kosz">
+            <h2><span class="num">13</span>Kosz</h2>
+            <p>Przycisk kosza na karcie <strong>nie kasuje od razu</strong> — zgłoszenie trafia do kosza
+            (filtr <strong>Kosz</strong> z licznikiem). Tam dostępne są dwie akcje:</p>
+            <ul>
+                <li><span class="tag info">Przywróć</span> — wraca na listę główną,</li>
+                <li><span class="tag warn">Usuń trwale</span> — kasuje zgłoszenie razem ze zdjęciami (nieodwracalne).</li>
+            </ul>
+        </section>
+
+        <section id="ustawienia">
+            <h2><span class="num">14</span>Ustawienia</h2>
+            <p>Ikona zębatki w nagłówku to ustawienia panelu:</p>
+            <ul>
+                <li><strong>Ogólne</strong> — statystyki zdjęć w bazie oraz zmiana hasła dostępowego,</li>
+                <li><strong>Dodaj usługi</strong> — własna lista usług serwisu (dodawanie i usuwanie pozycji).</li>
+            </ul>
+            <p>Obok jest przełącznik motywu (jasny/ciemny) oraz wylogowanie.</p>
+        </section>
+
+        <footer>
+            <p>RoweryExpert — panel serwisowy. <a href="serwis.php">Wróć do panelu</a></p>
+        </footer>
+    </div>
+</body>
+</html>
