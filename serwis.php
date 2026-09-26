@@ -2112,6 +2112,17 @@ $authenticated = auth_is_authenticated();
             color: var(--text-secondary);
         }
 
+        /* Lista przełączników modułów — box o stałej wysokości ze scrolliem
+           (jak .service-list przy Dodaj usługi), żeby10 modułów mieściło           się na jednym ekranie */
+        .mod-list {
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .mod-list .mod-row:last-child {
+            margin-bottom: 0;
+        }
+
         .mod-row:has(input:checked) {
             border-color: var(--primary);
         }
@@ -2568,7 +2579,7 @@ $authenticated = auth_is_authenticated();
         }
     </style>
 </head>
-<body class="light-theme"<?= ($authenticated && isset($_GET['powitanie'])) ? ' data-powitanie="1"' : '' ?>>
+<body class="dark-theme"<?= ($authenticated && isset($_GET['powitanie'])) ? ' data-powitanie="1"' : '' ?>>
 
     <?php if (!$authenticated): ?>
     <!-- LOGIN SCREEN (hasło podawane raz dziennie) -->
@@ -2699,7 +2710,7 @@ $authenticated = auth_is_authenticated();
                         </div>
 
                         <div class="form-group" id="photo-upload-group">
-                            <label>Zdjęcia (opcjonalnie, maks. 10 MB za zdjęcie)</label>
+                            <label>Zdjęcia (opcjonalnie, maks. 10 MB za zdjęcie, łącznie do 100 MB)</label>
                             <div class="photo-sources">
                                 <label class="photo-source-btn" for="photos-input">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 18px; height: 18px;">
@@ -2881,46 +2892,48 @@ $authenticated = auth_is_authenticated();
                     a ich funkcje zablokują się także po stronie serwera.
                     Zmiana zapisuje się natychmiast.
                 </p>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="kalendarz" checked>
-                    <span><strong>Kalendarz</strong><br><small>Widok kalendarza, terminy odbioru, kafle „Odbiory" i linki do Kalendarza Google</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="zdjecia" checked>
-                    <span><strong>Zdjęcia</strong><br><small>Wgrywanie i podgląd zdjęć z telefonu oraz miniatury na liście</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="skaner" checked>
-                    <span><strong>Skaner QR</strong><br><small>Przycisk skanera kodów QR przy wyszukiwarce</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="uslugi" checked>
-                    <span><strong>Katalog usług</strong><br><small>Checkboxy usług w formularzu i zakładka „Dodaj usługi"</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="druk" checked>
-                    <span><strong>Drukowanie</strong><br><small>Wydruk potwierdzenia przyjęcia dla klienta</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="kosz" checked>
-                    <span><strong>Kosz</strong><br><small>Filtr Kosz, przenoszenie do kosza i przywracanie zgłoszeń</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="kolorystyka" checked>
-                    <span><strong>Kolorystyka</strong><br><small>Paleta koloru akcentu w nagłówku; po wyłączeniu logo i faviconka wracają do domyślnego żółtego</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="powitanie" checked>
-                    <span><strong>Powitanie</strong><br><small>Okno „Podsumowanie dnia” po zalogowaniu (wymaga modułu Kalendarza)</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="karta_wydania" checked>
-                    <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania Roweru przy wydaniu; sam przycisk „Wydaj rower” zostaje</small></span>
-                </label>
-                <label class="mod-row">
-                    <input type="checkbox" class="mod-toggle" data-mod="wykonane" checked>
-                    <span><strong>Wykonane czynności</strong><br><small>Checkboxy w karcie zgłoszenia i ☑ na wydruku Karty Wydania; przyjęcie i katalog usług bez zmian</small></span>
-                </label>
+                <div class="mod-list">
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="kalendarz" checked>
+                        <span><strong>Kalendarz</strong><br><small>Widok kalendarza, terminy odbioru, kafle „Odbiory" i linki do Kalendarza Google</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="zdjecia" checked>
+                        <span><strong>Zdjęcia</strong><br><small>Wgrywanie i podgląd zdjęć z telefonu oraz miniatury na liście</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="skaner" checked>
+                        <span><strong>Skaner QR</strong><br><small>Przycisk skanera kodów QR przy wyszukiwarce</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="uslugi" checked>
+                        <span><strong>Katalog usług</strong><br><small>Checkboxy usług w formularzu i zakładka „Dodaj usługi"</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="druk" checked>
+                        <span><strong>Drukowanie</strong><br><small>Wydruk potwierdzenia przyjęcia dla klienta</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="kosz" checked>
+                        <span><strong>Kosz</strong><br><small>Filtr Kosz, przenoszenie do kosza i przywracanie zgłoszeń</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="kolorystyka" checked>
+                        <span><strong>Kolorystyka</strong><br><small>Paleta koloru akcentu w nagłówku; po wyłączeniu logo i faviconka wracają do domyślnego żółtego</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="powitanie" checked>
+                        <span><strong>Powitanie</strong><br><small>Okno „Podsumowanie dnia” po zalogowaniu (wymaga modułu Kalendarza)</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="karta_wydania" checked>
+                        <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania Roweru przy wydaniu; sam przycisk „Wydaj rower” zostaje</small></span>
+                    </label>
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="wykonane" checked>
+                        <span><strong>Wykonane czynności</strong><br><small>Checkboxy w karcie zgłoszenia i ☑ na wydruku Karty Wydania; przyjęcie i katalog usług bez zmian</small></span>
+                    </label>
+                </div>
                 <p class="settings-hint" id="moduly-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>
         </div>
@@ -3621,12 +3634,12 @@ $authenticated = auth_is_authenticated();
 
         // --- INICJALIZACJA STRONY ---
         window.addEventListener('DOMContentLoaded', async () => {
-            if (!IS_AUTHENTICATED) return; // brak sesji - pokazano ekran logowania
-
-            // Ustawienia motywu: zapisany wybór, w przeciwnym razie systemowy
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const savedTheme = localStorage.getItem('theme') || (prefersDark ? 'dark-theme' : 'light-theme');
+            // Motyw: domyślnie ciemny od pierwszego renderu (także ekran
+            // logowania); zapisany wybór w localStorage ma pierwszeństwo.
+            const savedTheme = localStorage.getItem('theme') || 'dark-theme';
             setTheme(savedTheme);
+
+            if (!IS_AUTHENTICATED) return; // brak sesji - pokazano ekran logowania
 
             // Moduły panelu: pobierz flagi z bazy i zastosuj (Ustawienia -> Moduły)
             await loadModules();
@@ -5831,6 +5844,10 @@ $authenticated = auth_is_authenticated();
         }
 
         // STATYSTYKI ZDJĘĆ
+        // Łączny limit pojemności na zdjęcia (MAX_PHOTOS_TOTAL_BYTES z config.php)
+        // — widoczny przy statystykach w Ustawieniach -> Ogólne
+        const FOTO_LIMIT_MB = <?= (int) round(MAX_PHOTOS_TOTAL_BYTES / 1048576) ?>;
+
         async function loadPhotoStats() {
             statsPhotosEl.textContent = '…';
             statsSizeEl.textContent = '…';
@@ -5841,7 +5858,7 @@ $authenticated = auth_is_authenticated();
                 const photos = Number(data.data.photos) || 0;
                 const bytes = Number(data.data.bytes) || 0;
                 statsPhotosEl.textContent = String(photos);
-                statsSizeEl.textContent = formatBytes(bytes);
+                statsSizeEl.textContent = formatBytes(bytes) + ' / ' + FOTO_LIMIT_MB + ' MB';
             } catch (err) {
                 statsPhotosEl.textContent = '—';
                 statsSizeEl.textContent = '—';

@@ -38,7 +38,7 @@ declare(strict_types=1);
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
  --------------------------------------------------------------- */
-const APP_VERSION = '2.11';
+const APP_VERSION = '2.12';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -53,6 +53,7 @@ const DB_PASS = 'UZUPELNIJ';
 const UPLOAD_DIR = __DIR__ . '/uploads/zdjecia';
 const UPLOAD_URL = 'uploads/zdjecia';
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10 MB na zdjęcie
+const MAX_PHOTOS_TOTAL_BYTES = 100 * 1024 * 1024; // 100 MB łącznie na wszystkie zdjęcia
 const MAX_PHOTOS_PER_REQUEST = 20;        // maks. zdjęć w jednym wgraniu (limit serwera max_file_uploads)
 const ALLOWED_PHOTO_MIME = [
     'image/jpeg' => 'jpg',
@@ -499,6 +500,14 @@ function store_photos(int $zgloszenieId, array $files): array
     $uploadedCount = count(array_filter($files['error'] ?? [], static fn($e) => $e !== UPLOAD_ERR_NO_FILE));
     if ($uploadedCount > MAX_PHOTOS_PER_REQUEST) {
         json_fail('Za dużo zdjęć w jednym wgraniu (maks. ' . MAX_PHOTOS_PER_REQUEST . '). Dodaj mniejszą partię.');
+    }
+
+    // Łączny limit pojemności na zdjęcia wszystkich zgłoszeń razem —
+    // sprawdzamy przed pętlą, żeby nie zapisać części partii po przekroczeniu
+    $incoming = array_sum(array_map('intval', $files['size'] ?? []));
+    if (photos_stats()['bytes'] + $incoming > MAX_PHOTOS_TOTAL_BYTES) {
+        json_fail('Osiągnięto limit ' . (int) round(MAX_PHOTOS_TOTAL_BYTES / 1048576)
+            . ' MB na zdjęcia. Usuń część starych zdjęć, żeby dodać nowe.');
     }
 
     foreach ($files['name'] as $i => $originalName) {

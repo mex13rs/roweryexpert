@@ -11,6 +11,28 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.12 — 2026-09-26 (serwis2, serwis)
+
+### Zmienione
+- **Motyw ciemny domyślnie** — od pierwszego renderu strony, także na ekranie
+  logowania (`<body class="dark-theme">` + domyślna wartość `'dark-theme'`
+  w JS). Zapisany wcześniej wybór w localStorage nadal ma pierwszeństwo;
+  preferencja systemowa (`prefers-color-scheme`) już nie decyduje.
+- **Ustawienia → Moduły**: lista przełączników w przewijanym boxie o stałej
+  wysokości240 px (wzór: `.service-list` przy Dodaj usługi) —10 modułów
+  nie rozpycha karty i mieści się na jednym ekranie.
+- Instrukcja: §14 (motyw domyślnie ciemny, lista modułów przewijana),
+  §9 (limit zdjęć), §15 (przewijany box).
+
+### Dodane
+- **Limit pojemności zdjęć:100 MB łącznie** — stała
+  `MAX_PHOTOS_TOTAL_BYTES` w `config.php` (+ `config.example.php`);
+  `store_photos()` przed zapisem sumuje bieżące zużycie (`photos_stats()`)
+  z rozmiarem partii i po przekroczeniu zwraca błąd z komunikatem.
+  Zużycie z limitem widoczne w Ustawieniach → Ogólne („12,4 MB / 100 MB”),
+  etykieta wgrywania zdjęć informuje o limicie.
+- `APP_VERSION` → `2.12`.
+
 ## 2.11 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane —10. moduł: Wykonane czynności
