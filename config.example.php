@@ -38,7 +38,7 @@ declare(strict_types=1);
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
  --------------------------------------------------------------- */
-const APP_VERSION = '2.10';
+const APP_VERSION = '2.11';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -130,7 +130,7 @@ function setting_set(string $klucz, string $wartosc): void
 /** Pelna lista modulow, ktore moga byc wylaczone przez uzytkownika. */
 function moduly_dostepne(): array
 {
-    return ['kalendarz', 'zdjecia', 'skaner', 'uslugi', 'druk', 'kosz', 'kolorystyka', 'powitanie', 'karta_wydania'];
+    return ['kalendarz', 'zdjecia', 'skaner', 'uslugi', 'druk', 'kosz', 'kolorystyka', 'powitanie', 'karta_wydania', 'wykonane'];
 }
 
 /**

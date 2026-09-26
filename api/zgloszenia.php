@@ -147,6 +147,9 @@ try {
 
         if ($action === 'services') {
             // Zapis zaznaczonych checkboxów "Wykonane czynności" z karty zgłoszenia
+            if (!modul('wykonane')) {
+                json_fail('Moduł „Wykonane czynności” jest wyłączony w ustawieniach panelu.', 403);
+            }
             $id = (int) ($_POST['id'] ?? 0);
             if ($id <= 0) {
                 json_fail('Brak identyfikatora zgłoszenia.');

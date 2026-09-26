@@ -316,7 +316,8 @@
             Zaznaczasz je dopiero w chwili, gdy daną pracę wykonasz — zaznaczenie
             zapisuje się samo, a na <a href="#wydruk">Karcie Wydania Roweru</a>
             drukują się jako ☑ tylko zaznaczone pozycje. Po wydaniu roweru (i w koszu)
-            checkboxy zostają tylko do podglądu. Niżej jest aktywne pole
+            checkboxy zostają tylko do podglądu. Cała sekcja (i ☑ na wydruku)
+            zależy od modułu <strong>Wykonane czynności</strong>. Niżej jest aktywne pole
             <strong>„Notatki”</strong> — dopiszesz tam własny tekst, zapisuje się samo
             (to ten sam tekst, co w <a href="#edycja">edycji</a>).
             Zgłoszenie z telefonu pokaże tu też info, że wymaga potwierdzenia na komputerze.</p>
@@ -365,7 +366,7 @@
             <ul>
                 <li><strong>lewa — egzemplarz dla klienta</strong>: dane roweru, telefon, numer serwisowy, opis usterki, na karcie wydania także lista <strong>wykonanych czynności</strong>, podpis klienta i pieczątka serwisu (umieszczone tuż nad kreską z adresem) oraz QR z linkiem do oceny w Google,</li>
                 <li><strong>prawa — egzemplarz serwisu</strong>: te same dane + sekcja
-                <strong>„Wykonane czynności”</strong> z listą usług i zaznaczeniami (tylko na karcie wydania; gdy nic nie zaznaczono — znika)
+                <strong>„Wykonane czynności”</strong> z listą usług i zaznaczeniami (tylko na karcie wydania; gdy nic nie zaznaczono lub moduł Wykonane czynności jest wyłączony — znika)
                 oraz blok <strong>„Notatki”</strong> widoczny wyłącznie po uzupełnieniu
                 i QR z numerem serwisowym na samym dole do naklejenia na rower.</li>
             </ul>
@@ -423,7 +424,10 @@
                     „Podsumowanie dnia” (wymaga modułu Kalendarza, jak dotychczas),</li>
                 <li><strong>Karta wydania</strong> — „Wydaj rower” i status „Odebrany”
                     tylko zmieniają status, bez automatycznego druku karty wydania
-                    (ręcznie z przycisku „Drukuj” karta nadal się drukuje).</li>
+                    (ręcznie z przycisku „Drukuj” karta nadal się drukuje),</li>
+                <li><strong>Wykonane czynności</strong> — chowa checkboxy w karcie
+                    zgłoszenia i sekcję ☑ na wydruku; checkboxy przy przyjęciu
+                    (katalog) działają dalej przy włączonym Katalogu usług.</li>
             </ul>
             <p>Wyłączone moduły są blokowane także po stronie serwera — to nie tylko ukrycie
             przycisków. Rdzeń panelu (logowanie, przyjęcie, lista, wyszukiwanie, wydanie roweru)

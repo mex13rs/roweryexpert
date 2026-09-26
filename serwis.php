@@ -2081,6 +2081,8 @@ $authenticated = auth_is_authenticated();
         body.off-uslugi #tab-btn-uslugi,
         body.off-kolorystyka #palette-btn,
         body.off-kolorystyka #accent-picker,
+        body.off-wykonane #detail-done-label,
+        body.off-wykonane #detail-done-list,
         body.off-kosz .filter-btn[data-filter="trash"] {
             display: none !important;
         }
@@ -2915,6 +2917,10 @@ $authenticated = auth_is_authenticated();
                     <input type="checkbox" class="mod-toggle" data-mod="karta_wydania" checked>
                     <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania Roweru przy wydaniu; sam przycisk „Wydaj rower” zostaje</small></span>
                 </label>
+                <label class="mod-row">
+                    <input type="checkbox" class="mod-toggle" data-mod="wykonane" checked>
+                    <span><strong>Wykonane czynności</strong><br><small>Checkboxy w karcie zgłoszenia i ☑ na wydruku Karty Wydania; przyjęcie i katalog usług bez zmian</small></span>
+                </label>
                 <p class="settings-hint" id="moduly-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>
         </div>
@@ -3369,7 +3375,7 @@ $authenticated = auth_is_authenticated();
         // --- MODUŁY PANELU (Ustawienia -> Moduły) ---
         // Użytkownik może wyłączyć nieużywane opcje; flagi żyją w bazie,
         // więc PC i telefon widzą to samo. Domyślnie wszystko włączone.
-        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true, kolorystyka: true, powitanie: true, karta_wydania: true };
+        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true, kolorystyka: true, powitanie: true, karta_wydania: true, wykonane: true };
 
         function modulOn(nazwa) {
             return MODULY[nazwa] !== false;
@@ -3954,8 +3960,8 @@ $authenticated = auth_is_authenticated();
             document.getElementById('print-service-no-service').textContent = item.serviceNo || '—';
 
             // Wykonane czynności: na karcie wydania lista zaznaczonych checkboxów (☑),
-            // gdy nic nie zaznaczono — sekcja na wydruku się nie pojawia
-            const doneList = (modulOn('uslugi') && isIssue) ? getDoneServices(item) : [];
+            // gdy nic nie zaznaczono lub moduł wyłączony — sekcja się nie pojawia
+            const doneList = (modulOn('wykonane') && isIssue) ? getDoneServices(item) : [];
             const doneHtml = doneList.map(n => '☑ ' + escapeHtml(n)).join('<br>');
             const showDone = doneList.length > 0;
             document.getElementById('print-done-row-client').hidden = !showDone;
@@ -4885,10 +4891,10 @@ $authenticated = auth_is_authenticated();
             // Wykonane czynności: wyłącznie usługi z pierwotnego zgłoszenia,
             // jako puste checkboxy — zaznaczasz je w chwili wykonania pracy;
             // zaznaczenie zapisuje się samo. Po wydaniu/z kosza tylko podgląd.
-            // Brak usług z przyjęcia — wiersz znika.
+            // Brak usług z przyjęcia lub wyłączony moduł — wiersz znika.
             const doneListEl = document.getElementById('detail-done-list');
             const planned = getPlannedServices(item);
-            const showDone = modulOn('uslugi') && planned.length > 0;
+            const showDone = modulOn('wykonane') && planned.length > 0;
             document.getElementById('detail-done-label').hidden = !showDone;
             doneListEl.hidden = !showDone;
             doneListEl.textContent = '';
@@ -5662,7 +5668,8 @@ $authenticated = auth_is_authenticated();
         const MODUL_NAZWA = {
             kalendarz: 'Kalendarz', zdjecia: 'Zdjęcia', skaner: 'Skaner QR',
             uslugi: 'Katalog usług', druk: 'Drukowanie', kosz: 'Kosz',
-            kolorystyka: 'Kolorystyka', powitanie: 'Powitanie', karta_wydania: 'Karta wydania'
+            kolorystyka: 'Kolorystyka', powitanie: 'Powitanie', karta_wydania: 'Karta wydania',
+            wykonane: 'Wykonane czynności'
         };
         const modToggles = document.querySelectorAll('.mod-toggle');
         const modulyHint = document.getElementById('moduly-hint');

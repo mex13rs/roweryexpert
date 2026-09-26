@@ -11,6 +11,26 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.11 — 2026-09-26 (serwis2, serwis)
+
+### Dodane —10. moduł: Wykonane czynności
+- **Wykonane czynności** — przełącznik w Ustawieniach → Moduły (domyślnie
+  włączony): po wyłączeniu znika sekcja „Wykonane czynności” z karty
+  zgłoszenia (`#detail-done-label` + `#detail-done-list`, także CSS
+  `body.off-wykonane`) i sekcja ☑ z obu egzemplarzy wydruku, a API
+  `action=services` zwraca403. Checkboxy przy przyjęciu i zakładka
+  „Dodaj usługi” zostają przy module Katalog usług — moduły są rozdzielone
+  (wcześniej sekcja karty była „przyklejona” do Katalogu usług).
+- Dane nietknięte: `services_done` w bazie zostaje, po włączeniu modułu
+  wszystko wraca (jak przy każdym module).
+
+### Zmienione
+- `moduly_dostepne()` z9 na10 kluczy (`config.php` + `config.example.php`);
+  `APP_VERSION` → `2.11`.
+- Instrukcja: §15 (lista modułów), §8 (sekcja karty), §11 (wydruk).
+
+---
+
 ## 2.10 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane —3 nowe przełączniki w Ustawieniach → Moduły (domyślnie włączone)
