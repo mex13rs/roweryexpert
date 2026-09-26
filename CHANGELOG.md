@@ -11,6 +11,18 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.13 — 2026-09-26 (serwis2, serwis)
+
+### Dodane
+- **Ostrzeżenie przy80% limitu zdjęć** — próg `FOTO_WARN_PCT =80`:
+  - po udanym wgrywaniu (modal Zdjęć oraz przyjęcie z plikami) komunikat
+    toast „Zdjęcia: zużytoX% limitu100 MB — zostałoY MB. Usuń część
+    starych zdjęć.” (czerwony, tylko gdy próg przekroczony);
+  - w statystykach (Ustawienia → Ogólne) czerwony dopisek `#stats-warn`
+    z tym samym tekstem i podświetlona wartość „X MB / 100 MB”;
+  - poniżej progu statystyki bez zmian (jak2.12).
+- `APP_VERSION` → `2.13`.
+
 ## 2.12 — 2026-09-26 (serwis2, serwis)
 
 ### Zmienione

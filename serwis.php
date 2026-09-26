@@ -2849,6 +2849,7 @@ $authenticated = auth_is_authenticated();
                             <strong id="stats-size" style="color: var(--primary-text);">…</strong>
                         </p>
                     </div>
+                    <p id="stats-warn" hidden style="margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--danger); font-weight: 600;"></p>
                     <button class="btn btn-secondary" id="refresh-stats-btn" style="margin-top: 0.75rem;">Odśwież statystyki</button>
                 </div>
 
@@ -3570,6 +3571,7 @@ $authenticated = auth_is_authenticated();
         const settingsModal = document.getElementById('settings-modal');
         const statsPhotosEl = document.getElementById('stats-photos');
         const statsSizeEl = document.getElementById('stats-size');
+        const statsWarnEl = document.getElementById('stats-warn');
         const refreshStatsBtn = document.getElementById('refresh-stats-btn');
         const currentPasswordInput = document.getElementById('current-password');
         const newPasswordInput = document.getElementById('new-password');
@@ -3853,6 +3855,12 @@ $authenticated = auth_is_authenticated();
             }
             db.unshift(data.data);
             renderServicesList();
+            if (files && files.length) {
+                // Po wgrywaniu zdjęć na przyjęciu: komunikat o progu80% limitu
+                const st = await photoStatsNow();
+                const warn = st ? fotoWarnText(st.bytes) : null;
+                if (warn) showToast('⚠ ' + warn, 'error');
+            }
             return data.data;
         }
 
@@ -5471,7 +5479,16 @@ $authenticated = auth_is_authenticated();
                     renderPhotosGrid(item.photos);
                     renderServicesList();
                 }
-                showToast(`Dodano zdjęć: ${data.data.length}`);
+                // Po wgrywaniu: komunikat; gdy próg80% przekroczony — jeden
+                // złożony toast z procentem i zapasem (nowy toast kasuje stary)
+                const st = await photoStatsNow();
+                const warn = st ? fotoWarnText(st.bytes) : null;
+                loadPhotoStats(); // odśwież info w statystykach
+                if (warn) {
+                    showToast(`Dodano zdjęć: ${data.data.length}. ⚠ ${warn}`, 'error');
+                } else {
+                    showToast(`Dodano zdjęć: ${data.data.length}`);
+                }
             } catch (err) {
                 showToast(err.message, 'error');
             } finally {
@@ -5511,6 +5528,7 @@ $authenticated = auth_is_authenticated();
                     renderPhotosGrid(item.photos);
                 }
                 renderServicesList();
+                loadPhotoStats(); // zużycie spadło — odśwież ostrzeżenie80%
                 showToast('Usunięto zdjęcie.', 'info');
             } catch (err) {
                 showToast(err.message, 'error');
@@ -5847,6 +5865,32 @@ $authenticated = auth_is_authenticated();
         // Łączny limit pojemności na zdjęcia (MAX_PHOTOS_TOTAL_BYTES z config.php)
         // — widoczny przy statystykach w Ustawieniach -> Ogólne
         const FOTO_LIMIT_MB = <?= (int) round(MAX_PHOTOS_TOTAL_BYTES / 1048576) ?>;
+        // Próg ostrzegawczy: od >=80% limitu komunikat po wgrywaniu
+        // i czerwone info w statystykach
+        const FOTO_WARN_PCT = 80;
+
+        // Tekst ostrzeżenia o zbliżaniu się do limitu (null = poniżej progu)
+        function fotoWarnText(bytes) {
+            if (!FOTO_LIMIT_MB) return null;
+            const limitBytes = FOTO_LIMIT_MB * 1024 * 1024;
+            const pct = Math.round(bytes / limitBytes * 100);
+            if (pct < FOTO_WARN_PCT) return null;
+            return 'Zdjęcia: zużyto ' + pct + '% limitu ' + FOTO_LIMIT_MB
+                + ' MB — zostało ' + formatBytes(Math.max(0, limitBytes - bytes))
+                + '. Usuń część starych zdjęć.';
+        }
+
+        // Bieżące zużycie prosto z API (do ostrzeżeń po wgrywaniu)
+        async function photoStatsNow() {
+            try {
+                const res = await apiFetch(API_KONTO);
+                const data = await res.json();
+                if (!data.success) return null;
+                return { photos: Number(data.data.photos) || 0, bytes: Number(data.data.bytes) || 0 };
+            } catch (e) {
+                return null;
+            }
+        }
 
         async function loadPhotoStats() {
             statsPhotosEl.textContent = '…';
@@ -5859,9 +5903,15 @@ $authenticated = auth_is_authenticated();
                 const bytes = Number(data.data.bytes) || 0;
                 statsPhotosEl.textContent = String(photos);
                 statsSizeEl.textContent = formatBytes(bytes) + ' / ' + FOTO_LIMIT_MB + ' MB';
+                // Info o zużyciu >= progu ostrzegawczego (80% limitu)
+                const warn = fotoWarnText(bytes);
+                statsWarnEl.hidden = !warn;
+                statsWarnEl.textContent = warn ? '⚠ ' + warn : '';
+                statsSizeEl.style.color = warn ? 'var(--danger)' : '';
             } catch (err) {
                 statsPhotosEl.textContent = '—';
                 statsSizeEl.textContent = '—';
+                statsWarnEl.hidden = true;
                 showToast('Nie udało się pobrać statystyk.', 'error');
             }
         }
