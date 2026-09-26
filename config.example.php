@@ -35,8 +35,9 @@ declare(strict_types=1);
  |   2.3  -> moduly: uzytkownik wylacza opcje w Ustawieniach (kalendarz, zdjecia, skaner, uslugi, druk, kosz)
  |   2.4  -> akcent: przełącznik koloru akcentu przy motywie (zolty ME, zielony, czerwony, niebieski, pomaranczowy)
  |   2.5  -> akcent: rower w logo i faviconka tez zmieniaja kolor razem z akcentem (warianty logo-*/favicon-*.png)
+ |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  --------------------------------------------------------------- */
-const APP_VERSION = '2.5';
+const APP_VERSION = '2.6';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne

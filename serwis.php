@@ -12,7 +12,8 @@ header('Expires: 0');
 // Obsługa logowania / wylogowania
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
     if (auth_login((string) ($_POST['password'] ?? ''))) {
-        header('Location: ' . strtok($_SERVER['REQUEST_URI'] ?? '/serwis.php', '?'));
+        // ?powitanie=1 — po zalogowaniu pokazujemy okno podsumowania dnia
+        header('Location: ' . strtok($_SERVER['REQUEST_URI'] ?? '/serwis.php', '?') . '?powitanie=1');
         exit;
     }
     $loginError = 'Nieprawidłowe hasło.';
@@ -1379,6 +1380,33 @@ $authenticated = auth_is_authenticated();
             color: var(--primary-text);
         }
 
+        /* Powitanie po zalogowaniu — liczniki odbiorów (dziś / jutro) */
+        .welcome-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .welcome-stat {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem 0.75rem;
+            text-align: center;
+        }
+
+        .welcome-stat strong {
+            display: block;
+            font-size: 1.9rem;
+            line-height: 1.1;
+            color: var(--primary-text);
+        }
+
+        .welcome-stat span {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
         /* Modal Settings */
         .modal-overlay {
             position: fixed;
@@ -2515,7 +2543,7 @@ $authenticated = auth_is_authenticated();
         }
     </style>
 </head>
-<body class="light-theme">
+<body class="light-theme"<?= ($authenticated && isset($_GET['powitanie'])) ? ' data-powitanie="1"' : '' ?>>
 
     <?php if (!$authenticated): ?>
     <!-- LOGIN SCREEN (hasło podawane raz dziennie) -->
@@ -2876,6 +2904,39 @@ $authenticated = auth_is_authenticated();
                 <button class="btn btn-secondary" id="confirm-modal-cancel" style="flex: 1 1 0; min-width: 0;">Anuluj</button>
                 <button class="btn btn-danger" id="confirm-modal-ok" style="flex: 1 1 0; min-width: 0;">Usuń</button>
             </div>
+        </div>
+    </div>
+
+    <!-- POWITANIE PO ZALOGOWANIU — ile odbiorów dziś / jutro -->
+    <div class="modal-overlay" id="welcome-modal">
+        <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.15rem; display: flex; align-items: center; gap: 0.6rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px; color: var(--primary-text); flex: none;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 8.25h18M4.5 6.75h15A2.25 2.25 0 0 1 21 8.25v11.25a2.25 2.25 0 0 1-2.25 2.25h-15A2.25 2.25 0 0 1 3 19.5v-11.25a2.25 2.25 0 0 1 2.25-2.25Z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11.25h.008v.008h-.008v-.008Zm3.75 0h.008v.008h-.008v-.008Zm3.75 0h.008v.008h-.008v-.008Zm-7.5 3.75h.008v.008h-.008v-.008Zm3.75 0h.008v.008h-.008v-.008Zm3.75 0h.008v.008h-.008v-.008Z" />
+                    </svg>
+                    <span>Podsumowanie dnia</span>
+                </h3>
+                <button class="modal-close" id="welcome-modal-close">&times;</button>
+            </div>
+
+            <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+                Rowery zaplanowane do odbioru:
+            </p>
+
+            <div class="welcome-grid">
+                <div class="welcome-stat">
+                    <strong id="welcome-today">–</strong><span>na dziś</span>
+                </div>
+                <div class="welcome-stat">
+                    <strong id="welcome-tomorrow">–</strong><span>na jutro</span>
+                </div>
+            </div>
+
+            <p id="welcome-overdue" hidden style="color: var(--danger); font-size: 0.9rem; font-weight: 600; margin-top: 0.85rem;"></p>
+
+            <button class="btn btn-primary" id="welcome-modal-ok" style="width: 100%; margin-top: 1.25rem;">OK</button>
         </div>
     </div>
 
@@ -3528,6 +3589,14 @@ $authenticated = auth_is_authenticated();
             }
 
             renderServicesList();
+
+            // Powitanie po zalogowaniu (?powitanie=1): podsumowanie dnia.
+            // Parametr czyścimy z adresu, żeby odświeżenie (F5) nie pokazywało
+            // okna ponownie.
+            if (document.body.dataset.powitanie) {
+                history.replaceState(null, '', location.pathname);
+                if (modulOn('kalendarz')) pokazPowitanie();
+            }
         });
 
         // --- MOTYW (DARK / LIGHT) ---
@@ -4076,6 +4145,34 @@ $authenticated = auth_is_authenticated();
             document.querySelectorAll('.dash-tile').forEach(tile =>
                 tile.classList.toggle('active', tile.dataset.filter === currentFilter));
         }
+
+        // --- POWITANIE PO ZALOGOWANIU ---
+        // Okno „Podsumowanie dnia": ile odbiorów zaplanowanych na dziś i jutro
+        // (te same helpery co kafle dashboardu) + ostrzeżenie „Po terminie",
+        // gdy jakikolwiek termin minął. Pokazywane tylko po zalogowaniu
+        // (flaga ?powitanie=1 z redirectu po udanym logowaniu).
+        function pokazPowitanie() {
+            const set = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = String(val);
+            };
+            set('welcome-today', db.filter(isPlannedToday).length);
+            set('welcome-tomorrow', db.filter(isPlannedTomorrow).length);
+            const poTerminie = db.filter(isOverdue).length;
+            const overEl = document.getElementById('welcome-overdue');
+            if (overEl) {
+                overEl.hidden = poTerminie === 0;
+                overEl.textContent = 'Po terminie: ' + poTerminie;
+            }
+            document.getElementById('welcome-modal').classList.add('active');
+        }
+
+        function zamknijPowitanie() {
+            document.getElementById('welcome-modal').classList.remove('active');
+        }
+
+        document.getElementById('welcome-modal-ok').addEventListener('click', zamknijPowitanie);
+        document.getElementById('welcome-modal-close').addEventListener('click', zamknijPowitanie);
 
         // --- RENDERING LISTY HISTORYCZNEJ ---
         // Wyszukiwanie po tekście (nazwa, telefon, opis, NUMER SERWISOWY, notatki)

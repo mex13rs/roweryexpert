@@ -11,6 +11,22 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.6 — 2026-09-26 (serwis2, serwis)
+
+### Dodane — powitanie po zalogowaniu (podsumowanie dnia)
+- **Po każdym zalogowaniu pokazuje się okno „Podsumowanie dnia"** — ile rowerów
+  jest zaplanowanych **na dziś** i **na jutro** (te same helpery co kafle
+  dashboardu: `isPlannedToday`/`isPlannedTomorrow`), plus ostrzeżenie
+  „Po terminie: N" gdy jakikolwiek termin minął; przycisk **OK** (lub ×)
+  zamyka okno.
+- Mechanizm: udane logowanie → redirect na `?powitanie=1`, flaga w
+  `body data-powitanie`, JS pokazuje okno po wczytaniu zgłoszeń i czyści
+  parametr z adresu (F5 nie powtarza okna).
+- Tylko przy włączonym module **Kalendarza** — przy wyłączonym terminy są
+  ukryte w całym panelu, więc i okno się nie pojawia.
+- Nowe: modal `#welcome-modal`, CSS `.welcome-grid`/`.welcome-stat`.
+- Instrukcja: sekcja1 (Logowanie).
+
 ## 2.5 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane — akcent w logo i faviconce
