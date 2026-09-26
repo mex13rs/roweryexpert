@@ -59,6 +59,8 @@ $authenticated = auth_is_authenticated();
             --primary: #ffdd00; /* Media Expert Yellow */
             --primary-hover: #ecc900;
             --primary-light: rgba(255, 221, 0, 0.16);
+            --primary-ring: rgba(255, 221, 0, 0.2);   /* obwódka focusa */
+            --primary-soft: rgba(255, 221, 0, 0.09);   /* delikatne tlo akcentu */
             --primary-text: #ffdd00; /* zolty akcent tekstowy */
             --success: #10b981;
             --success-hover: #059669;
@@ -90,6 +92,94 @@ $authenticated = auth_is_authenticated();
             --border: var(--border-light);
             --card-lighter: rgba(0, 0, 0, 0.04);
             color-scheme: light;
+        }
+
+        /* --- WARIANTY KOLORU AKCENTU (przycisk palety w nagłówku) ---
+           Domyślnie żółty Media Expert (bez klasy). Wybór inny = klasa
+           body.accent-nazwa nadpisująca tokeny --primary*.
+           Motyw jasny dostaje ciemniejszy wariant tekstu (--primary-text),
+           żeby akcent był czytelny na białym tle. */
+        body.accent-zielony {
+            --primary: #4ade80;
+            --primary-hover: #22c55e;
+            --primary-text: #4ade80;
+            --primary-light: rgba(74, 222, 128, 0.16);
+            --primary-ring: rgba(74, 222, 128, 0.2);
+            --primary-soft: rgba(74, 222, 128, 0.09);
+        }
+
+        body.accent-zielony.light-theme { --primary-text: #15803d; }
+
+        body.accent-czerwony {
+            --primary: #f87171;
+            --primary-hover: #ef4444;
+            --primary-text: #f87171;
+            --primary-light: rgba(248, 113, 113, 0.16);
+            --primary-ring: rgba(248, 113, 113, 0.2);
+            --primary-soft: rgba(248, 113, 113, 0.09);
+        }
+
+        body.accent-czerwony.light-theme { --primary-text: #b91c1c; }
+
+        body.accent-niebieski {
+            --primary: #60a5fa;
+            --primary-hover: #3b82f6;
+            --primary-text: #60a5fa;
+            --primary-light: rgba(96, 165, 250, 0.16);
+            --primary-ring: rgba(96, 165, 250, 0.2);
+            --primary-soft: rgba(96, 165, 250, 0.09);
+        }
+
+        body.accent-niebieski.light-theme { --primary-text: #1d4ed8; }
+
+        body.accent-pomaranczowy {
+            --primary: #fb923c;
+            --primary-hover: #f97316;
+            --primary-text: #fb923c;
+            --primary-light: rgba(251, 146, 60, 0.16);
+            --primary-ring: rgba(251, 146, 60, 0.2);
+            --primary-soft: rgba(251, 146, 60, 0.09);
+        }
+
+        body.accent-pomaranczowy.light-theme { --primary-text: #c2410c; }
+
+        /* Paleta kolorów - panel z kulkami pod przyciskiem */
+        .accent-picker {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            z-index: 60;
+            display: none;
+            gap: 0.55rem;
+            padding: 0.65rem 0.75rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+        }
+
+        .accent-picker.open {
+            display: flex;
+        }
+
+        .accent-swatch {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            background: var(--sw);
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .accent-swatch:hover {
+            transform: scale(1.15);
+        }
+
+        .accent-swatch.active {
+            border-color: var(--text-primary);
+            box-shadow: 0 0 0 2px var(--card);
         }
 
         * {
@@ -164,6 +254,7 @@ $authenticated = auth_is_authenticated();
         }
 
         .header-actions {
+            position: relative;   /* kotwica dla panelu palety kolorów */
             display: flex;
             align-items: center;
             gap: 1rem;
@@ -258,7 +349,7 @@ $authenticated = auth_is_authenticated();
         input:focus, textarea:focus, select:focus {
             outline: none;
             border-color: var(--primary-text);
-            box-shadow: 0 0 0 3px rgba(255, 221, 0, 0.2);
+            box-shadow: 0 0 0 3px var(--primary-ring);
         }
 
         /* Mobile-specific fixes */
@@ -1661,7 +1752,7 @@ $authenticated = auth_is_authenticated();
         .photo-source-btn:hover,
         .photo-source-btn:active {
             border-color: var(--primary-text);
-            background: rgba(255, 221, 0, 0.09);
+            background: var(--primary-soft);
         }
 
         .photo-source-btn svg {
@@ -1852,7 +1943,7 @@ $authenticated = auth_is_authenticated();
         .upload-cyclist {
             width: 150px;
             height: auto;
-            color: #ffdd00;
+            color: var(--primary-text);
             filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.5));
             animation: cyclist-bob 0.45s ease-in-out infinite alternate;
         }
@@ -2489,6 +2580,23 @@ $authenticated = auth_is_authenticated();
                             <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                         </svg>
                     </button>
+                    <!-- Accent Color Button (kolor akcentu) -->
+                    <button class="btn-icon" id="palette-btn" title="Kolor akcentu">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+                            <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                            <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                            <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                            <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+                        </svg>
+                    </button>
+                    <div class="accent-picker" id="accent-picker">
+                        <button class="accent-swatch" data-accent="zolty" title="Żółty Media Expert (domyślny)" style="--sw: #ffdd00"></button>
+                        <button class="accent-swatch" data-accent="zielony" title="Zielony" style="--sw: #4ade80"></button>
+                        <button class="accent-swatch" data-accent="czerwony" title="Czerwony" style="--sw: #f87171"></button>
+                        <button class="accent-swatch" data-accent="niebieski" title="Niebieski" style="--sw: #60a5fa"></button>
+                        <button class="accent-swatch" data-accent="pomaranczowy" title="Pomarańczowy" style="--sw: #fb923c"></button>
+                    </div>
                     <!-- Logout Button -->
                     <button class="btn-icon" id="logout-btn" title="Wyloguj się">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px;">
@@ -3443,6 +3551,39 @@ $authenticated = auth_is_authenticated();
             }
             localStorage.setItem('theme', theme);
         }
+
+        // --- KOLOR AKCENTU (paleta w nagłówku) ---
+        // Domyślnie żółty Media Expert; wybór zapisywany w localStorage
+        // (jak motyw - ustawienie per urządzenie).
+        const ACCENT_KLASY = ['accent-zielony', 'accent-czerwony', 'accent-niebieski', 'accent-pomaranczowy'];
+        const paletteBtn = document.getElementById('palette-btn');
+        const accentPicker = document.getElementById('accent-picker');
+
+        function setAccent(accent) {
+            ACCENT_KLASY.forEach(k => document.body.classList.remove(k));
+            if (accent && accent !== 'zolty') document.body.classList.add('accent-' + accent);
+            document.querySelectorAll('.accent-swatch').forEach(sw =>
+                sw.classList.toggle('active', sw.dataset.accent === (accent || 'zolty')));
+            localStorage.setItem('accent', accent || 'zolty');
+        }
+
+        // Wybór zapisany przy starcie (przed pierwszym odrysowaniem)
+        setAccent(localStorage.getItem('accent') || 'zolty');
+
+        paletteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            accentPicker.classList.toggle('open');
+        });
+
+        document.querySelectorAll('.accent-swatch').forEach(sw =>
+            sw.addEventListener('click', () => setAccent(sw.dataset.accent)));
+
+        // Zamknięcie palety po kliknięciu poza nią
+        document.addEventListener('click', (e) => {
+            if (!accentPicker.contains(e.target) && !paletteBtn.contains(e.target)) {
+                accentPicker.classList.remove('open');
+            }
+        });
 
         // Helper: formatowanie daty do elementu input type="date"
         function formatDateForInput(date) {

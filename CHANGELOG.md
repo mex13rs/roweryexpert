@@ -11,6 +11,23 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.4 — 2026-09-26 (serwis2, serwis)
+
+### Dodane — przełącznik koloru akcentu
+- **Przycisk palety w nagłówku** (obok przełącznika motywu) z 5 kulkami:
+  żółty Media Expert (domyślny), zielony, czerwony, niebieski, pomarańczowy.
+  Wybór zapisywany w `localStorage` (jak motyw — per urządzenie).
+- Realizacja przez tokeny CSS: klasy `body.accent-nazwa` nadpisują
+  `--primary`, `--primary-hover`, `--primary-text`, `--primary-light`
+  oraz nowe `--primary-ring` (obwódka focusa) i `--primary-soft`
+  (delikatne tło) — wcześniejsze twarde żółte `rgba(255,221,0,…)` i
+  `#ffdd00` w kodzie (focus inputów, hover źródła zdjęć, kolarz
+  ładowania) podmienione na zmienne.
+- Motyw jasny: dla każdego akcentu ciemniejszy wariant `--primary-text`
+  (`body.accent-x.light-theme`), analogicznie do `#8a7300` przy żółtym.
+- Główne motywy (czarny/biały) bez zmian — zmienia się tylko akcent.
+- Instrukcja: sekcja14 opisuje paletę.
+
 ## 2.3 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane — moduły (wyłączanie opcji przez użytkownika)
