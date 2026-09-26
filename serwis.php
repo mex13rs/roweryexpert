@@ -801,6 +801,25 @@ $authenticated = auth_is_authenticated();
             color: var(--primary-text);
         }
 
+        /* Notatki w karcie — aktywne pole tekstowe z autozapisem */
+        .detail-grid .detail-notes-input {
+            width: 100%;
+            min-height: 4.5rem;
+            padding: 0.5rem 0.65rem;
+            font: inherit;
+            font-weight: 500;
+            color: var(--text-primary);
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            resize: vertical;
+        }
+
+        .detail-grid .detail-notes-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
         /* Kalendarz terminów — widok miesięczny */
         .calendar-panel {
             background: var(--card);
@@ -3062,7 +3081,8 @@ $authenticated = auth_is_authenticated();
                 <span class="d-label" id="detail-done-label">Wykonane czynności:</span>
                 <span class="d-val" id="detail-done-list">—</span>
                 <span class="d-label" id="detail-notes-label">Notatki:</span>
-                <span class="d-val" id="detail-notes">—</span>
+                <textarea class="d-val detail-notes-input" id="detail-notes" rows="3"
+                    placeholder="Wpisz swoje uwagi do zgłoszenia..."></textarea>
             </div>
             <div class="pending-detail" id="detail-pending" hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
@@ -3775,7 +3795,7 @@ $authenticated = auth_is_authenticated();
             formData.append('fault_description', item.faultDescription);
             formData.append('status', item.status);
             formData.append('source', IS_MOBILE ? 'mobile' : 'desktop');
-            formData.append('services_done', JSON.stringify(item.servicesDone || []));
+            // services_done pomijamy: przyjęcie to zakres prac, nie stan wykonania
 
             if (files && files.length) {
                 for (const file of files) {
@@ -3810,7 +3830,9 @@ $authenticated = auth_is_authenticated();
                 customerPhone: customerPhoneInput.value.trim(),
                 faultDescription: description,
                 status: 'in_progress', // Domyślny status: 'in_progress', 'completed', 'picked_up'
-                servicesDone: checked  // te same checkboxy trafiają jako wykonane czynności
+                // Na przyjęciu nic jeszcze nie wykonano — zaznaczone usługi
+                // jadą do opisu (linie „- ”), checkboxy z karty je wypełnią
+                servicesDone: []
             };
         }
 
@@ -4688,16 +4710,24 @@ $authenticated = auth_is_authenticated();
         });
 
         // --- WYKONANE CZYNNOŚCI (checkboxy z katalogu usług) ---
-        // Lista nazw zapisanych w bazie; dla starych zgłoszeń (null)
-        // liczymy ją z linii „- Usługa” wklejonych do opisu przy przyjęciu.
+        // Faktycznie wykonane: stan zapisany w bazie.
+        // null = jeszcze nie zapisywano (nic nie zaznaczono) -> pusta lista.
         function getDoneServices(item) {
-            if (Array.isArray(item.servicesDone)) return item.servicesDone;
+            return Array.isArray(item.servicesDone) ? item.servicesDone : [];
+        }
+
+        // Zakres uzgodniony przy przyjęciu: linie „- Usługa” dopisane do opisu
+        // przy zakładaniu zgłoszenia. Karta pokazuje tylko te pozycje; dokładamy
+        // też to, co jest już zaznaczone jako wykonane (żeby nie zgubić stanu).
+        function getPlannedServices(item) {
             const lines = (item.faultDescription || '').split('\n')
                 .map(l => l.trim())
                 .filter(l => l.startsWith('- '))
-                .map(l => l.slice(2).trim());
+                .map(l => l.slice(2).trim())
+                .filter(l => l.length > 0);
             const names = services.map(s => s.nazwa);
-            return names.length ? lines.filter(l => names.includes(l)) : lines;
+            const planned = names.length ? lines.filter(l => names.includes(l)) : lines;
+            return Array.from(new Set([...planned, ...getDoneServices(item)]));
         }
 
         // Zapis zaznaczeń z karty zgłoszenia (debounce: jeden request na serię kliknięć)
@@ -4741,6 +4771,48 @@ $authenticated = auth_is_authenticated();
             }
         }
 
+        // Autozapis notatek z karty zgłoszenia (debounce jak przy checkboxach)
+        let notesSaveTimer = null;
+        const notesPending = new Map();   // id zgłoszenia -> { item, value, prev }
+        document.getElementById('detail-notes').addEventListener('input', () => {
+            const item = db.find(x => x.id === detailModalId);
+            if (!item) return;
+            const value = document.getElementById('detail-notes').value;
+            const before = notesPending.get(item.id);
+            notesPending.set(item.id, {
+                item,
+                value,
+                prev: before ? before.prev : item.serviceNotes
+            });
+            item.serviceNotes = value;   // stan lokalny od razu (podgląd/wydruk)
+
+            clearTimeout(notesSaveTimer);
+            notesSaveTimer = setTimeout(flushNotesSaves, 450);
+        });
+
+        async function flushNotesSaves() {
+            const entries = Array.from(notesPending.values());
+            notesPending.clear();
+            for (const e of entries) {
+                try {
+                    const fd = new FormData();
+                    fd.append('action', 'notes');
+                    fd.append('id', e.item.id);
+                    fd.append('service_notes', e.value);
+                    const res = await apiFetch(API_ZGLOSZENIA, { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Nie udało się zapisać notatek.');
+                    e.item.serviceNotes = data.data.serviceNotes;
+                } catch (err) {
+                    e.item.serviceNotes = e.prev || '';
+                    if (detailModalId === e.item.id) {
+                        document.getElementById('detail-notes').value = e.prev || '';
+                    }
+                    showToast(err.message, 'error');
+                }
+            }
+        }
+
         // --- MODAL PODGLĄDU ZGŁOSZENIA (bez edycji, z wydaniem roweru) ---
         const detailModal = document.getElementById('detail-modal');
         const detailIssueBtn = document.getElementById('detail-issue-btn');
@@ -4774,18 +4846,24 @@ $authenticated = auth_is_authenticated();
                 `<a href="tel:${escapeHtml(item.customerPhone)}">tel. ${escapeHtml(item.customerPhone)}</a>`;
 
             document.getElementById('detail-fault').textContent = item.faultDescription || '—';
-            document.getElementById('detail-notes').textContent = item.serviceNotes || '—';
+
+            // Notatki: aktywne pole z autozapisem (w koszu tylko do odczytu)
+            const notesEl = document.getElementById('detail-notes');
+            notesEl.value = item.serviceNotes || '';
+            notesEl.disabled = !!item.deleted;
 
             // Wydanie roweru dostępne tylko dla zgłoszeń spoza kosza i nieodebranych
             const canIssue = !item.deleted && item.status !== 'picked_up';
             detailIssueBtn.disabled = !canIssue;
             detailIssueBtn.textContent = canIssue ? 'Wydaj rower' : 'Rower już wydany';
 
-            // Wykonane czynności: te same checkboxy co przy przyjęciu, wstępnie
-            // zaznaczone; po wydaniu/z kosza tylko podgląd. Moduł usług wyłączony
-            // albo pusty katalog — wiersz znika.
+            // Wykonane czynności: wyłącznie usługi z pierwotnego zgłoszenia,
+            // jako puste checkboxy — zaznaczasz je w chwili wykonania pracy;
+            // zaznaczenie zapisuje się samo. Po wydaniu/z kosza tylko podgląd.
+            // Brak usług z przyjęcia — wiersz znika.
             const doneListEl = document.getElementById('detail-done-list');
-            const showDone = modulOn('uslugi') && services.length > 0;
+            const planned = getPlannedServices(item);
+            const showDone = modulOn('uslugi') && planned.length > 0;
             document.getElementById('detail-done-label').hidden = !showDone;
             doneListEl.hidden = !showDone;
             doneListEl.textContent = '';
@@ -4794,18 +4872,18 @@ $authenticated = auth_is_authenticated();
                 const wrap = document.createElement('span');
                 wrap.className = 'service-checkbox-list';
                 wrap.style.marginTop = '0';
-                services.forEach(s => {
+                planned.forEach(name => {
                     const label = document.createElement('label');
                     label.className = 'service-check';
                     const cb = document.createElement('input');
                     cb.type = 'checkbox';
                     cb.className = 'service-checkbox';
-                    cb.value = s.nazwa;
-                    cb.checked = checked.includes(s.nazwa);
+                    cb.value = name;
+                    cb.checked = checked.includes(name);
                     cb.disabled = !canIssue;
                     cb.addEventListener('change', () => onDoneToggle(item));
                     label.appendChild(cb);
-                    label.appendChild(document.createTextNode(' ' + s.nazwa));
+                    label.appendChild(document.createTextNode(' ' + name));
                     wrap.appendChild(label);
                 });
                 doneListEl.appendChild(wrap);

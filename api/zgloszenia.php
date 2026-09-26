@@ -9,6 +9,7 @@ declare(strict_types=1);
  |  POST   action=confirm                    -> potwierdzenie zgloszenia z mobile (PC)
  |  POST   action=update                     -> edycja danych zgloszenia
  |  POST   action=services                    -> zapis wykonanych czynnosci (checkboxy)
+ |  POST   action=notes                       -> zapis notatek z karty zgloszenia
  |  POST   action=restore                    -> przywrocenie z kosza
  |  DELETE /api/zgloszenia.php?id=N          -> przeniesienie do kosza (soft delete)
  |  DELETE /api/zgloszenia.php?id=N&purge=1  -> trwale usuniecie ze zdjeciami
@@ -45,7 +46,9 @@ try {
                 json_fail('Moduł zdjęć jest wyłączony w ustawieniach panelu.');
             }
 
-            // Zaznaczone usługi z przyjęcia trafiają od razu jako wykonane czynności
+            // Przyjęcie nie zapisuje wykonanych czynności: services_done zostaje
+            // null (puste), checkboxy z karty zgłoszenia wypełniają je w trakcie
+            // prac. Pole w żądaniu obsługujemy dla zgodności ze starym frontem.
             $servicesDone = validate_services_done((string) ($_POST['services_done'] ?? ''));
             $servicesJson = $servicesDone
                 ? json_encode($servicesDone, JSON_UNESCAPED_UNICODE)
@@ -160,6 +163,30 @@ try {
 
             db()->prepare('UPDATE zgloszenia SET services_done = ? WHERE id = ?')
                 ->execute([$servicesJson, $id]);
+
+            $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
+            $row->execute([$id]);
+
+            json_out(['success' => true, 'data' => map_zgloszenie($row->fetch())]);
+        }
+
+        if ($action === 'notes') {
+            // Zapis notatek z karty zgłoszenia (autozapis jak przy checkboxach)
+            $id = (int) ($_POST['id'] ?? 0);
+            if ($id <= 0) {
+                json_fail('Brak identyfikatora zgłoszenia.');
+            }
+            if (!record_exists($id)) {
+                json_fail('Zgłoszenie nie istnieje.', 404);
+            }
+
+            $notes = trim((string) ($_POST['service_notes'] ?? ''));
+            if (mb_strlen($notes) > 6000) {
+                json_fail('Notatka jest za długa (max 6000 znaków).');
+            }
+
+            db()->prepare('UPDATE zgloszenia SET service_notes = ? WHERE id = ?')
+                ->execute([$notes ?: null, $id]);
 
             $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
             $row->execute([$id]);

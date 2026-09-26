@@ -11,6 +11,27 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 2.9 — 2026-09-26 (serwis2, serwis)
+
+### Zmienione — karta pokazuje tylko zakres z przyjęcia, checkboxy puste na starcie
+- **Karta zgłoszenia**: sekcja „Wykonane czynności” to **wyłącznie usługi
+  zaznaczone przy przyjęciu** (linie „- ” dopisane do opisu) — nie cały
+  katalog. Checkboxy startują **puste**; zaznaczasz je w chwili wykonania
+  pracy, autozapis bez zmian (`action=services`). Na Karcie Wydania Roweru
+  drukują się jako ☑ tylko zaznaczone.
+- Przyjęcie **nie zapisuje już** zaznaczonych usług jako wykonanych
+  (`services_done` nowego zgłoszenia = null).
+- Jednorazowa korekta danych (marker `korekta_2_9_uslugi` w tabeli
+  `ustawienia`): zgłoszenia, których `services_done` w całości pokrywa się
+  z zakresem z opisu, wracają do stanu „nic nie zaznaczono”.
+- **Notatki w karcie są aktywne**: pole tekstowe z autozapisem
+  (debounce 450 ms, nowe `action=notes` w API); w koszu tylko do odczytu.
+- Helpery: `getDoneServices()` = tylko faktycznie zapisany stan
+  (null → pusto), nowe `getPlannedServices()` = zakres z przyjęcia
+  ∪ zaznaczone.
+
+---
+
 ## 2.8 — 2026-09-26 (serwis2, serwis)
 
 ### Zmienione — kliknięcie w kartę na liście otwiera kartę zgłoszenia
