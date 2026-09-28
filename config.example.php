@@ -37,8 +37,11 @@ declare(strict_types=1);
  |   2.5  -> akcent: rower w logo i faviconka tez zmieniaja kolor razem z akcentem (warianty: logo-* oraz favicon-*.png)
  |   2.6  -> powitanie po zalogowaniu: okno "Podsumowanie dnia" z liczba odbiorow na dzis i jutro + OK
  |   2.7  -> wykonane czynnosci (checkboxy z katalogu) + karta wydania roweru z automatycznym drukiem
+ |   3.0  -> konta uzytkownikow + sesje w bazie (14 dni), login i haslo na ekranie
+ |           logowania, limit nieudanych prob, wlasna nazwa cookie (fork dziala
+ |           rownolegle ze stara wersja) + rozdrobnienie serwis.php na assets/
  --------------------------------------------------------------- */
-const APP_VERSION = '2.13';
+const APP_VERSION = '3.0-logowanie';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -64,14 +67,18 @@ const ALLOWED_PHOTO_MIME = [
 const STATUSES = ['in_progress', 'completed', 'picked_up'];
 
 /* ---------------------------------------------------------------
- | Uwierzytelnianie (hasło podawane raz dziennie, cookie na dobę)
- | APP_PASSWORD  -> początkowe hasło (potem zmienialne w Ustawieniach)
- | APP_SECRET    -> tajny klucz do podpisywania tokenu na dzień
+ | Uwierzytelnianie 3.0: konta użytkowników + sesje w bazie (14 dni)
+ | APP_PASSWORD -> hasło konta "admin" tworzonego przy pierwszym
+ |                 uruchomieniu (stare hasło aplikacji zostaje)
+ | AUTH_COOKIE  -> fork ma WŁASNĄ nazwę cookie (path=/), żeby sesja
+ |                 nie kolidowała ze starą wersją działającą równolegle
  --------------------------------------------------------------- */
 const APP_PASSWORD = 'UZUPELNIJ';
-const APP_SECRET = 'UZUPELNIJ';
 
 const AUTH_COOKIE = 'UZUPELNIJ';
+const SESSION_TTL = 14 * 86400;         // sesja ważna 14 dni (ślizgająca)
+const LOGIN_MAX_ATTEMPTS = 5;           // tyle nieudanych prób logowania...
+const LOGIN_ATTEMPT_WINDOW = 15 * 60;   // ...w tym oknie (w sekundach)
 
 /** Zwraca hash hasła aplikacji (seeded z APP_PASSWORD przy pierwszym uruchomieniu). */
 function app_password_hash(): string
@@ -91,19 +98,24 @@ function app_password_hash(): string
     return (string) $hash;
 }
 
-/** Zmienia hasło aplikacji. Zwraca null przy sukcesie albo komunikat błędu. */
-function change_app_password(string $current, string $next): ?string
+/** Zmiana hasła BIEŻĄCEGO konta. Zwraca null przy sukcesie albo komunikat błędu. */
+function change_own_password(string $current, string $next): ?string
 {
-    $currentHash = app_password_hash();
-    if (!password_verify($current, $currentHash)) {
+    $user = auth_user();
+    if ($user === null) {
+        return 'Brak sesji - zaloguj się ponownie.';
+    }
+    if (!password_verify($current, (string) $user['password_hash'])) {
         return 'Aktualne hasło jest nieprawidłowe.';
     }
     if (strlen($next) < 6) {
         return 'Nowe hasło musi mieć min. 6 znaków.';
     }
-    $newHash = password_hash($next, PASSWORD_DEFAULT);
-    db()->prepare('UPDATE ustawienia SET wartosc = ? WHERE klucz = ?')
-        ->execute([$newHash, 'app_password_hash']);
+    db()->prepare('UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?')
+        ->execute([password_hash($next, PASSWORD_DEFAULT), $user['id']]);
+    // Pozostałe sesje tego konta wylogowujemy (bieżąca zostaje)
+    db()->prepare('DELETE FROM sesje WHERE user_id = ? AND token_hash <> ?')
+        ->execute([$user['id'], (string) $user['session_hash']]);
     return null;
 }
 
@@ -207,43 +219,147 @@ function uslugi_remove(int $id): bool
     return $stmt->rowCount() > 0;
 }
 
-/** Token autoryzacji ważny tylko dzisiaj. */
-function auth_token_today(): string
+/** Czy token wygląda jak nasz (64 znaki hex)? */
+function auth_cookie_plausible(string $token): bool
 {
-    return hash_hmac('sha256', date('Y-m-d'), APP_SECRET);
+    return preg_match('/^[a-f0-9]{64}$/', $token) === 1;
 }
 
-/** Czy użytkownik jest zalogowany "na dziś". */
+/** Czy żądanie idzie po HTTPS (liczymy też nagłówek reverse proxy). */
+function auth_is_https(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+}
+
+/** Opcje cookie sesji (wspólne dla ustawiania i kasowania). */
+function auth_cookie_options(int $expires): array
+{
+    return [
+        'expires'  => $expires,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax',
+        'secure'   => auth_is_https(),
+    ];
+}
+
+/**
+ * Dane bieżącego użytkownika z sesji albo null. Cache na żądanie.
+ * Zwraca wiersz users + 'session_id'/'session_hash' z aktywnej sesji.
+ * Token w bazie trzymany jest wyłącznie jako hash (wyciek bazy
+ * nie daje możliwości przejęcia sesji).
+ */
+function auth_user(): ?array
+{
+    static $cache = null;
+    static $loaded = false;
+    if ($loaded) {
+        return $cache;
+    }
+    $loaded = true;
+
+    $token = (string) ($_COOKIE[AUTH_COOKIE] ?? '');
+    if ($token === '' || !auth_cookie_plausible($token)) {
+        return null;
+    }
+    $hash = hash('sha256', $token);
+
+    $stmt = db()->prepare(
+        'SELECT u.id, u.login, u.rola, u.aktywny, u.must_change_password,
+                s.id AS session_id, s.token_hash AS session_hash, s.expires_at
+         FROM sesje s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.token_hash = ? AND u.aktywny = 1'
+    );
+    $stmt->execute([$hash]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return null;
+    }
+    if ((string) $row['expires_at'] <= date('Y-m-d H:i:s')) {
+        db()->prepare('DELETE FROM sesje WHERE id = ?')->execute([(int) $row['session_id']]);
+        return null;
+    }
+    // Sesja ślizgająca: przedłużamy, gdy została mniej niż połowa czasu
+    if (strtotime((string) $row['expires_at']) < time() + intdiv(SESSION_TTL, 2)) {
+        $newExp = date('Y-m-d H:i:s', time() + SESSION_TTL);
+        db()->prepare('UPDATE sesje SET expires_at = ? WHERE id = ?')
+            ->execute([$newExp, (int) $row['session_id']]);
+        setcookie(AUTH_COOKIE, $token, auth_cookie_options(time() + SESSION_TTL));
+        $row['expires_at'] = $newExp;
+    }
+
+    $cache = $row;
+    return $cache;
+}
+
+/** Czy użytkownik jest zalogowany? */
 function auth_is_authenticated(): bool
 {
-    return isset($_COOKIE[AUTH_COOKIE])
-        && hash_equals(auth_token_today(), (string) $_COOKIE[AUTH_COOKIE]);
+    return auth_user() !== null;
 }
 
-/** Logowanie - ustawia cookie ważne do końca dzisiejszego dnia. */
-function auth_login(string $password): bool
+/** Zalogowany użytkownik (albo null). */
+function current_user(): ?array
 {
-    if (!password_verify($password, app_password_hash())) {
-        return false;
-    }
-    setcookie(AUTH_COOKIE, auth_token_today(), [
-        'expires'  => strtotime('tomorrow'),
-        'path'     => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
-    return true;
+    return auth_user();
 }
 
-/** Wylogowanie - unieważnia cookie. */
+/** Czy klucz logowania przekroczył limit nieudanych prób? */
+function login_blocked(string $key): bool
+{
+    $stmt = db()->prepare(
+        'SELECT COUNT(*) FROM login_attempts WHERE klucz = ? AND created_at > ?'
+    );
+    $stmt->execute([$key, date('Y-m-d H:i:s', time() - LOGIN_ATTEMPT_WINDOW)]);
+    return (int) $stmt->fetchColumn() >= LOGIN_MAX_ATTEMPTS;
+}
+
+/**
+ * Logowanie (login + hasło). Zwraca null przy sukcesie albo komunikat błędu.
+ * Komunikat jest celowo uniwersalny - nie zdradza, czy login istnieje.
+ */
+function auth_login(string $login, string $password): ?string
+{
+    $login = trim($login);
+    $key = $login . '|' . ($_SERVER['REMOTE_ADDR'] ?? '');
+
+    db()->exec('DELETE FROM sesje WHERE expires_at < NOW()');   // sprzątanie starych sesji
+    if (login_blocked($key)) {
+        return 'Zbyt wiele nieudanych prób - spróbuj ponownie za kilka minut.';
+    }
+
+    $stmt = db()->prepare('SELECT * FROM users WHERE login = ? AND aktywny = 1');
+    $stmt->execute([$login]);
+    $user = $stmt->fetch();
+
+    if (!$user || !password_verify($password, (string) $user['password_hash'])) {
+        db()->prepare('INSERT INTO login_attempts (klucz) VALUES (?)')->execute([$key]);
+        return 'Nieprawidłowy login lub hasło.';
+    }
+    db()->prepare('DELETE FROM login_attempts WHERE klucz = ?')->execute([$key]);
+
+    $token = bin2hex(random_bytes(32));
+    db()->prepare('INSERT INTO sesje (token_hash, user_id, expires_at) VALUES (?, ?, ?)')
+        ->execute([hash('sha256', $token), (int) $user['id'],
+                   date('Y-m-d H:i:s', time() + SESSION_TTL)]);
+    db()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = ?')
+        ->execute([(int) $user['id']]);
+
+    setcookie(AUTH_COOKIE, $token, auth_cookie_options(time() + SESSION_TTL));
+    return null;
+}
+
+/** Wylogowanie - kasuje sesję w bazie (nie tylko cookie) i czyści cookie. */
 function auth_logout(): void
 {
-    setcookie(AUTH_COOKIE, '', [
-        'expires'  => time() - 3600,
-        'path'     => '/',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    $token = (string) ($_COOKIE[AUTH_COOKIE] ?? '');
+    if ($token !== '' && auth_cookie_plausible($token)) {
+        db()->prepare('DELETE FROM sesje WHERE token_hash = ?')
+            ->execute([hash('sha256', $token)]);
+    }
+    setcookie(AUTH_COOKIE, '', auth_cookie_options(time() - 3600));
 }
 
 /** Dla endpointów API - przerywa żądanie 401, gdy brak autoryzacji. */
@@ -329,6 +445,54 @@ function db(): PDO
             UNIQUE KEY uk_nazwa (nazwa)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+
+    // --- Konta użytkowników i sesje (3.0) ---
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS users (
+            id                   INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            login                VARCHAR(64)  NOT NULL,
+            password_hash        VARCHAR(255) NOT NULL,
+            rola                 ENUM("admin","pracownik") NOT NULL DEFAULT "pracownik",
+            aktywny              TINYINT(1) NOT NULL DEFAULT 1,
+            must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+            created_at           TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_login_at        TIMESTAMP DEFAULT NULL,
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_login (login)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS sesje (
+            id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            token_hash CHAR(64) NOT NULL,
+            user_id    INT UNSIGNED NOT NULL,
+            expires_at DATETIME NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uk_token (token_hash),
+            KEY idx_sesje_user (user_id),
+            CONSTRAINT fk_sesje_user FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS login_attempts (
+            id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            klucz      VARCHAR(160) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_klucz_czas (klucz, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+
+    // Seed konta admin z dotychczasowego hasła aplikacji - wykonywane tylko
+    // raz, gdy baza nie ma jeszcze żadnych użytkowników
+    if ((int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0) {
+        $pdo->prepare('INSERT INTO users (login, password_hash, rola) VALUES (?, ?, "admin")')
+            ->execute(['admin', app_password_hash()]);
+    }
 
     // Migracja na istniejących bazach: dodanie kolumny size_bytes + uzupełnienie z dysku
     $hasSize = false;

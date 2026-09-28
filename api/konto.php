@@ -17,7 +17,7 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'password') {
     $current = (string) ($_POST['current'] ?? '');
     $next    = (string) ($_POST['next'] ?? '');
 
-    $error = change_app_password($current, $next);
+    $error = change_own_password($current, $next);
     if ($error !== null) {
         json_fail($error);
     }

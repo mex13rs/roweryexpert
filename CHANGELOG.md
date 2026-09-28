@@ -11,6 +11,45 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.0-logowanie — 2026-09-28 (serwis2 = fork, produkcja bez zmian)
+
+Fork z systemem użytkowników działa **równolegle** z produkcją na tej samej
+bazie MySQL; stary `serwis/` pozostaje na 2.13 (hasło aplikacji) aż do merge.
+
+### Refaktor (etap 0)
+- CSS z `serwis.php` (2536 linii) → `assets/css/panel.css`, link z `?v=APP_VERSION`.
+- JS z `serwis.php` → 12 plików w `assets/js/` (kolejność źródłowa, bez systemu
+  modułów — globalne zmienne zostają); bootstrap PHP (`IS_AUTHENTICATED`,
+  `FOTO_LIMIT_MB`) został jako inline `<script>` przed skryptami.
+- `serwis.php`: 5998 → ~850 linii. Rekonstrukcja zweryfikowana (oryginał ≡ podział).
+
+### Konta i sesje
+- Nowe tabele: `users`, `sesje` (w bazie tylko **hash** tokenu),
+  `login_attempts`; seed konta `admin` z dotychczasowego hasła aplikacji —
+  **stare hasło działa dalej**, tylko dochodzi pole „Login".
+- Sesja **14 dni ześlizgiem**; wylogowanie kasuje sesję w bazie (nie tylko cookie);
+  cookie `rowery_expert_sess` — **własna nazwa forka**, żeby sesje obu wersji
+  nie kolidowały (path=/).
+- Ekran logowania: pole **Login** + Hasło, komunikat uniwersalny
+  („Nieprawidłowy login lub hasło" — nie zdradza, czy login istnieje).
+- Limit prób: **5 nieudanych / 15 min** (klucz login+IP), czyszczenie starych prób.
+- Zmiana hasła = hasło **własnego konta** (`change_own_password`), pozostałe
+  sesje konta wylogowywane; zapomniane → reset przez admina.
+- Nagłówek: nazwa konta (`#current-user`); Ustawienia → Ogólne: konto + rola.
+- `APP_VERSION = 3.0-logowanie` (znacznik forka w stopce).
+
+### Testy
+- `/tmp/opencode/test30.py` — **17/17 zielone**: pola logowania, komunikaty
+  ujemne, logowanie admin, cookie, trwałość sesji, konto w nagłówku, zmiana
+  hasła (złe aktualne), lockout po 5 (6. próba zablokowana), wylogowanie,
+  ponowne logowanie, API 401 bez sesji.
+- `/tmp/opencode/test_js_split.py` — 19/19 (regresja UI po podziale JS).
+- `/tmp/opencode/test_css_split.py` — regresja po podziale CSS.
+- `/tmp/opencode/test_prod_old.py` — produkcja na wspólnej bazie: logowanie
+  starym mechanizmem, 7 kart, brak błędów.
+
+---
+
 ## 2.13 — 2026-09-26 (serwis2, serwis)
 
 ### Dodane

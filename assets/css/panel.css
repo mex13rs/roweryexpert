@@ -2534,3 +2534,17 @@
                 letter-spacing: 0.5px;
             }
         }
+
+/* ===== 3.0: zalogowane konto w naglowku ===== */
+.header-user {
+    align-self: center;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@media (max-width: 1024px) {
+    .header-user { display: none; }
+}

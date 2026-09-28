@@ -11,12 +11,15 @@ header('Expires: 0');
 
 // Obsługa logowania / wylogowania
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {
-    if (auth_login((string) ($_POST['password'] ?? ''))) {
+    $loginError = auth_login(
+        (string) ($_POST['login'] ?? ''),
+        (string) ($_POST['password'] ?? '')
+    );
+    if ($loginError === null) {
         // ?powitanie=1 — po zalogowaniu pokazujemy okno podsumowania dnia
         header('Location: ' . strtok($_SERVER['REQUEST_URI'] ?? '/serwis.php', '?') . '?powitanie=1');
         exit;
     }
-    $loginError = 'Nieprawidłowe hasło.';
 }
 
 if (isset($_GET['logout'])) {
@@ -26,6 +29,7 @@ if (isset($_GET['logout'])) {
 }
 
 $authenticated = auth_is_authenticated();
+$currentUser = auth_user();
 ?>
 
 <!DOCTYPE html>
@@ -62,8 +66,12 @@ $authenticated = auth_is_authenticated();
             <form method="post" action="<?= htmlspecialchars($_SERVER['PHP_SELF'] ?? '/serwis.php') ?>">
                 <input type="hidden" name="action" value="login">
                 <div class="form-group">
+                    <label for="login-user">Login</label>
+                    <input type="text" id="login-user" name="login" placeholder="np. marek" required autofocus autocomplete="username">
+                </div>
+                <div class="form-group">
                     <label for="login-password">Hasło</label>
-                    <input type="password" id="login-password" name="password" placeholder="******" required autofocus>
+                    <input type="password" id="login-password" name="password" placeholder="******" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="btn btn-primary">Zaloguj</button>
             </form>
@@ -124,8 +132,10 @@ $authenticated = auth_is_authenticated();
                         <button class="accent-swatch" data-accent="niebieski" title="Niebieski" style="--sw: #60a5fa"></button>
                         <button class="accent-swatch" data-accent="pomaranczowy" title="Pomarańczowy" style="--sw: #fb923c"></button>
                     </div>
+                    <!-- Zalogowane konto -->
+                    <span class="header-user" id="current-user" title="Zalogowane konto"><?= htmlspecialchars($currentUser['login'] ?? '') ?></span>
                     <!-- Logout Button -->
-                    <button class="btn-icon" id="logout-btn" title="Wyloguj się">
+                    <button class="btn-icon" id="logout-btn" title="Wyloguj się (<?= htmlspecialchars($currentUser['login'] ?? '') ?>)">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px;">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
                         </svg>
@@ -318,7 +328,12 @@ $authenticated = auth_is_authenticated();
 
                 <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
 
-                <h4 style="margin: 0 0 1rem; font-size: 1rem;">Zmiana hasła do aplikacji</h4>
+                <h4 style="margin: 0 0 1rem; font-size: 1rem;">Zmiana hasła do konta</h4>
+                <p class="settings-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin: -0.5rem 0 1rem;">
+                    Zalogowano jako <strong><?= htmlspecialchars($currentUser['login'] ?? '') ?></strong>
+                    (<?= ($currentUser['rola'] ?? '') === 'admin' ? 'administrator' : 'pracownik' ?>).
+                    Zapomniałeś hasła? Poproś administratora o reset.
+                </p>
                 <div class="form-group">
                     <label for="current-password">Aktualne hasło</label>
                     <input type="password" id="current-password" autocomplete="current-password" placeholder="••••••••">
