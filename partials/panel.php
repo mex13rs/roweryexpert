@@ -4,7 +4,10 @@
             <!-- BANER AKTUALIZACJI (v2): admin widzi przycisk, pracownik — info -->
             <div id="update-banner" hidden style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: rgba(255, 221, 0, 0.08); border: 1px solid rgba(255, 221, 0, 0.35); border-radius: 12px; padding: 0.7rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;">
                 <span id="update-banner-text">Sprawdzanie aktualizacji…</span>
-                <button class="btn btn-primary" id="update-now-btn" style="flex: none; padding: 0.45rem 1rem; font-size: 0.85rem;" hidden>Zaktualizuj teraz</button>
+                <div style="display: flex; gap: 0.5rem; flex: none;">
+                    <button class="btn btn-secondary" id="update-check-btn" style="padding: 0.45rem 1rem; font-size: 0.85rem;">Sprawdź aktualizacje</button>
+                    <button class="btn btn-primary" id="update-now-btn" style="padding: 0.45rem 1rem; font-size: 0.85rem;" hidden>Zaktualizuj teraz</button>
+                </div>
             </div>
 
             <!-- Header Section -->

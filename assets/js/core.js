@@ -365,6 +365,44 @@
             }
         }
 
+        // Wymuszone sprawdzenie (przycisk "Sprawdź aktualizacje") — omija cache 24h
+        async function forceCheckUpdate() {
+            const btn = document.getElementById('update-check-btn');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.textContent = 'Sprawdzanie…';
+            try {
+                const res = await apiFetch(API_USTAWIENIA, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=check_update',
+                });
+                const data = await res.json();
+                if (data.success && data.data.update) {
+                    updateData = data.data.update;
+                    if (updateData.dostepna) {
+                        updateBannerText.textContent = 'Dostępna nowsza wersja: ' + updateData.nowa_wersja
+                            + ' (masz ' + updateData.obecna_wersja + ')';
+                        updateNowBtn.hidden = false;
+                        updateBanner.hidden = false;
+                        showToast('Dostępna wersja ' + updateData.nowa_wersja);
+                    } else {
+                        updateBannerText.textContent = 'Masz najnowszą wersję (' + updateData.obecna_wersja + ').';
+                        updateNowBtn.hidden = true;
+                        updateBanner.hidden = false;
+                        showToast('Brak nowych aktualizacji.');
+                    }
+                } else {
+                    showToast(data.error || 'Nie udało się sprawdzić aktualizacji.', 'error');
+                }
+            } catch (e) {
+                showToast('Błąd połączenia podczas sprawdzania.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Sprawdź aktualizacje';
+            }
+        }
+
         function openUpdateModal() {
             if (!updateModal || !updateData) return;
             updateModalVersions.textContent = 'Z wersji ' + updateData.obecna_wersja
@@ -379,6 +417,7 @@
         }
 
         updateNowBtn?.addEventListener('click', openUpdateModal);
+        document.getElementById('update-check-btn')?.addEventListener('click', forceCheckUpdate);
         updateModalCancel?.addEventListener('click', closeUpdateModal);
         updateModalClose?.addEventListener('click', closeUpdateModal);
         updateModal?.addEventListener('click', (e) => {
