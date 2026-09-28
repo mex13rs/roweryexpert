@@ -34,6 +34,7 @@
         // mogą nie istnieć w DOM, więc wszystko przez ?? i tablicę.
         const SETTINGS_TABS = [
             ['general', tabGeneralBtn, tabGeneralContent],
+            ['serwis',  tabSerwisBtn,  tabSerwisContent],
             ['uslugi',  tabUslugiBtn,  tabUslugiContent],
             ['moduly',  tabModulyBtn,  tabModulyContent],
             ['users',   tabUsersBtn,   tabUsersContent],
@@ -44,18 +45,20 @@
             // Zakładka usług nie istnieje, gdy moduł wyłączony albo brak uprawnień
             if (tabName === 'uslugi' && (!modulOn('uslugi') || !istnieje.uslugi)) tabName = 'general';
             // Zakładki admina niedostępne dla pracownika -> cofamy do "Ogólne"
-            if ((tabName === 'moduly' || tabName === 'users') && !istnieje[tabName]) tabName = 'general';
+            if ((tabName === 'moduly' || tabName === 'users' || tabName === 'serwis') && !istnieje[tabName]) tabName = 'general';
 
             for (const [name, btn, content] of SETTINGS_TABS) {
                 btn?.classList.toggle('active', name === tabName);
                 if (content) content.hidden = name !== tabName;
             }
+            if (tabName === 'serwis') loadInstDane();
             if (tabName === 'uslugi') renderServiceList();
             if (tabName === 'moduly') syncModuleToggles();
             if (tabName === 'users') loadUsers();
         }
 
         tabGeneralBtn.addEventListener('click', () => switchSettingsTab('general'));
+        tabSerwisBtn?.addEventListener('click', () => switchSettingsTab('serwis'));
         tabUslugiBtn?.addEventListener('click', () => switchSettingsTab('uslugi'));
         tabModulyBtn?.addEventListener('click', () => switchSettingsTab('moduly'));
         tabUsersBtn?.addEventListener('click', () => switchSettingsTab('users'));
@@ -362,5 +365,71 @@
         if (logoutBtn) {
             logoutBtn.addEventListener('click', () => {
                 window.location.href = window.location.pathname + '?logout=1';
+            });
+        }
+
+        // --- DANE SERWISU: zakładka "Dane serwisu" (edycja po instalacji) ---
+        const instAdres = document.getElementById('inst-adres');
+        const instMiasto = document.getElementById('inst-miasto');
+        const instTelefon = document.getElementById('inst-telefon');
+        const instMaps = document.getElementById('inst-maps');
+        const instSite = document.getElementById('inst-site');
+        const instHint = document.getElementById('inst-hint');
+        const saveInstBtn = document.getElementById('save-inst-btn');
+
+        async function loadInstDane() {
+            if (!instAdres) return;
+            try {
+                const res = await apiFetch(API_USTAWIENIA);
+                const data = await res.json();
+                if (data.success && data.data.dane_instancji) {
+                    const d = data.data.dane_instancji;
+                    instAdres.value = d.adres || '';
+                    instMiasto.value = d.miasto || '';
+                    instTelefon.value = d.telefon || '';
+                    instMaps.value = d.maps_url || '';
+                    instSite.value = d.site_url || '';
+                }
+            } catch (e) {
+                /* błąd odczuty pomijamy - pola zostaja puste */
+            }
+        }
+
+        if (saveInstBtn) {
+            saveInstBtn.addEventListener('click', async () => {
+                instHint.textContent = 'Zapisywanie…';
+                instHint.style.color = 'var(--text-secondary)';
+                saveInstBtn.disabled = true;
+
+                const body = new URLSearchParams({
+                    action: 'dane_instancji',
+                    service_address: instAdres.value.trim(),
+                    service_city: instMiasto.value.trim(),
+                    service_phone: instTelefon.value.trim(),
+                    google_maps_url: instMaps.value.trim(),
+                    site_url: instSite.value.trim(),
+                });
+
+                try {
+                    const res = await apiFetch(API_USTAWIENIA, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body.toString(),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        instHint.textContent = 'Zapisano. Zmiany widoczne od razu na wydruku.';
+                        instHint.style.color = 'var(--success)';
+                        showToast('Dane serwisu zaktualizowane!');
+                    } else {
+                        instHint.textContent = data.error || 'Nie udało się zapisać.';
+                        instHint.style.color = 'var(--danger)';
+                    }
+                } catch (err) {
+                    instHint.textContent = 'Błąd połączenia.';
+                    instHint.style.color = 'var(--danger)';
+                } finally {
+                    saveInstBtn.disabled = false;
+                }
             });
         }

@@ -218,16 +218,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } elseif (filter_var($vals['maps'], FILTER_VALIDATE_URL) === false
                 || !in_array(strtolower(substr($vals['maps'], 0, 4)), ['http'], true)) {
                 $err = 'Podaj pełny link do wizytówki Google (zaczyna się od https://…) — z niego powstanie QR „Oceń nas” na wydruku.';
-            } elseif ($vals['site'] !== '' && filter_var($vals['site'], FILTER_VALIDATE_URL) === false) {
-                $err = 'Adres URL panelu musi być pełnym adresem (https://…) albo pusty.';
             } else {
-                $vals['site'] = $vals['site'] !== '' ? rtrim($vals['site'], '/') : '';
-                $inst['dane'] = $vals;
-                $inst['max'] = max($inst['max'] ?? 1, 4);
-                header('Location: install.php?krok=4');
-                exit;
+                // URL panelu: zdejmij ewentualne zdublowane schematy (https://https://…)
+                // i dopisz brakujący — zapisujemy zawsze jeden poprawny adres.
+                if ($vals['site'] !== '') {
+                    $trzymajHttp = stripos($vals['site'], 'http://') === 0;
+                    $bezSchematu = preg_replace('#^(?:https?://)+#i', '', $vals['site']);
+                    $vals['site'] = ($trzymajHttp ? 'http://' : 'https://') . $bezSchematu;
+                }
+                if ($vals['site'] !== '' && filter_var($vals['site'], FILTER_VALIDATE_URL) === false) {
+                    $err = 'Adres URL panelu wygląda na niepoprawny — wpisz np. https://twojadomena.pl/serwis (schemat dorobimy sami).';
+                } else {
+                    $vals['site'] = $vals['site'] !== '' ? rtrim($vals['site'], '/') : '';
+                    $inst['dane'] = $vals;
+                    $inst['max'] = max($inst['max'] ?? 1, 4);
+                    header('Location: install.php?krok=4');
+                    exit;
+                }
             }
-
         } elseif ($action === 'step4') {
             if (!isset($inst['dane'])) {
                 header('Location: install.php?krok=3');

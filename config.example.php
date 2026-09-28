@@ -163,6 +163,25 @@ function setting_set(string $klucz, string $wartosc): void
     )->execute([$klucz, $wartosc]);
 }
 
+/* ---------------------------------------------------------------
+ | Dane instancji serwisu (adres, telefon, link Google, URL panelu).
+ | Wartosci mozna edytowac po instalacji z panelu admina (zakladka
+ | "Dane serwisu" w ustawieniach) - zapis do tabeli ustawienia.
+ | Brak zapisu w bazie = wartosc domyslna ze stalych config.php.
+ | Klucze: service_address, service_city, service_phone,
+ |         google_maps_url, site_url
+ --------------------------------------------------------------- */
+function dane_instancji(): array
+{
+    return [
+        'adres'      => setting_get('service_address', SERVICE_ADDRESS),
+        'miasto'     => setting_get('service_city', SERVICE_CITY),
+        'telefon'    => setting_get('service_phone', SERVICE_PHONE),
+        'maps_url'   => setting_get('google_maps_url', GOOGLE_MAPS_URL),
+        'site_url'   => setting_get('site_url', SITE_URL),
+    ];
+}
+
 /** Pelna lista modulow, ktore moga byc wylaczone przez uzytkownika. */
 function moduly_dostepne(): array
 {

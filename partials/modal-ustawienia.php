@@ -10,6 +10,7 @@
             <div class="settings-tabs">
                 <button class="settings-tab active" id="tab-btn-general" data-tab="general">Ogólne</button>
                 <?php if ($isAdmin): ?>
+                <button class="settings-tab" id="tab-btn-serwis" data-tab="serwis">Dane serwisu</button>
                 <button class="settings-tab" id="tab-btn-uslugi" data-tab="uslugi">Dodaj usługi</button>
                 <button class="settings-tab" id="tab-btn-moduly" data-tab="moduly">Moduły</button>
                 <button class="settings-tab" id="tab-btn-users" data-tab="users">Użytkownicy</button>
@@ -61,6 +62,37 @@
             </div>
 
             <?php if ($isAdmin): ?>
+            <!-- ZAKŁADKA: DANE SERWISU (edycja po instalacji) -->
+            <div class="settings-tab-content" id="tab-content-serwis" hidden>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">
+                    Dane trafiają na <strong>potwierdzenie zlecenia (wydruk A4)</strong> oraz do kodu QR
+                    „Oceń nas". Zmiana zapisuje się natychmiast — nie trzeba przeinstalowywać panelu.
+                    Nazwa <strong>RoweryExpert</strong> jest stała (sieć serwisów).
+                </p>
+                <div class="form-group">
+                    <label for="inst-adres">Ulica</label>
+                    <input type="text" id="inst-adres" maxlength="120" placeholder="np. Ostrobramska 81">
+                </div>
+                <div class="form-group">
+                    <label for="inst-miasto">Kod pocztowy i miasto</label>
+                    <input type="text" id="inst-miasto" maxlength="120" placeholder="np. 04-175 Warszawa">
+                </div>
+                <div class="form-group">
+                    <label for="inst-telefon">Telefon serwisu (na wydruku)</label>
+                    <input type="text" id="inst-telefon" maxlength="32" placeholder="np. 532-561-152">
+                </div>
+                <div class="form-group">
+                    <label for="inst-maps">Link do wizytówki Google (źródło QR „Oceń nas")</label>
+                    <input type="url" id="inst-maps" maxlength="255" placeholder="https://maps.app.goo.gl/…">
+                </div>
+                <div class="form-group">
+                    <label for="inst-site">Adres URL panelu (opcjonalnie)</label>
+                    <input type="url" id="inst-site" maxlength="255" placeholder="https://serwis.twojadomena.pl">
+                </div>
+                <button class="btn btn-primary" id="save-inst-btn">Zapisz dane serwisu</button>
+                <p class="settings-hint" id="inst-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
+            </div>
+
             <!-- ZAKŁADKA: DODAJ USŁUGI -->
             <div class="settings-tab-content" id="tab-content-uslugi" hidden>
                 <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">

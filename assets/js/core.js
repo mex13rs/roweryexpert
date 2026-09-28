@@ -217,9 +217,11 @@
         const passwordHintEl = document.getElementById('password-hint');
 
         const tabGeneralBtn = document.getElementById('tab-btn-general');
+        const tabSerwisBtn = document.getElementById('tab-btn-serwis');
         const tabUslugiBtn = document.getElementById('tab-btn-uslugi');
         const tabModulyBtn = document.getElementById('tab-btn-moduly');
         const tabGeneralContent = document.getElementById('tab-content-general');
+        const tabSerwisContent = document.getElementById('tab-content-serwis');
         const tabUslugiContent = document.getElementById('tab-content-uslugi');
         const tabModulyContent = document.getElementById('tab-content-moduly');
         const tabUsersBtn = document.getElementById('tab-btn-users');

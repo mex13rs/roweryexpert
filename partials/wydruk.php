@@ -61,8 +61,8 @@
 
             <div class="receipt-footer">
                 <div class="receipt-address">
-                    RoweryExpert <?= SERVICE_ADDRESS ?>
-                    <?= SERVICE_CITY ?> tel. <?= SERVICE_PHONE ?>
+                    RoweryExpert <?= dane_instancji()['adres'] ?>
+                    <?= dane_instancji()['miasto'] ?> tel. <?= dane_instancji()['telefon'] ?>
                 </div>
 
                 <div class="receipt-qr-container">

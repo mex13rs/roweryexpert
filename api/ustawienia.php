@@ -23,7 +23,10 @@ try {
     auth_require();
 
     if ($method === 'GET') {
-        json_out(['success' => true, 'data' => ['moduly' => moduly()]]);
+        json_out(['success' => true, 'data' => [
+            'moduly' => moduly(),
+            'dane_instancji' => dane_instancji(),
+        ]]);
     }
 
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'modules') {
@@ -43,6 +46,36 @@ try {
         moduly(true);   // odswiez cache w tym zapytaniu
 
         json_out(['success' => true, 'data' => ['moduly' => moduly()]]);
+    }
+
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'dane_instancji') {
+        auth_require_admin();   // edycja danych serwisu tylko przez admina
+        $pola = [
+            'service_address'  => ['adres', 120],
+            'service_city'     => ['miasto', 120],
+            'service_phone'    => ['telefon', 32],
+            'google_maps_url'  => ['maps_url', 255],
+            'site_url'         => ['site_url', 255],
+        ];
+        $zapis = [];
+        foreach ($pola as $klucz => [$etykieta, $max]) {
+            $wartosc = trim((string) ($_POST[$klucz] ?? ''));
+            if (mb_strlen($wartosc) > $max) {
+                json_fail('Pole ' . $etykieta . ' jest za dlugie (maks. ' . $max . ' znakow).');
+            }
+            if ($klucz === 'google_maps_url' && $wartosc !== ''
+                && filter_var($wartosc, FILTER_VALIDATE_URL) === false) {
+                json_fail('Link do wizytowki Google musi byc poprawnym adresem URL.');
+            }
+            if ($klucz === 'site_url' && $wartosc !== ''
+                && filter_var($wartosc, FILTER_VALIDATE_URL) === false) {
+                json_fail('Adres URL panelu musi byc poprawnym adresem URL.');
+            }
+            setting_set($klucz, $wartosc);
+            $zapis[$klucz] = $wartosc;
+        }
+
+        json_out(['success' => true, 'data' => ['dane_instancji' => dane_instancji()]]);
     }
 
     json_fail('Nieznane żądanie.', 400);

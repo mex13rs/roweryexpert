@@ -26,6 +26,11 @@ i wyświetlany w stopce strony.
   dwa miejsca w `druk.js`). Branding RoweryExpert pozostaje niekonfigurowalny.
 - **Bramka instalacji**: brak `config.php` → `serwis.php` przekierowuje na
   `install.php`, `api/*` zwraca 503 JSON zamiast fatality PHP.
+- **Edycja danych instancji po instalacji** — zakładka „Dane serwisu" w ustawieniach
+  (tylko admin): adres, kod/miasto, telefon, link Google, URL panelu. Zapis do
+  tabeli `ustawienia` przez `api/ustawienia.php` (`action=dane_instancji`),
+  odczyt przez `dane_instancji()` z fallbackiem do stałych. Zmiana działa od razu
+  na wydruku — bez przeinstalowywania.
 - `README.md` (instrukcja instalacji i ręcznej aktualizacji) + `LICENSE` (MIT) —
   przygotowanie dystrybucji publicznej przez GitHuba.
 
@@ -35,6 +40,8 @@ i wyświetlany w stopce strony.
 - Neutralne przykłady telefonu w placeholderze pola telefonu (`panel.php`),
   na wydruku i w komentarzu `motyw.js` (bez numeru serwisu).
 - `partials/head.php` — `window.APP_CFG.mapsUrl` dla JS.
+- Instalator: normalizacja SITE_URL (zdublowany schemat `https://https://…`
+  skracany do jednego, brak schematu → doklejany `https://`).
 
 ---
 

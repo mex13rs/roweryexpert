@@ -13,7 +13,7 @@
     <!-- Wczytywanie biblioteki QRious bez sumy kontrolnej integrity, aby uniknąć blokowania przez przeglądarkę -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <!-- Dane instancji dla JS (m.in. link do wizytki Google dla QR na wydruku) -->
-    <script>window.APP_CFG = <?= json_encode(['mapsUrl' => GOOGLE_MAPS_URL], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
+    <script>window.APP_CFG = <?= json_encode(['mapsUrl' => dane_instancji()['maps_url']], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;</script>
     <link rel="stylesheet" href="assets/css/panel.css?v=<?= APP_VERSION ?>">
 </head>
 <body class="dark-theme"<?= ($authenticated && isset($_GET['powitanie'])) ? ' data-powitanie="1"' : '' ?>>
