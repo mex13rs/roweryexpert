@@ -2612,8 +2612,8 @@
 .header-user:hover {
     text-decoration: underline;
 }
-/* Nazwa konta + przycisk ustawień jako para (3.6) */
-.header-user + #open-settings-btn {
+/* Trybik ustawień + nazwa konta jako para (3.7: nazwa została przy wylogowaniu) */
+#open-settings-btn + .header-user {
     margin-left: -0.5rem;
 }
 @media (max-width: 1024px) {

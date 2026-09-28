@@ -11,6 +11,23 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.7-nazwa-przy-wylogowaniu — 2026-09-28 (korekta kolejności nagłówka)
+
+- **Korekta po feedbacku**: nazwa użytkownika wraca na koniec nagłówka — znowu
+  bezpośrednio przy przycisku wylogowaniu (jak przed 3.6), a to **przycisk
+  ustawień został przeniesiony w stronę nazwy**. Kolejność:
+  `paleta → ⚙ ustawienia → nick → 🚪 wyloguj`.
+- CSS: selektor pary odwrócony (`#open-settings-btn + .header-user`),
+  nadal cieśniejszy odstęp `−0.5rem`.
+- Rozmiar nazwy, klik/Enter/Spacja otwierający ustawienia — bez zmian (z 3.6).
+
+### Testy
+- `test31` (41 asercji): kolejność sprawdzana dwustronnie —
+  `previousElementSibling == #open-settings-btn` ORAZ
+  `nextElementSibling == #logout-btn`.
+
+---
+
 ## 3.6-naglowek — 2026-09-28 (nazwa użytkownika w nagłówku)
 
 - **Większa nazwa konta**: `.header-user` `0.8rem → 1.05rem`, `font-weight: 600`,
