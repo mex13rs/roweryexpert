@@ -148,3 +148,30 @@
         </div>
     </div>
 
+    <!-- MODAL AKTUALIZACJI (v2): potwierdzenie + postęp -->
+    <div class="modal-overlay" id="update-modal">
+        <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.15rem;">Aktualizacja panelu</h3>
+                <button class="modal-close" id="update-modal-close">&times;</button>
+            </div>
+            <div id="update-modal-body">
+                <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
+                    Dostępna jest nowsza wersja panelu.
+                    Przed aktualizacją zostanie utworzona kopia zapasowa plików.
+                </p>
+                <p id="update-modal-versions" style="font-size: 0.9rem; margin-bottom: 1.5rem;"></p>
+            </div>
+            <div id="update-modal-progress" hidden style="margin-bottom: 1rem;">
+                <p id="update-progress-text" style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Pobieranie…</p>
+                <div style="height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;">
+                    <div id="update-progress-bar" style="height: 100%; width: 0%; background: var(--primary); transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn btn-secondary" id="update-modal-cancel" style="flex: 1 1 0; min-width: 0;">Później</button>
+                <button class="btn btn-primary" id="update-modal-ok" style="flex: 1 1 0; min-width: 0;">Zaktualizuj</button>
+            </div>
+        </div>
+    </div>
+

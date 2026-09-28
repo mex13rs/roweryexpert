@@ -985,3 +985,212 @@ function validate_services_done(string $raw): array
     }
     return array_values(array_unique($clean));
 }
+
+/* ---------------------------------------------------------------
+ | AUTOMATYCZNE AKTUALIZACJE (v2)
+ |  check_update() - sprawdza GitHub (max raz / 24h, cache w ustawienia)
+ |  do_update()     - pobiera Release, backup, podmiana, migracje
+ --------------------------------------------------------------- */
+
+/** Sprawdza dostepnosc aktualizacji. Zwraca tablica z danymi lub null. */
+function check_update(bool $force = false): ?array
+{
+    $cacheKey = 'update_check_at';
+    $resultKey = 'update_check_result';
+
+    if (!$force) {
+        $lastCheck = (int) setting_get($cacheKey, '0');
+        if (time() - $lastCheck < 86400) {
+            $cached = setting_get($resultKey, '');
+            if ($cached !== '') {
+                return json_decode($cached, true);
+            }
+        }
+    }
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 10,
+            'header' => "User-Agent: RoweryExpert-Updater\r\nAccept: application/vnd.github.v3+json\r\n",
+        ],
+    ]);
+
+    $response = @file_get_contents(
+        'https://api.github.com/repos/mex13rs/roweryexpert/releases/latest',
+        false,
+        $context
+    );
+
+    if ($response === false) {
+        return null;
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data) || empty($data['tag_name'])) {
+        return null;
+    }
+
+    $latest = ltrim($data['tag_name'], 'v');
+    $current = APP_VERSION;
+
+    $result = [
+        'dostepna' => version_compare($latest, $current, '>'),
+        'nowa_wersja' => $latest,
+        'obecna_wersja' => $current,
+        'url' => $data['html_url'] ?? '',
+        'opis' => $data['body'] ?? '',
+    ];
+
+    // Cache bez 'opis' — kolumna ustawienia.wartosc to VARCHAR(255)
+    $cache = $result;
+    unset($cache['opis']);
+    setting_set($cacheKey, (string) time());
+    setting_set($resultKey, json_encode($cache));
+
+    return $result;
+}
+
+/** Pobiera i instaluje aktualizacje. Zwraca tablica wyniku. */
+function do_update(): array
+{
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 30,
+            'header' => "User-Agent: RoweryExpert-Updater\r\nAccept: application/vnd.github.v3+json\r\n",
+        ],
+    ]);
+
+    $response = @file_get_contents(
+        'https://api.github.com/repos/mex13rs/roweryexpert/releases/latest',
+        false,
+        $context
+    );
+
+    if ($response === false) {
+        return ['success' => false, 'error' => 'Nie udało się połączyć z GitHub.'];
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data) || empty($data['tag_name'])) {
+        return ['success' => false, 'error' => 'Nieprawidłowa odpowiedź z GitHub.'];
+    }
+
+    $tag = $data['tag_name'];
+    if (!preg_match('/^v\d+\.\d+$/', $tag)) {
+        return ['success' => false, 'error' => 'Nieprawidłowy format tagu: ' . $tag];
+    }
+
+    $zipUrl = $data['zipball_url'] ?? '';
+    if ($zipUrl === '') {
+        return ['success' => false, 'error' => 'Brak URL do pobrania.'];
+    }
+
+    // Pobierz zip
+    $zipData = @file_get_contents($zipUrl, false, stream_context_create([
+        'http' => ['timeout' => 60, 'header' => "User-Agent: RoweryExpert-Updater\r\n"],
+    ]));
+
+    if ($zipData === false) {
+        return ['success' => false, 'error' => 'Nie udało się pobrać paczki aktualizacji.'];
+    }
+
+    // Zapisz do pliku tymczasowego
+    $tmpFile = sys_get_temp_dir() . '/roweryexpert-update-' . time() . '.zip';
+    if (@file_put_contents($tmpFile, $zipData) === false) {
+        return ['success' => false, 'error' => 'Nie udało się zapisać pliku tymczasowego.'];
+    }
+
+    // Weryfikacja zipa
+    $zip = new ZipArchive();
+    if ($zip->open($tmpFile) !== true) {
+        @unlink($tmpFile);
+        return ['success' => false, 'error' => 'Pobrany plik nie jest poprawnym archiwum ZIP.'];
+    }
+
+    $hasSerwis = false;
+    $hasInstall = false;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if (str_ends_with($name, '/serwis.php')) $hasSerwis = true;
+        if (str_ends_with($name, '/install.php')) $hasInstall = true;
+    }
+    $zip->close();
+
+    if (!$hasSerwis || !$hasInstall) {
+        @unlink($tmpFile);
+        return ['success' => false, 'error' => 'Paczka nie zawiera wymaganych plików.'];
+    }
+
+    // Kopia zapasowa
+    $backupDir = __DIR__ . '/uploads/backup';
+    if (!is_dir($backupDir)) {
+        @mkdir($backupDir, 0755, true);
+    }
+    $backupFile = $backupDir . '/backup-' . date('Y-m-d_H-i-s') . '.zip';
+    $backup = new ZipArchive();
+    if ($backup->open($backupFile, ZipArchive::CREATE) === true) {
+        $files = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator(__DIR__, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::LEAVES_ONLY
+        );
+        foreach ($files as $file) {
+            $path = $file->getPathname();
+            $relative = substr($path, strlen(__DIR__) + 1);
+            if (str_starts_with($relative, 'config.php') ||
+                str_starts_with($relative, 'uploads/') ||
+                str_starts_with($relative, '.git/') ||
+                str_starts_with($relative, 'uploads/backup/')) {
+                continue;
+            }
+            $backup->addFile($path, $relative);
+        }
+        $backup->close();
+    }
+
+    // Rozpakuj nowe pliki (z pominięciem config.php i uploads/)
+    $zip = new ZipArchive();
+    if ($zip->open($tmpFile) !== true) {
+        @unlink($tmpFile);
+        return ['success' => false, 'error' => 'Nie udało się otworzyć paczki.'];
+    }
+
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if (preg_match('#^[^/]+/(.+)$#', $name, $m)) {
+            $relative = $m[1];
+        } else {
+            continue;
+        }
+        if ($relative === 'config.php' ||
+            str_starts_with($relative, 'uploads/') ||
+            $relative === '.user.ini') {
+            continue;
+        }
+        $dest = __DIR__ . '/' . $relative;
+        $dir = dirname($dest);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $content = $zip->getFromIndex($i);
+        if ($content !== false) {
+            @file_put_contents($dest, $content);
+        }
+    }
+    $zip->close();
+    @unlink($tmpFile);
+
+    // Migracje bazy
+    try {
+        db();
+    } catch (Throwable $e) {
+        return ['success' => false, 'error' => 'Aktualizacja plików OK, ale błąd migracji: ' . $e->getMessage()];
+    }
+
+    // Zaktualizuj installed_version
+    setting_set('installed_version', ltrim($tag, 'v'));
+
+    // Wyczyść cache aktualizacji
+    setting_set('update_check_at', '0');
+
+    return ['success' => true, 'data' => ['nowa_wersja' => ltrim($tag, 'v')]];
+}

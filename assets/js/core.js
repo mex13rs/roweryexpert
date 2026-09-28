@@ -323,5 +323,98 @@
                 // wymagany (bez terminów nie ma czego podsumowywać)
                 if (modulOn('powitanie') && modulOn('kalendarz')) pokazPowitanie();
             }
+
+            // Aktualizacje (v2): sprawdź dostępność przy starcie (check raz/24h po stronie PHP)
+            checkForUpdate();
+        });
+
+        // --- AKTUALIZACJE (v2): baner + modal + wykonywanie ---
+        const updateBanner = document.getElementById('update-banner');
+        const updateBannerText = document.getElementById('update-banner-text');
+        const updateNowBtn = document.getElementById('update-now-btn');
+        const updateModal = document.getElementById('update-modal');
+        const updateModalVersions = document.getElementById('update-modal-versions');
+        const updateModalProgress = document.getElementById('update-modal-progress');
+        const updateProgressText = document.getElementById('update-progress-text');
+        const updateProgressBar = document.getElementById('update-progress-bar');
+        const updateModalOk = document.getElementById('update-modal-ok');
+        const updateModalCancel = document.getElementById('update-modal-cancel');
+        const updateModalClose = document.getElementById('update-modal-close');
+        let updateData = null;
+
+        async function checkForUpdate() {
+            if (!updateBanner) return;
+            try {
+                const res = await apiFetch(API_USTAWIENIA);
+                const data = await res.json();
+                if (!data.success || !data.data.update) return;
+                updateData = data.data.update;
+                if (!updateData.dostepna) return;
+
+                const isAdmin = (document.getElementById('current-user')?.dataset.rola === 'admin');
+                if (isAdmin) {
+                    updateBannerText.textContent = 'Dostępna nowsza wersja: ' + updateData.nowa_wersja
+                        + ' (masz ' + updateData.obecna_wersja + ')';
+                    updateNowBtn.hidden = false;
+                } else {
+                    updateBannerText.textContent = 'Dostępna nowsza wersja panelu — powiadom administratora.';
+                }
+                updateBanner.hidden = false;
+            } catch (e) {
+                /* brak połączenia z API — baner pozostaje ukryty */
+            }
+        }
+
+        function openUpdateModal() {
+            if (!updateModal || !updateData) return;
+            updateModalVersions.textContent = 'Z wersji ' + updateData.obecna_wersja
+                + ' do wersji ' + updateData.nowa_wersja;
+            updateModalProgress.hidden = true;
+            updateModalOk.disabled = false;
+            updateModal.classList.add('active');
+        }
+
+        function closeUpdateModal() {
+            if (updateModal) updateModal.classList.remove('active');
+        }
+
+        updateNowBtn?.addEventListener('click', openUpdateModal);
+        updateModalCancel?.addEventListener('click', closeUpdateModal);
+        updateModalClose?.addEventListener('click', closeUpdateModal);
+        updateModal?.addEventListener('click', (e) => {
+            if (e.target === updateModal) closeUpdateModal();
+        });
+
+        updateModalOk?.addEventListener('click', async () => {
+            if (!updateData) return;
+            updateModalOk.disabled = true;
+            updateModalProgress.hidden = false;
+            updateProgressText.textContent = 'Pobieranie aktualizacji…';
+            updateProgressBar.style.width = '30%';
+
+            try {
+                const res = await apiFetch(API_USTAWIENIA, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'action=do_update',
+                });
+                const data = await res.json();
+                updateProgressBar.style.width = '100%';
+                if (data.success) {
+                    updateProgressText.textContent = 'Gotowe! Odświeżam panel…';
+                    showToast('Zaktualizowano do wersji ' + data.data.nowa_wersja);
+                    setTimeout(() => window.location.reload(), 1200);
+                } else {
+                    updateProgressText.textContent = '';
+                    updateModalProgress.hidden = true;
+                    updateModalOk.disabled = false;
+                    showToast(data.error || 'Nie udało się zaktualizować.', 'error');
+                }
+            } catch (err) {
+                updateProgressText.textContent = '';
+                updateModalProgress.hidden = true;
+                updateModalOk.disabled = false;
+                showToast('Błąd połączenia podczas aktualizacji.', 'error');
+            }
         });
 

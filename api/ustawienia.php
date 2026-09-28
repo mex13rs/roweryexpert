@@ -26,7 +26,17 @@ try {
         json_out(['success' => true, 'data' => [
             'moduly' => moduly(),
             'dane_instancji' => dane_instancji(),
+            'update' => check_update(),
         ]]);
+    }
+
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'check_update') {
+        json_out(['success' => true, 'data' => ['update' => check_update(true)]]);
+    }
+
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'do_update') {
+        auth_require_admin();
+        json_out(do_update());
     }
 
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'modules') {
