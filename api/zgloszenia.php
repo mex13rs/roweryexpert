@@ -88,13 +88,37 @@ try {
                 json_fail('Nieprawidłowy status.');
             }
 
-            $stmt = db()->prepare('UPDATE zgloszenia SET status = ? WHERE id = ?');
-            $stmt->execute([$status, $id]);
-            if ($stmt->rowCount() === 0 && !record_exists($id)) {
+            $st = db()->prepare('SELECT status FROM zgloszenia WHERE id = ?');
+            $st->execute([$id]);
+            $current = $st->fetchColumn();
+            if ($current === false) {
                 json_fail('Zgłoszenie nie istnieje.', 404);
             }
 
-            json_out(['success' => true, 'id' => $id, 'status' => $status]);
+            if ($status === 'picked_up' && $current !== 'picked_up') {
+                // 3.5: wydanie roweru - zapisz, kto wydal (kólko na liscie)
+                $me = (int) (auth_user()['id'] ?? 0);
+                db()->prepare('UPDATE zgloszenia SET status = ?, confirmed_by = ? WHERE id = ?')
+                    ->execute([$status, $me ?: null, $id]);
+            } elseif ($current === 'picked_up' && $status !== 'picked_up') {
+                // 3.5: cofniecie wydania - "kto wydal" ma zniknac z listy i karty
+                db()->prepare('UPDATE zgloszenia SET status = ?, confirmed_by = NULL WHERE id = ?')
+                    ->execute([$status, $id]);
+            } else {
+                db()->prepare('UPDATE zgloszenia SET status = ? WHERE id = ?')
+                    ->execute([$status, $id]);
+            }
+
+            // 3.5: pelny rekord - po wydaniu/cofnieciu zmienia sie tez "kto wydal",
+            // frontend podmienia go w cache, zeby kólko na liscie zniknelo od razu
+            $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
+            $row->execute([$id]);
+            json_out([
+                'success' => true,
+                'id'      => $id,
+                'status'  => $status,
+                'data'    => map_zgloszenie($row->fetch()),
+            ]);
         }
 
         if ($action === 'confirm') {

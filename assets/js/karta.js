@@ -300,14 +300,24 @@
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Nie udało się zmienić statusu.');
 
-                item.status = 'picked_up';
-                fillDetailModal(item);
+                // 3.5: serwer zwraca pelny rekord - wpisuje sie w nim tez "kto wydal"
+                let fresh = item;
+                if (data.data) {
+                    const idx = db.findIndex(row => row.id === detailModalId);
+                    if (idx !== -1) {
+                        db[idx] = data.data;
+                        fresh = data.data;
+                    }
+                } else {
+                    item.status = 'picked_up';
+                }
+                fillDetailModal(fresh);
                 renderServicesList();
-                showToast(`Rower wydany klientowi: ${item.bikeName}`);
+                showToast(`Rower wydany klientowi: ${fresh.bikeName}`);
 
                 // Karta wydania roweru: druk od razu (komputer + moduły
                 // druku i Karta wydania)
-                if (modulOn('druk') && modulOn('karta_wydania') && !IS_MOBILE) triggerPrint(item, 'wydanie');
+                if (modulOn('druk') && modulOn('karta_wydania') && !IS_MOBILE) triggerPrint(fresh, 'wydanie');
             } catch (err) {
                 showToast(err.message, 'error');
             }

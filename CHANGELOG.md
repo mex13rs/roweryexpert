@@ -11,6 +11,37 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.5-cofniecie-wydania — 2026-09-28 („kto wydał" nie zostaje na stałe)
+
+### Problem
+Po cofnięciu wydania (kliknięcie odznaki statusu „Odebrany" → „W serwisie")
+informacja **kto wydał rower** zostawała na liście i na karcie — `confirmed_by`
+był kasowany tylko… nigdy; znikał dopiero po ręcznej ingerencji w bazę.
+
+### Zmiana (dwa zabezpieczenia)
+- **`api/zgloszenia.php` → `action=status`**: wejście w `picked_up` zapisuje
+  `confirmed_by = <kto kliknął>`, **wyjście z `picked_up` czyści go do NULL**
+  (dotyczy wszystkich ścieżek zmiany statusu: odznaka na liście, „Wydaj
+  rower" w karcie). Przy okazji zniknął martwy `rowCount()`-check — jest
+  teraz wstępny `SELECT status` (ten sam strzał = walidacja istnienia).
+- **`config.php` → `map_zgloszenie`**: bramka na poziomie odczytu —
+  `confirmedBy`/`confirmedById` przekazywane dalej **wyłącznie gdy
+  `status === 'picked_up'`**. Dzięki temu stare rekordy (np. wpis id=56
+  z13:48) też przestają pokazywać wydającego bez migracji danych, a każdy
+  przyszły ścieżka zapisu (edycja, import) jest bezpieczna.
+- `action=confirm` (potwierdzenie maski mobilnej) zostaje bez zmian —
+  wartość i tak jest bramkowana statusem i nadpisywana przy faktycznym
+  wydaniu.
+
+### Testy
+- `test32` — krok „wydanie" teraz przez `action=status` (picked_up), nie
+  `confirm` (to był błąd w testach: „Wydaj rower" nigdy nie wysyła `confirm`).
+- `test34` — rozszerzony o scenariusz użytkownika: wydanie → odznaka na
+  liście (cofnięcie) → **kółko znika i API zwraca `confirmedBy: null`**,
+  ponowne wydanie → kółko wraca.
+
+---
+
 ## 3.4-kto-przyjal — 2026-09-28 (kto przyjął i kto wydał — od razu na liście)
 
 ### Plakietki osób na liście zgłoszeń

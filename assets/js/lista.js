@@ -303,7 +303,7 @@
             const index = db.findIndex(item => item.id === id);
             if (index === -1) return;
 
-            const item = db[index];
+            let item = db[index];
             let next;
             if (item.status === 'in_progress') next = 'completed';
             else if (item.status === 'completed') next = 'picked_up';
@@ -319,7 +319,14 @@
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Nie udało się zmienić statusu.');
 
-                item.status = next;
+                // 3.5: serwer zwraca pelny rekord - zmienia sie tez "kto wydal",
+                // wiec podmieniamy cache, a nie tylko status
+                if (data.data) {
+                    db[index] = data.data;
+                    item = data.data;
+                } else {
+                    item.status = next;
+                }
                 renderServicesList();
                 showToast(`Zmieniono status roweru: ${item.bikeName}`);
 
