@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8-instalator';
+const APP_VERSION = '3.8.0';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -1039,9 +1039,16 @@ function check_update(bool $force = false): ?array
     $latest = ltrim($data['tag_name'], 'v');
     $current = wersja_aplikacji();
 
-    // Normalizacja do X.Y (installed_version moze miec sufix, np. "3.8-instalator")
-    $latestNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1', $latest);
-    $currentNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1', $current);
+    // Normalizacja do X.Y.Z (semver; installed_version moze miec sufix, np. "3.8-instalator")
+    $latestNum = preg_replace('/^.*?(\d+\.\d+\.\d+).*$/', '$1', $latest);
+    $currentNum = preg_replace('/^.*?(\d+\.\d+\.\d+).*$/', '$1', $current);
+    // Fallback dla wersji bez trzeciej cyfry (np. "3.8" -> "3.8.0")
+    if (!preg_match('/^\d+\.\d+\.\d+$/', $latestNum)) {
+        $latestNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1.0', $latest);
+    }
+    if (!preg_match('/^\d+\.\d+\.\d+$/', $currentNum)) {
+        $currentNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1.0', $current);
+    }
 
     $result = [
         'dostepna' => version_compare($latestNum, $currentNum, '>'),
