@@ -30,6 +30,9 @@
                         if (!isPlannedToday(item)) return false;
                     } else if (currentFilter === 'overdue') {
                         if (!isOverdue(item)) return false;
+                    } else if (currentFilter === 'mine') {
+                        // 3.2: filtr "Moje" - zgloszenia zalozyc przez mnie
+                        if (item.createdById !== USER_ID) return false;
                     } else if (currentFilter !== 'all' && item.status !== currentFilter) {
                         return false;
                     }
@@ -49,7 +52,12 @@
                 name: (a, b) => collator.compare(a.bikeName || '', b.bikeName || ''),
                 status: (a, b) => ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9))
                     || (a.datePlanned || '').localeCompare(b.datePlanned || ''),
+                // 3.2: wg uzytkownika (kto zalozyl / kto wydal) - rekordy sprzed
+                // wdrozenia bez autora (null) ida na koniec listy
+                user: (a, b) => collator.compare(a.createdBy || String.fromCharCode(65533), b.createdBy || String.fromCharCode(65533)),
+                issuer: (a, b) => collator.compare(a.confirmedBy || String.fromCharCode(65533), b.confirmedBy || String.fromCharCode(65533)),
             };
+
             filteredDb.sort((a, b) =>
                 (sorters[currentSort] || sorters.planned_asc)(a, b) || (b.id - a.id));
 

@@ -27,6 +27,10 @@
                 <span class="d-label" id="detail-notes-label">Notatki:</span>
                 <textarea class="d-val detail-notes-input" id="detail-notes" rows="3"
                     placeholder="Wpisz swoje uwagi do zgłoszenia..."></textarea>
+                <span class="d-label" id="detail-created-label">Założył:</span>
+                <span class="d-val" id="detail-created-by">—</span>
+                <span class="d-label" id="detail-issued-label">Wydanie:</span>
+                <span class="d-val" id="detail-confirmed-by">—</span>
             </div>
             <div class="pending-detail" id="detail-pending" hidden>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">

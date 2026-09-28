@@ -54,13 +54,14 @@ try {
                 ? json_encode($servicesDone, JSON_UNESCAPED_UNICODE)
                 : null;
 
+            $me = (int) (auth_user()['id'] ?? 0);
             $stmt = db()->prepare(
                 'INSERT INTO zgloszenia
                     (bike_name, date_in, date_planned, customer_phone,
-                     fault_description, status, confirmed, services_done)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+                     fault_description, status, confirmed, services_done, created_by)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $confirmed, $servicesJson]);
+            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $confirmed, $servicesJson, $me ?: null]);
             $id = (int) db()->lastInsertId();
 
             // Numer serwisowy: RO-ROK-NUMER_ID (etykieta QR na rowerze)
@@ -102,8 +103,10 @@ try {
                 json_fail('Brak identyfikatora zgłoszenia.');
             }
 
-            $stmt = db()->prepare('UPDATE zgloszenia SET confirmed = 1 WHERE id = ?');
-            $stmt->execute([$id]);
+            // 3.2: kto wydal rower (klikniecie "Wydaj rower")
+            $me = (int) (auth_user()['id'] ?? 0);
+            $stmt = db()->prepare('UPDATE zgloszenia SET confirmed = 1, confirmed_by = ? WHERE id = ?');
+            $stmt->execute([$me ?: null, $id]);
             if ($stmt->rowCount() === 0 && !record_exists($id)) {
                 json_fail('Zgłoszenie nie istnieje.', 404);
             }
@@ -205,12 +208,14 @@ try {
             if ($id <= 0) {
                 json_fail('Brak identyfikatora zgłoszenia.');
             }
+            if (!record_exists($id)) {
+                json_fail('Zgłoszenie nie istnieje.', 404);
+            }
+            // 3.2: pracownik przywraca tylko własne zgłoszenia (admin - każde)
+            owner_guard($id);
 
             $stmt = db()->prepare('UPDATE zgloszenia SET deleted_at = NULL WHERE id = ?');
             $stmt->execute([$id]);
-            if ($stmt->rowCount() === 0 && !record_exists($id)) {
-                json_fail('Zgłoszenie nie istnieje.', 404);
-            }
 
             json_out(['success' => true, 'id' => $id]);
         }
@@ -242,6 +247,9 @@ try {
             json_out(['success' => true, 'id' => $id, 'purged' => true]);
         }
 
+        // 3.2: pracownik kasuje (kosz) tylko własne zgłoszenia; admin - każde
+        owner_guard($id);
+
         // Domyślnie: kosz (soft delete) — można przywrócić
         db()->prepare('UPDATE zgloszenia SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL')
             ->execute([$id]);
@@ -260,4 +268,22 @@ function record_exists(int $id): bool
     $stmt = db()->prepare('SELECT 1 FROM zgloszenia WHERE id = ?');
     $stmt->execute([$id]);
     return (bool) $stmt->fetchColumn();
+}
+
+/**
+ * 3.2 - wlasnosc zgloszenia: pracownik kasuje/przywraca tylko wlasne
+ * (created_by = jego id); admin przechodzi bez ograniczen. Rekordy sprzed
+ * wdrozenia (created_by = NULL) kasuje wiec tylko admin.
+ */
+function owner_guard(int $id): void
+{
+    if (auth_is_admin()) {
+        return;
+    }
+    $stmt = db()->prepare('SELECT created_by FROM zgloszenia WHERE id = ?');
+    $stmt->execute([$id]);
+    $owner = $stmt->fetchColumn();
+    if ($owner === false || $owner === null || (int) $owner !== (int) (auth_user()['id'] ?? 0)) {
+        json_fail('Możesz kasować i przywracać tylko własne zgłoszenia.', 403);
+    }
 }

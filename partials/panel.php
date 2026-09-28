@@ -183,6 +183,7 @@
                     <div class="history-header list-controls" style="margin-top: 0.85rem; justify-content: space-between;">
                         <div class="filters">
                             <button class="filter-btn active" data-filter="all">Wszystkie</button>
+                            <button class="filter-btn" data-filter="mine">Moje</button>
                             <button class="filter-btn" data-filter="picked_up">Odebrane</button>
                             <button class="filter-btn" data-filter="trash">Kosz <span class="filter-count count-neutral" id="count-trash" hidden></span></button>
                         </div>
@@ -194,6 +195,8 @@
                                 <option value="dateIn_asc">Przyjęcia: najstarsze</option>
                                 <option value="name">Nazwa roweru A–Z</option>
                                 <option value="status">Wg statusu</option>
+                                <option value="user">Wg użytkownika (kto założył)</option>
+                                <option value="issuer">Wg wydającego</option>
                             </select>
                         </label>
                     </div>

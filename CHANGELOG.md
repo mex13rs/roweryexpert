@@ -11,6 +11,42 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.2-wlasciciele — 2026-09-28 (kto założył, kto wydał, filtr „Moje")
+
+### Dane
+- Migracja `zgloszenia` (wykrywanie przez `SHOW COLUMNS`, kolumny **nullable** —
+  stary kod na wspólnej bazie przechodzi to bez zmian): `created_by`
+  (kto założył) i `confirmed_by` (kto wydał rower).
+- `create` wypełnia `created_by`, `confirm` („Wydaj rower") — `confirmed_by`.
+- `map_zgloszenie` zwraca `createdById`/`createdBy`/`confirmedById`/`confirmedBy`
+  (nazwa loginu z cache `users_login_map()` — jedno zapytanie na request,
+  bez N+1). Rekordy sprzed wdrożenia (NULL) = `null` = „—".
+
+### Uprawnienia (własność)
+- `owner_guard()` w `api/zgloszenia.php`: pracownik kasuje (kosz) i przywraca
+  **tylko swoje** zgłoszenia (403 dla cudzych), admin — wszystkie;
+  rekordy sprzed wdrożenia (`created_by = NULL`) kasuje więc tylko admin.
+- `purge` bez zmian = wyłącznie admin (sprawdzany przed guardem własności).
+- Restrukturyzacja `restore`: najpierw `record_exists` (404), potem guard,
+  potem UPDATE — identyczne odpowiedzi co przed zmianą.
+
+### UI
+- Karta zgłoszenia: pola **„Założył"** i **„Wydanie"** (stare = „—").
+- Lista: przycisk filtra **„Moje"** (zgłoszenia założone przez mnie,
+  `USER_ID` z bootstrapu PHP) + sortowanie **„Wg użytkownika"**
+  (kto założył) i **„Wg wydającego"** — rekordy bez autora na końcu listy.
+
+### Testy
+- Nowy `/tmp/opencode/test32.py` — **29/29**: `createdBy`/`confirmedBy`
+  po API, cudze kasowanie → 403 (nietknięte), swoje kasowanie + przywracanie
+  → 200, karta pokazuje autora i wydającego, rekord sprzed wdrożenia = „—",
+  filtr „Moje" (bez cudzych), sortowanie wg użytkownika (kolejność zgodna
+  z API), purge testu przez admina, konsola czysta.
+- Regresje: `test30.py`, `test31.py`, `test_js_split.py`,
+  `test_css_split.py`, `test_prod_old.py`.
+
+---
+
 ## 3.1-role — 2026-09-28 (role i uprawnienia)
 
 ### Uprawnienia (mapa w jednym miejscu)

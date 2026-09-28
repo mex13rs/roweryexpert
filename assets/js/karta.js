@@ -216,6 +216,10 @@
 
             document.getElementById('detail-fault').textContent = item.faultDescription || '—';
 
+            // 3.2: kto zalozyl zgloszenie / kto wydal rower (stare = "—")
+            document.getElementById('detail-created-by').textContent = item.createdBy || '—';
+            document.getElementById('detail-confirmed-by').textContent = item.confirmedBy || '—';
+
             // Notatki: aktywne pole z autozapisem (w koszu tylko do odczytu)
             const notesEl = document.getElementById('detail-notes');
             notesEl.value = item.serviceNotes || '';

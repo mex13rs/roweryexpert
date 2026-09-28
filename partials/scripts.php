@@ -5,6 +5,8 @@
     <script>
     const IS_AUTHENTICATED = <?= $authenticated ? 'true' : 'false' ?>;
     const FOTO_LIMIT_MB = <?= (int) round(MAX_PHOTOS_TOTAL_BYTES / 1048576) ?>;
+    // 3.2: id zalogowanego konta (filtr "Moje" na liscie zgloszen)
+    const USER_ID = <?= (int) ($currentUser['id'] ?? 0) ?>;
     </script>
     <script src="assets/js/core.js?v=<?= APP_VERSION ?>"></script>
     <script src="assets/js/motyw.js?v=<?= APP_VERSION ?>"></script>
