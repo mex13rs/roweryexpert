@@ -23,6 +23,16 @@ bazie MySQL; stary `serwis/` pozostaje na 2.13 (hasło aplikacji) aż do merge.
   `FOTO_LIMIT_MB`) został jako inline `<script>` przed skryptami.
 - `serwis.php`: 5998 → ~850 linii. Rekonstrukcja zweryfikowana (oryginał ≡ podział).
 
+### Partials HTML/PHP (3.0-post)
+- `serwis.php` (858 linii) → **bootstrap czysto PHP: 44 linie** + 9 plików w
+  `partials/`: `head`, `login`, `panel`, `modal-ustawienia`, `modaly`,
+  `modal-karta`, `modal-zdjecia`, `wydruk`, `scripts`.
+- Każdy partial zaczyna się guardem `defined('SERWIS_PANEL') or exit` — wejście
+  wprost do `partials/*.php` niczego nie renderuje.
+- Podział w kolejności źródłowej, rekonstrukcja zweryfikowana skryptem
+  (oryginał ≡ suma partiali). Uwaga: `serwis.php` **bez** `?>` na końcu —
+  HTML żyje w partialach, requires muszą być w bloku PHP.
+
 ### Konta i sesje
 - Nowe tabele: `users`, `sesje` (w bazie tylko **hash** tokenu),
   `login_attempts`; seed konta `admin` z dotychczasowego hasła aplikacji —
@@ -47,6 +57,9 @@ bazie MySQL; stary `serwis/` pozostaje na 2.13 (hasło aplikacji) aż do merge.
 - `/tmp/opencode/test_css_split.py` — regresja po podziale CSS.
 - `/tmp/opencode/test_prod_old.py` — produkcja na wspólnej bazie: logowanie
   starym mechanizmem, 7 kart, brak błędów.
+- Po podziale na partials oba zestawy przepuszczone ponownie: `test30.py`
+  17/17 + `test_js_split.py` 19/19, w tym weryfikacja guardu partiali
+  (wejście wprost = pusta odpowiedź) i screenshoty desktop/mobile.
 
 ---
 
