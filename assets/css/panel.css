@@ -1143,6 +1143,48 @@
             transition: var(--transition);
         }
 
+        /* Plakietki osób obsługujących na liście (3.4): kto przyjął / kto wydał */
+        .user-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.4rem;
+            height: 1.4rem;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+            flex: none;
+        }
+
+        .user-chip-empty {
+            background: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .chip-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            margin-left: 0.5rem;
+        }
+
+        .status-wrap .chip-inline {
+            margin-left: 0;
+        }
+
+        .chip-name {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
         .status-in_progress {
             background: var(--primary);
             color: #141414;

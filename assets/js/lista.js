@@ -11,6 +11,23 @@
                 || (item.servicesDone || []).join(' ').toLowerCase().includes(query);
         }
 
+        // --- Plakietki osób obsługujących na liście (3.4) ---
+        // Stały kolor dla danego loginu: prosty hash -> HSL, niezależny od motywu
+        function userChipColor(login) {
+            let h = 0;
+            for (let i = 0; i < login.length; i++) h = (h * 31 + login.charCodeAt(i)) % 360;
+            return 'hsl(' + h + ', 58%, 42%)';
+        }
+
+        // Kółko z inicjałem; brak loginu = szare "—" (rekord sprzed wdrożenia)
+        function userChip(login, emptyTitle) {
+            if (!login) {
+                return `<span class="user-chip user-chip-empty" title="${escapeHtml(emptyTitle || 'Brak danych')}">—</span>`;
+            }
+            const s = String(login);
+            return `<span class="user-chip" style="background: ${userChipColor(s)}" title="${escapeHtml(s)}">${escapeHtml(Array.from(s)[0].toUpperCase())}</span>`;
+        }
+
         function renderServicesList() {
             servicesListContainer.innerHTML = '';
             
@@ -177,6 +194,15 @@
                         : `${photosBtn}${editBtn}${calendarBtn}${printBtn}${modulOn('kosz') ? trashBtn : ''}`
                 }</div>`;
 
+                // Kto przyjął: plakietka + login w wierszu „Przyjęto”; kto wydał:
+                // kółko przy odznace statusu (3.4)
+                const intakeHtml = item.createdBy
+                    ? `<span class="chip-inline">${userChip(item.createdBy)}<span class="chip-name">${escapeHtml(item.createdBy)}</span></span>`
+                    : userChip(null, 'Konto sprzed wdrożenia użytkowników');
+                const issuerHtml = item.confirmedBy
+                    ? `<span class="chip-inline" title="Rower wydał: ${escapeHtml(item.confirmedBy)}">${userChip(item.confirmedBy)}</span>`
+                    : '';
+
                 card.innerHTML = `
                     <div class="item-header">
                         <div class="item-info">
@@ -188,13 +214,13 @@
                                 tel. ${escapeHtml(item.customerPhone)}
                             </a>
                         </div>
-                        ${statusHtml}
+                        <span class="status-wrap">${statusHtml}${issuerHtml}</span>
                     </div>
                     
                     <div class="item-details">
                         <div class="detail-row">
                             <span class="detail-label">Przyjęto:</span>
-                            <span class="detail-val">${formatDateForUser(item.dateIn)}</span>
+                            <span class="detail-val">${formatDateForUser(item.dateIn)}${intakeHtml}</span>
                         </div>
                         ${modulOn('kalendarz') ? `
                         <div class="detail-row">

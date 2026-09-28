@@ -11,6 +11,28 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.4-kto-przyjal — 2026-09-28 (kto przyjął i kto wydał — od razu na liście)
+
+### Plakietki osób na liście zgłoszeń
+- **Kto przyjął**: w wierszu „Przyjęto" obok daty kółko z inicjałem loginu
+  w stałym kolorze wyliczanym z loginu (hash → HSL, niezależny od motywu:
+  ciemny/jasny zawsze ten sam kolor) + nazwa obok; tooltip = pełne konto.
+- **Kto wydał**: przy odznace statusu drugie kółko z inicjałem wydającego —
+  cała obsługa (przyjął → wydał) bez otwierania karty.
+- Rekordy sprzed wdrożenia (`created_by` = NULL) = szare „—" z podpisem
+  „Konto sprzed wdrożenia użytkowników" w tooltipie.
+- Kliknięcie w kółko/nazwę jak w resztę karty → otwiera zgłoszenie.
+- Nowe klasy CSS: `.user-chip`, `.user-chip-empty`, `.chip-inline`,
+  `.chip-name`, `.status-wrap`.
+
+### Testy
+- Nowy `test34.py` — plakietka przyjmującego (tytuł = login, inicjał,
+  kolor `hsl(...)`), kółko wydającego przy statusie, **różne kolory dla
+  różnych loginów** i zawsze ten sam dla tego samego, szare „—" dla rekordu
+  sprzed wdrożenia, czysta konsola.
+
+---
+
 ## 3.3-karta-konta — 2026-09-28 (karta konta + usuwanie użytkowników)
 
 ### Karta konta (osobny modal, jak zgłoszenie)
