@@ -11,6 +11,28 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.6-naglowek — 2026-09-28 (nazwa użytkownika w nagłówku)
+
+- **Większa nazwa konta**: `.header-user` `0.8rem → 1.05rem`, `font-weight: 600`,
+  kolor `--text-primary` (był secondary), `max-width 90px → 170px` + podkreślenie
+  przy najechaniu i `cursor: pointer`.
+- **Przycisk ustawień zaraz obok nazwy**: `<span id="current-user">` przeniesiony
+  bezpośrednio przed `#open-settings-btn` (+CSS `.header-user + #open-settings-btn`
+  zmniejszający odstęp, żeby czytało się jako para).
+- **Klik w nazwę otwiera ustawienia** (tak samo jak ikona): wspólna funkcja
+  `openSettingsModal` w `ustawienia.js`, plus obsługa klawiatury
+  (Enter/Space, `role="button"`).
+- **Fix ukryty dotąd**: `var(--accent)` **nie istnieje** w CSS (jest `--primary`) —
+  deklaracje odpadały po cichu; podmienione w `.user-row:hover` i odznace roli
+  admina w `uzytkownicy.js` (wcześniejszy hover wierszy i ramka odznaki w
+  ogóle nie działały).
+
+### Testy
+- `test31` rozbudowany o sekcję nagłówka: rozmiar `>= 16px`, sąsiedztwo
+  `#current-user` ↔ `#open-settings-btn`, klik w nazwę otwiera modal ustawień.
+
+---
+
 ## 3.5-cofniecie-wydania — 2026-09-28 („kto wydał" nie zostaje na stałe)
 
 ### Problem

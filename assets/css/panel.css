@@ -1869,7 +1869,7 @@
 
         .user-row:hover,
         .user-row:focus-visible {
-            border-color: var(--accent);
+            border-color: var(--primary);
             outline: none;
         }
 
@@ -2600,12 +2600,21 @@
 /* ===== 3.0: zalogowane konto w naglowku ===== */
 .header-user {
     align-self: center;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    max-width: 90px;
+    font-size: 1.05rem;      /* 3.6: bylo 0.8rem */
+    font-weight: 600;
+    color: var(--text-primary);
+    max-width: 170px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    cursor: pointer;
+}
+.header-user:hover {
+    text-decoration: underline;
+}
+/* Nazwa konta + przycisk ustawień jako para (3.6) */
+.header-user + #open-settings-btn {
+    margin-left: -0.5rem;
 }
 @media (max-width: 1024px) {
     .header-user { display: none; }

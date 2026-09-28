@@ -62,7 +62,7 @@
 
         function roleBadge(u) {
             return u.rola === 'admin'
-                ? '<span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 0.1rem 0.5rem;">admin</span>'
+                ? '<span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--primary); border: 1px solid var(--primary); border-radius: 999px; padding: 0.1rem 0.5rem;">admin</span>'
                 : '<span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 0.1rem 0.5rem;">pracownik</span>';
         }
 

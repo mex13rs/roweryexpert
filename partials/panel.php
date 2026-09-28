@@ -18,6 +18,9 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 11.25h.008v.008H8.25v-.008Zm3.75 0h.008v.008H12v-.008Zm3.75 0h.008v.008H15.75v-.008ZM8.25 15h.008v.008H8.25V15Zm3.75 0h.008v.008H12V15Z" />
                         </svg>
                     </button>
+                    <!-- Zalogowane konto — zaraz przed ustawieniami, klik otwiera ustawienia (3.6) -->
+                    <span class="header-user" id="current-user" role="button" tabindex="0"
+                          title="Kliknij, aby otworzyć ustawienia"><?= htmlspecialchars($currentUser['login'] ?? '') ?></span>
                     <!-- Global Settings Button -->
                     <button class="btn-icon" id="open-settings-btn" title="Ustawienia">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px;">
@@ -51,8 +54,6 @@
                         <button class="accent-swatch" data-accent="niebieski" title="Niebieski" style="--sw: #60a5fa"></button>
                         <button class="accent-swatch" data-accent="pomaranczowy" title="Pomarańczowy" style="--sw: #fb923c"></button>
                     </div>
-                    <!-- Zalogowane konto -->
-                    <span class="header-user" id="current-user" title="Zalogowane konto"><?= htmlspecialchars($currentUser['login'] ?? '') ?></span>
                     <!-- Logout Button -->
                     <button class="btn-icon" id="logout-btn" title="Wyloguj się (<?= htmlspecialchars($currentUser['login'] ?? '') ?>)">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px;">

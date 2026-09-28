@@ -1,8 +1,19 @@
         // --- OBSŁUGA SETTINGS MODAL ---
-        openSettingsBtn.addEventListener('click', () => {
+        // Otwiera też klik w nazwę użytkownika w nagłówku (3.6)
+        const openSettingsModal = () => {
             settingsModal.classList.add('active');
             loadPhotoStats();
             syncModuleToggles();   // zakładka Moduły: odbij aktualne flagi
+        };
+        openSettingsBtn?.addEventListener('click', openSettingsModal);
+
+        const currentUserEl = document.getElementById('current-user');
+        currentUserEl?.addEventListener('click', openSettingsModal);
+        currentUserEl?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openSettingsModal();
+            }
         });
 
         closeSettingsBtn.addEventListener('click', () => {
