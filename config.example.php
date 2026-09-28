@@ -1093,7 +1093,8 @@ function do_update(): array
     }
 
     $tag = $data['tag_name'];
-    if (!preg_match('/^v\d+\.\d+$/', $tag)) {
+    // Tag moze byc vX.Y.Z (semver) lub vX.Y (starsze) — oba akceptowale
+    if (!preg_match('/^v\d+\.\d+(\.\d+)?$/', $tag)) {
         return ['success' => false, 'error' => 'Nieprawidłowy format tagu: ' . $tag];
     }
 
