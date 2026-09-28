@@ -241,6 +241,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: install.php?krok=3');
                 exit;
             }
+            // podglad hasla: checkbox zapamietuje stan w sesji
+            $_SESSION['pass_show'] = isset($_POST['pass_show']) ? '1' : '0';
             $postStep = 4;
             $p1 = (string) ($_POST['pass1'] ?? '');
             $p2 = (string) ($_POST['pass2'] ?? '');
@@ -409,6 +411,8 @@ function inst_render(?int $step, string $err = '', ?string $body = null, array $
   summary { cursor: pointer; color: #ffdd00; font-weight: 600; font-size: 14.5px; }
   details .hint { font-size: 14px; color: #9aa2b1; margin-top: 8px; }
   details .hint b { color: #cbd2de; }
+  .checkbox { display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 14.5px; color: #b9c0cc; cursor: pointer; }
+  .checkbox input { width: auto; margin: 0; accent-color: #ffdd00; }
   code { background: #12151a; border: 1px solid #333a46; border-radius: 5px; padding: 1px 6px;
          font-size: 13.5px; color: #ffdd00; }
   .sum { width: 100%; border-collapse: collapse; font-size: 14.5px; margin-top: 6px; }
@@ -516,6 +520,9 @@ function inst_step3(array $v, string $err): string
 
 function inst_step4(string $err): string
 {
+    $show = ($_SESSION['pass_show'] ?? '0') === '1';
+    $passType = $show ? 'text' : 'password';
+
     return '<h2>Krok 4/6 — Konto administratora</h2>
         <div class="box">Tworzone jest konto <strong>admin</strong> (login stały). Hasło możesz zmienić
         później w panelu. Zapisz je w bezpiecznym miejscu.</div>
@@ -524,9 +531,13 @@ function inst_step4(string $err): string
             <input type="hidden" name="csrf" value="' . h($_SESSION['inst_csrf'] ?? '') . '">
             <input type="hidden" name="action" value="step4">
             <label>Hasło admina <small>(min. 6 znaków, zalecane 8+)</small></label>
-            <input type="password" name="pass1" autocomplete="new-password" required>
+            <input type="' . $passType . '" name="pass1" autocomplete="new-password" required>
             <label>Powtórz hasło</label>
-            <input type="password" name="pass2" autocomplete="new-password" required>
+            <input type="' . $passType . '" name="pass2" autocomplete="new-password" required>
+            <label class="checkbox">
+                <input type="checkbox" name="pass_show" value="1" ' . ($show ? 'checked' : '') . ' onchange="this.form.submit()">
+                Pokaż hasło
+            </label>
             <button class="btn" type="submit">Dalej — podsumowanie</button>
             <a class="btn ghost" href="install.php?krok=3">Wstecz</a>
         </form>';
