@@ -11,6 +11,14 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.0 — 2026-09-28
+
+### Zmienione
+- **Wersjonowanie semver X.Y.Z**: ostatnia cyfra = drobne poprawki (3.8.1),
+  środkowa = większe zmiany (3.9.0), pierwsza = zmiany organizacyjne (4.0.0).
+  `APP_VERSION` = `3.8.0`; `check_update` normalizuje wersje do X.Y.Z
+  (z fallbackiem dla `3.8` → `3.8.0`). Tag `v3.8.0` obok `v3.8`.
+
 ## 3.8-instalator — 2026-09-28
 
 ### Dodane
