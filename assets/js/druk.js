@@ -75,7 +75,7 @@
                     
                     new QRious({
                         element: qrCanvas,
-                        value: 'https://maps.app.goo.gl/samSLejTdYzsQAEg8',
+                        value: (window.APP_CFG && window.APP_CFG.mapsUrl) || '',
                         size: 150,
                         level: 'H',
                         foreground: '#000000',
@@ -117,7 +117,7 @@
                     executePrint(); // Drukuj mimo braku obrazka QR
                 };
                 
-                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https%3A%2F%2Fmaps.app.goo.gl%2FsamSLejTdYzsQAEg8';
+                qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent((window.APP_CFG && window.APP_CFG.mapsUrl) || '');
             }
         }
 

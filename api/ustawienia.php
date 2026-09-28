@@ -7,6 +7,14 @@ declare(strict_types=1);
  |  POST action=modules    -> zapis listy modulow (JSON w polu "moduly")
  --------------------------------------------------------------- */
 
+// Brak config.php = instalacja nieukonczona -> JSON zamiast bledu PHP.
+if (!is_file(__DIR__ . '/../config.php')) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['success' => false, 'error' => 'Instalacja nie zostala zakonczona - uruchom install.php']);
+    exit;
+}
+
 require __DIR__ . '/../config.php';
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';

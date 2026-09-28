@@ -22,7 +22,7 @@
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Telefon klienta:</td>
-                    <td class="receipt-value" id="print-customer-phone">532-561-152</td>
+                    <td class="receipt-value" id="print-customer-phone">500-600-700</td>
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Numer serwisowy:</td>
@@ -61,8 +61,8 @@
 
             <div class="receipt-footer">
                 <div class="receipt-address">
-                    RoweryExpert Ostrobramska 81
-                    04-175 Warszawa tel. 532-561-152
+                    RoweryExpert <?= SERVICE_ADDRESS ?>
+                    <?= SERVICE_CITY ?> tel. <?= SERVICE_PHONE ?>
                 </div>
 
                 <div class="receipt-qr-container">
@@ -94,7 +94,7 @@
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Telefon klienta:</td>
-                    <td class="receipt-value" id="print-customer-phone-service">532-561-152</td>
+                    <td class="receipt-value" id="print-customer-phone-service">500-600-700</td>
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Numer serwisowy:</td>

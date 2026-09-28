@@ -95,7 +95,7 @@
                         
                         <div class="form-group">
                             <label for="customer-phone">Telefon Klienta</label>
-                            <input type="tel" id="customer-phone" placeholder="np. 532-561-152 lub 532561152" required>
+                            <input type="tel" id="customer-phone" placeholder="np. 500 600 700 lub 500600700" required>
                         </div>
                         
                         <div class="form-group">

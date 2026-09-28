@@ -1,6 +1,12 @@
 <?php
 declare(strict_types=1);
 
+// Brak config.php = panel jeszcze nie skonfigurowany -> kierujemy do instalatora.
+if (!is_file(__DIR__ . '/config.php')) {
+    header('Location: install.php');
+    exit;
+}
+
 require __DIR__ . '/config.php';
 
 // Znacznik dla partiali: wejście wprost do pliku partials/*.php niczego nie renderuje

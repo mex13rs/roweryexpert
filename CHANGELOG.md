@@ -11,6 +11,33 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8-instalator — 2026-09-28
+
+### Dodane
+- **Instalator `install.php`** — graficzny wizard 6 kroków (wymagania serwera →
+  baza z testem połączenia i rozwijaną podpowiedzią „jak założyć bazę” →
+  dane serwisu → hasło admina → podsumowanie → gotowe). CSRF, limit prób testu
+  bazy (10 / 15 min), blokada przy istniejącym `config.php`, po instalacji
+  przypomnienie o usunięciu pliku. Wygenerowany `config.php` = podmiana stałych
+  we wzorcu `config.example.php` (sekret przez `var_export`).
+- **Dane instancji jako stałe w `config.php`**: `SERVICE_ADDRESS`, `SERVICE_CITY`,
+  `SERVICE_PHONE`, `GOOGLE_MAPS_URL`, `SITE_URL` — stopka wydruku i QR „Oceń nas”
+  czytają ze stałych zamiast utwardzonych tekstów (WCZEŚNIEJ: `wydruk.php:64-65`,
+  dwa miejsca w `druk.js`). Branding RoweryExpert pozostaje niekonfigurowalny.
+- **Bramka instalacji**: brak `config.php` → `serwis.php` przekierowuje na
+  `install.php`, `api/*` zwraca 503 JSON zamiast fatality PHP.
+- `README.md` (instrukcja instalacji i ręcznej aktualizacji) + `LICENSE` (MIT) —
+  przygotowanie dystrybucji publicznej przez GitHuba.
+
+### Zmienione
+- `config.example.php` — odświeżony z 3.0 do 3.8 (kopiowany z `config.php`,
+  sekrety i dane instancji podmienione na `UZUPELNIJ`).
+- Neutralne przykłady telefonu w placeholderze pola telefonu (`panel.php`),
+  na wydruku i w komentarzu `motyw.js` (bez numeru serwisu).
+- `partials/head.php` — `window.APP_CFG.mapsUrl` dla JS.
+
+---
+
 ## 3.7-nazwa-przy-wylogowaniu — 2026-09-28 (korekta kolejności nagłówka)
 
 - **Korekta po feedbacku**: nazwa użytkownika wraca na koniec nagłówka — znowu

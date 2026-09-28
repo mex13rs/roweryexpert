@@ -95,7 +95,7 @@
             const digits = value.replace(/\D/g, '');
             // Max 9 digits
             const limited = digits.slice(0, 9);
-            // Insert dash every 3 digits: 532 561 152 → 532-561-152
+            // Insert dash every 3 digits: 500 600 700 → 500-600-700
             const parts = [];
             for (let i = 0; i < limited.length; i += 3) {
                 parts.push(limited.slice(i, i + 3));

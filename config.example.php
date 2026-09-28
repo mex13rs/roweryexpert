@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+/* UWAGA: to jest WZORZEC konfiguracji, nie uruchamiaj go na serwerze.
+   install.php generuje z niego plik config.php i uzupełnia pola UZUPELNIJ.
+   Ręczna instalacja: skopiuj na config.php i uzupełnij wartości. */
+
 /* ---------------------------------------------------------------
  | Numer wersji aplikacji - pokazywany w stopce strony.
  | Zwiększaj przy każdej istotnej zmianie i dopisuj wpis w CHANGELOG.md
@@ -40,8 +44,11 @@ declare(strict_types=1);
  |   3.0  -> konta uzytkownikow + sesje w bazie (14 dni), login i haslo na ekranie
  |           logowania, limit nieudanych prob, wlasna nazwa cookie (fork dziala
  |           rownolegle ze stara wersja) + rozdrobnienie serwis.php na assets/
+ |   3.8  -> instalator install.php (wizard), dane instancji jako stale w config
+ |           (adres/telefon/link Google/URL), gate brakujacego config.php
+ |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.0-logowanie';
+const APP_VERSION = '3.8-instalator';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -49,9 +56,25 @@ const APP_VERSION = '3.0-logowanie';
 
 const DB_HOST = 'localhost';
 const DB_PORT = '3306';
-const DB_NAME = 'host91573_serwis';
+const DB_NAME = 'UZUPELNIJ';
 const DB_USER = 'UZUPELNIJ';
 const DB_PASS = 'UZUPELNIJ';
+
+/* ---------------------------------------------------------------
+ | Dane tej instancji serwisu - ustawiane przez install.php
+ |   SERVICE_ADDRESS -> ulica (stopka wydruku zlecenia)
+ |   SERVICE_CITY    -> kod pocztowy i miasto (stopka wydruku)
+ |   SERVICE_PHONE   -> telefon serwisu (stopka wydruku)
+ |   GOOGLE_MAPS_URL -> link do wizytki Google (QR "Oceń nas" na wydruku)
+ |   SITE_URL        -> opcjonalny adres URL panelu (pusty = bez zmian)
+ | Nazwa/marka RoweryExpert jest stała (sieć serwisów) - nie jest
+ | konfigurowalna. Wzorzec tych stalych: config.example.php
+ --------------------------------------------------------------- */
+const SERVICE_ADDRESS = 'UZUPELNIJ';
+const SERVICE_CITY = 'UZUPELNIJ';
+const SERVICE_PHONE = 'UZUPELNIJ';
+const GOOGLE_MAPS_URL = 'UZUPELNIJ';
+const SITE_URL = '';
 
 const UPLOAD_DIR = __DIR__ . '/uploads/zdjecia';
 const UPLOAD_URL = 'uploads/zdjecia';
@@ -326,6 +349,8 @@ function auth_login(string $login, string $password): ?string
     $key = $login . '|' . ($_SERVER['REMOTE_ADDR'] ?? '');
 
     db()->exec('DELETE FROM sesje WHERE expires_at < NOW()');   // sprzątanie starych sesji
+    db()->prepare('DELETE FROM login_attempts WHERE created_at < ?')
+        ->execute([date('Y-m-d H:i:s', time() - LOGIN_ATTEMPT_WINDOW)]);
     if (login_blocked($key)) {
         return 'Zbyt wiele nieudanych prób - spróbuj ponownie za kilka minut.';
     }
@@ -367,6 +392,25 @@ function auth_require(): void
 {
     if (!auth_is_authenticated()) {
         json_fail('Brak autoryzacji - zaloguj się.', 401);
+    }
+}
+
+/** Czy bieżący użytkownik jest administratorem? */
+function auth_is_admin(): bool
+{
+    $user = auth_user();
+    return $user !== null && (string) $user['rola'] === 'admin';
+}
+
+/**
+ * Guard dla endpointów admina - mapa uprawnień w jednym miejscu (3.1).
+ * Najpierw sprawdza sesję (401), potem rolę (403).
+ */
+function auth_require_admin(): void
+{
+    auth_require();
+    if (!auth_is_admin()) {
+        json_fail('Brak uprawnień administratora.', 403);
     }
 }
 
@@ -587,6 +631,16 @@ function db(): PDO
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL AFTER created_at');
     }
 
+    // created_by - kto zalozyl zgloszenie (wlasciciel; uprawnienia pracownika)
+    // confirmed_by - kto wydal rower (klikniecie "Wydaj rower")
+    // Oba nullable: stare zgloszenia (sprzed wdrozenia) = NULL = "—" na karcie.
+    if (!in_array('created_by', $zgCols, true)) {
+        $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN created_by INT UNSIGNED DEFAULT NULL AFTER deleted_at');
+    }
+    if (!in_array('confirmed_by', $zgCols, true)) {
+        $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN confirmed_by INT UNSIGNED DEFAULT NULL AFTER created_by');
+    }
+
     // Modul "kalendarz" moze byc wylaczony przez uzytkownika - wtedy termin
     // odbioru jest pusty, wiec kolumna musi dopuszczac NULL.
     foreach ($pdo->query("SHOW COLUMNS FROM zgloszenia LIKE 'date_planned'") as $col) {
@@ -766,9 +820,36 @@ function delete_photos_of(int $zgloszenieId): void
 }
 
 /** Buduje rekord zgłoszenia w formacie oczekiwanym przez frontend. */
+/** 
+ * Mapa loginów użytkowników (id -> login) do pokazywania na karcie
+ * kto zalozyl i kto wydal rower. Statyczny cache - jedno zapytanie
+ * na zapytanie strony zamiast N+1 przy liscie zgloszen.
+ */
+function users_login_map(): array
+{
+    static $map = null;
+    if ($map === null) {
+        $map = [];
+        foreach (db()->query('SELECT id, login FROM users') as $u) {
+            $map[(int) $u['id']] = (string) $u['login'];
+        }
+    }
+    return $map;
+}
+
 function map_zgloszenie(array $row): array
 {
     $id = (int) $row['id'];
+    $logins = users_login_map();
+    $createdById = isset($row['created_by']) ? (int) $row['created_by'] : null;
+    $confirmedById = isset($row['confirmed_by']) ? (int) $row['confirmed_by'] : null;
+    // 3.5: "kto wydal" widoczne wylacznie gdy rower jest faktycznie wydany
+    // (status picked_up). Cofniecie wydania kasuje confirmed_by w bazie
+    // (action=status), a bramka nizej zdejmuje tez stare rekordy, ktore
+    // zostawily stara wartosc po cofnieciu.
+    if ((string) ($row['status'] ?? '') !== 'picked_up') {
+        $confirmedById = null;
+    }
     return [
         'id'               => $id,
         'bikeName'         => $row['bike_name'],
@@ -787,6 +868,11 @@ function map_zgloszenie(array $row): array
             : null,
         'deleted'          => !empty($row['deleted_at']),
         'createdAt'        => $row['created_at'],
+        // 3.2: kto zalozyl / kto wydal rower (stare zgloszenia = null = "—")
+        'createdById'      => $createdById,
+        'createdBy'        => $createdById !== null ? ($logins[$createdById] ?? null) : null,
+        'confirmedById'    => $confirmedById,
+        'confirmedBy'      => $confirmedById !== null ? ($logins[$confirmedById] ?? null) : null,
         'photos'           => photos_for($id),
     ];
 }
