@@ -182,6 +182,12 @@ function dane_instancji(): array
     ];
 }
 
+/** Wersja aplikacji: z bazy (aktualizowana przez do_update), fallback: stala config. */
+function wersja_aplikacji(): string
+{
+    return setting_get('installed_version', APP_VERSION);
+}
+
 /** Pelna lista modulow, ktore moga byc wylaczone przez uzytkownika. */
 function moduly_dostepne(): array
 {
@@ -1031,10 +1037,14 @@ function check_update(bool $force = false): ?array
     }
 
     $latest = ltrim($data['tag_name'], 'v');
-    $current = APP_VERSION;
+    $current = wersja_aplikacji();
+
+    // Normalizacja do X.Y (installed_version moze miec sufix, np. "3.8-instalator")
+    $latestNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1', $latest);
+    $currentNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1', $current);
 
     $result = [
-        'dostepna' => version_compare($latest, $current, '>'),
+        'dostepna' => version_compare($latestNum, $currentNum, '>'),
         'nowa_wersja' => $latest,
         'obecna_wersja' => $current,
         'url' => $data['html_url'] ?? '',

@@ -8,9 +8,9 @@
     // 3.2: id zalogowanego konta (filtr "Moje" na liscie zgloszen)
     const USER_ID = <?= (int) ($currentUser['id'] ?? 0) ?>;
     </script>
-    <script src="assets/js/core.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/motyw.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/api.js?v=<?= APP_VERSION ?>"></script>
+    <script src="assets/js/core.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/motyw.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/api.js?v=<?= wersja_aplikacji() ?>"></script>
     <script src="assets/js/druk.js?v=<?= APP_VERSION ?>"></script>
     <script src="assets/js/formularz.js?v=<?= APP_VERSION ?>"></script>
     <script src="assets/js/lista.js?v=<?= APP_VERSION ?>"></script>

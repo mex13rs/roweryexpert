@@ -224,7 +224,7 @@
             <!-- Footer -->
             <footer class="app-footer">
                 <p>&copy; 2026 RoweryExpert. Wszystkie prawa zastrzeżone.</p>
-                <p style="margin-top: 0.5rem; font-size: 0.75rem; opacity: 0.7;">Wersja <strong><?= APP_VERSION ?></strong> &middot; <a href="instrukcja.html" class="footer-link">Instrukcja</a></p>
+                <p style="margin-top: 0.5rem; font-size: 0.75rem; opacity: 0.7;">Wersja <strong><?= wersja_aplikacji() ?></strong> &middot; <a href="instrukcja.html" class="footer-link">Instrukcja</a></p>
             </footer>
         </div>
     </div>
