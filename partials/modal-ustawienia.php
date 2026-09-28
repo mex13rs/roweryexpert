@@ -165,3 +165,58 @@
         </div>
     </div>
 
+    <!-- MODAL KONTA UŻYTKOWNIKA (3.3) — szczegóły i akcje w osobnej karcie,
+         jak karta zgłoszenia; lista to tylko podgląd -->
+    <?php if ($isAdmin): ?>
+    <div class="modal-overlay" id="user-modal">
+        <div class="modal-card" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.6rem;">
+                    <span id="user-modal-login">—</span>
+                    <span id="user-modal-badge"></span>
+                </h3>
+                <button class="modal-close" id="user-modal-close">&times;</button>
+            </div>
+
+            <div class="detail-grid">
+                <span class="d-label">Status:</span>
+                <span class="d-val" id="user-modal-status">—</span>
+                <span class="d-label">Ostatnie logowanie:</span>
+                <span class="d-val" id="user-modal-last">—</span>
+                <span class="d-label">Konto utworzone:</span>
+                <span class="d-val" id="user-modal-created">—</span>
+                <span class="d-label">Hasło:</span>
+                <span class="d-val" id="user-modal-passflag">—</span>
+                <span class="d-label">Założył zgłoszeń:</span>
+                <span class="d-val" id="user-modal-zgloszenia">0</span>
+                <span class="d-label">Wydanych rowerów:</span>
+                <span class="d-val" id="user-modal-wydane">0</span>
+                <span class="d-label">Rola:</span>
+                <span class="d-val">
+                    <select id="user-modal-rola" class="sort-select" style="max-width: 100%;">
+                        <option value="pracownik">pracownik</option>
+                        <option value="admin">administrator</option>
+                    </select>
+                </span>
+            </div>
+
+            <div class="form-group" style="margin-top: 1.25rem;">
+                <label for="user-modal-pass-input">Reset hasła (min. 6 znaków)</label>
+                <div class="service-add-row">
+                    <input type="password" id="user-modal-pass-input" autocomplete="new-password"
+                           placeholder="nowe hasło">
+                    <button class="btn btn-primary" id="user-modal-pass-save">Zapisz hasło</button>
+                </div>
+                <p class="settings-hint" id="user-modal-hint"
+                   style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;"></p>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="user-modal-toggle">Wyłącz konto</button>
+                <button class="btn btn-danger" id="user-modal-delete">Usuń konto</button>
+                <button class="btn btn-secondary" id="user-modal-cancel">Zamknij</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; // user-modal tylko dla admina ?>
+

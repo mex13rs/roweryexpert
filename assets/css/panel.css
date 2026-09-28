@@ -1819,6 +1819,18 @@
             white-space: nowrap;
         }
 
+        /* Wiersz konta w zakładce Użytkownicy — klik otwiera kartę konta */
+        .user-row {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .user-row:hover,
+        .user-row:focus-visible {
+            border-color: var(--accent);
+            outline: none;
+        }
+
         .service-list {
             list-style: none;
             margin: 0;

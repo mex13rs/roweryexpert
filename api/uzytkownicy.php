@@ -2,13 +2,17 @@
 declare(strict_types=1);
 
 /* ---------------------------------------------------------------
- | API kont użytkowników (3.1) - wyłącznie administrator
- |  GET                      -> lista kont (bez hashy haseł)
+ | API kont użytkowników (3.1+) - wyłącznie administrator
+ |  GET                      -> lista kont (bez hashy haseł) + liczniki
+ |                               zgłoszeń (zlożone / wydane)
  |  POST action=create       -> nowe konto: login, haslo, rola
  |  POST action=password     -> reset hasła konta (id, haslo)
  |                               + wymuszona zmiana + wylogowanie sesji
  |  POST action=role         -> zmiana roli (id, rola)
  |  POST action=toggle       -> włączenie/wyłączenie konta (id, aktywny)
+ |  POST action=delete       -> trwałe usunięcie konta (id); tylko konta
+ |                              bez zgłoszeń, nigdy własne; kasuje też
+ |                              sesje i próby logowania
  --------------------------------------------------------------- */
 
 require __DIR__ . '/../config.php';
@@ -25,8 +29,12 @@ function uzytkownicy_login_ok(string $login): bool
 
 if ($method === 'GET') {
     $rows = db()->query(
-        'SELECT id, login, rola, aktywny, must_change_password, created_at, last_login_at
-         FROM users ORDER BY (rola = "admin") DESC, login'
+        'SELECT u.id, u.login, u.rola, u.aktywny, u.must_change_password,
+                u.created_at, u.last_login_at,
+                (SELECT COUNT(*) FROM zgloszenia z WHERE z.created_by = u.id) AS zgloszenia,
+                (SELECT COUNT(*) FROM zgloszenia z WHERE z.confirmed_by = u.id) AS wydane
+         FROM users u
+         ORDER BY (u.rola = "admin") DESC, u.login'
     )->fetchAll();
     json_out(['success' => true, 'data' => $rows]);
 }
@@ -90,6 +98,47 @@ if ($method === 'POST') {
             json_fail('Konto nie istnieje.', 404);
         }
         json_out(['success' => true]);
+    }
+
+    if ($action === 'delete') {
+        // Twarde usuniecie: tylko konta BEZ zgloszen (3.3) - zgloszenie musi
+        // zachowac info, kto je zlozyl i wydal; konto z historia = wylaczenie.
+        $id = (int) ($_POST['id'] ?? 0);
+        if ($id <= 0) {
+            json_fail('Brak konta.', 400);
+        }
+        if ($id === $me) {
+            json_fail('Nie możesz usunąć własnego konta.', 400);
+        }
+
+        $st = db()->prepare('SELECT login FROM users WHERE id = ?');
+        $st->execute([$id]);
+        $login = $st->fetchColumn();
+        if ($login === false) {
+            json_fail('Konto nie istnieje.', 404);
+        }
+
+        $st = db()->prepare(
+            'SELECT COUNT(*) FROM zgloszenia WHERE created_by = ? OR confirmed_by = ?'
+        );
+        $st->execute([$id, $id]);
+        $refs = (int) $st->fetchColumn();
+        if ($refs > 0) {
+            json_fail(
+                'To konto założyło lub wydało ' . $refs . ' zgłoszeń — wyłącz je zamiast kasować, '
+                . 'żeby na kartach została informacja, kto je obsługiwał.',
+                400
+            );
+        }
+
+        db()->prepare('DELETE FROM users WHERE id = ?')->execute([$id]);
+        db()->prepare('DELETE FROM sesje WHERE user_id = ?')->execute([$id]);
+        // próby logowania: klucz = "login|ip" -> czyścimy wszystkie wpisy tego loginu
+        // (regex loginu dopuszcza znaki specjalne LIKE, więc escape)
+        $like = addcslashes($login, '\\%_') . '|%';
+        db()->prepare("DELETE FROM login_attempts WHERE klucz LIKE ? ESCAPE '\\\\'")
+            ->execute([$like]);
+        json_out(['success' => true, 'id' => $id]);
     }
 
     if ($action === 'toggle') {

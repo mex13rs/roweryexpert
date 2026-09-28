@@ -11,6 +11,38 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.3-karta-konta — 2026-09-28 (karta konta + usuwanie użytkowników)
+
+### Karta konta (osobny modal, jak zgłoszenie)
+- Lista pracowników to teraz **tylko podgląd**: wiersz (login, rola, flagi,
+  ostatnie logowanie, licznik „założył / wydał") — klik lub Enter **otwiera
+  kartę konta** (`#user-modal`), tak jak karta zgłoszenia.
+- W karcie: status, ostatnie logowanie, utworzenie konta, stan hasła,
+  liczniki zgłoszeń, zmiana roli (select), reset hasła, włącz/wyłącz,
+  usunięcie — wszystko w jednym miejscu zamiast przycisków w wierszach.
+- Zamknij: krzyżyk, „Zamknij" lub klik w tło (jak inne modale).
+- Nowa reguła CSS `.user-row` (kursor + podświetlenie przy najechaniu).
+
+### Usuwanie kont (`POST action=delete`)
+- Twarde usunięcie **wyłącznie kont bez zgłoszeń** (ustalenie: historia
+  „kto założył / kto wydał" na kartach ma pozostać) — konto z historią
+  obsługi można tylko **wyłączyć**; karta pokazuje liczniki i podpowiedź,
+  a przycisk „Usuń konto" jest wtedy nieaktywny (serwer też zwraca 400).
+- Usuwanie własnego konta zablokowane (UI + API); konto z licznikiem 0
+  kasuje też jego sesje i próby logowania.
+- Potwierdzenie przez wspólny `showConfirmModal(...)` jak przy kasowaniu
+  zgłoszeń.
+
+### Testy
+- `test31.py` przepisane pod nowy UI (karta konta zamiast przycisków
+  w wierszach) — nadal 30/30.
+- Nowy `test33.py` — kasowanie: konto bez zgłoszeń → karta → potwierdzenie
+  → zniknęło z listy i z API; konto z zgłoszeniami → API 400, przycisk
+  nieaktywny + podpowiedź; po wyczyszczeniu zgłoszeń (purge) to samo konto
+  da się już usunąć; self-guardy (własnego nie wyłączysz/nie usuniesz).
+
+---
+
 ## 3.2-wlasciciele — 2026-09-28 (kto założył, kto wydał, filtr „Moje")
 
 ### Dane
