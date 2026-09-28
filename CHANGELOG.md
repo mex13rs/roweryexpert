@@ -42,6 +42,11 @@ i wyświetlany w stopce strony.
 - `partials/head.php` — `window.APP_CFG.mapsUrl` dla JS.
 - Instalator: normalizacja SITE_URL (zdublowany schemat `https://https://…`
   skracany do jednego, brak schematu → doklejany `https://`).
+- **Automatyczne aktualizacje (v2)**: `check_update()` (GitHub API, cache 24 h
+  w `ustawienia`) + `do_update()` (pobranie zipballa, weryfikacja, kopia zapasowa
+  do `uploads/backup/`, podmiana z pominięciem `config.php`/`uploads/`.user.ini`,
+  migracje `db()`). Baner w panelu: admin widzi przycisk „Zaktualizuj teraz",
+  pracownik — „powiadom administratora". Modal z potwierdzeniem i paskiem postępu.
 
 ---
 
