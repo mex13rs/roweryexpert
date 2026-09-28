@@ -18,5 +18,6 @@
     <script src="assets/js/zdjecia.js?v=<?= APP_VERSION ?>"></script>
     <script src="assets/js/filtry.js?v=<?= APP_VERSION ?>"></script>
     <script src="assets/js/ustawienia.js?v=<?= APP_VERSION ?>"></script>
+    <script src="assets/js/uzytkownicy.js?v=<?= APP_VERSION ?>"></script>
 </body>
 </html>

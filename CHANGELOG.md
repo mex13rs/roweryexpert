@@ -11,6 +11,47 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.1-role — 2026-09-28 (role i uprawnienia)
+
+### Uprawnienia (mapa w jednym miejscu)
+- `config.php`: `auth_is_admin()` + `auth_require_admin()` (sesja 401 → rola 403).
+- Guardy `auth_require_admin()` w API:
+  - `ustawienia.php` — zapis listy modułów,
+  - `uslugi.php` — dodawanie/usuwanie usług (odczyt = wszyscy),
+  - `konto.php` — statystyki zdjęć (GET),
+  - `zgloszenia.php` — trwałe `purge` z kosza (niszczy zdjęcia).
+
+### Konta użytkowników
+- Nowy endpoint `api/uzytkownicy.php` (wyłącznie admin): lista kont
+  (bez hashy haseł), tworzenie konta, reset hasła (+ flaga
+  `must_change_password` + wylogowanie sesji), zmiana roli,
+  włączenie/wyłączenie konta (z wylogowaniem). Self-guardy: admin nie
+  wyłączy własnego konta ani nie zmieni własnej roli.
+- Zakładka **„Użytkownicy"** w Ustawieniach (tylko admin): formularz
+  nowego konta (login/hasło/rola) i lista kont z akcjami (reset hasła,
+  zmiana roli, włącz/wyłącz), ostatnie logowanie, flagi konta.
+- Pracownik widzi w Ustawieniach **tylko „Ogólne"** (brak zakładek
+  Dodaj usługi / Moduły / Użytkownicy i bloku statystyk) — PHP nie
+  renderuje ich wcale, JS ma strażników null (`?.`, wczesne `return`).
+
+### Poprawki
+- CSS: `.modal-overlay` przewijany (`overflow-y: auto`) + `.modal-card`
+  `margin: auto` — karta wyższa od ekranu (np. długa lista użytkowników)
+  była przycinana i dolne przyciski nieklikalne.
+- `syncModuleToggles()` nie rusza `#moduly-hint`, gdy go nie ma
+  (pracownik) — wcześniej `PAGEERROR: setting 'textContent'`.
+
+### Testy
+- Nowy `/tmp/opencode/test31.py` — 30/30:4 zakładki admina, tworzenie
+  konta, widok pracownika (1 zakładka),403 na modułach/usługach/
+  statystykach/tworzeniu kont/purge (z weryfikacją, że zgłoszenie
+  przeżyło), reset hasła (stare nie działa → nowe działa), wyłączone
+  konto nie loguje się, self-guardy. Konsola czysta.
+- Regresje zielone: `test30.py` 17/17, `test_js_split.py` 19/19,
+  `test_css_split.py` (293 reguły CSS).
+
+---
+
 ## 3.0-logowanie — 2026-09-28 (serwis2 = fork, produkcja bez zmian)
 
 Fork z systemem użytkowników działa **równolegle** z produkcją na tej samej

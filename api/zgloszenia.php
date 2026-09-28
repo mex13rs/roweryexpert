@@ -234,7 +234,9 @@ try {
         $purge = (string) ($_GET['purge'] ?? '') === '1';
 
         if ($purge) {
-            // Trwałe usunięcie: zdjęcia z dysku + wiersz z bazy
+            // Trwałe usunięcie: zdjęcia z dysku + wiersz z bazy.
+            // 3.1: tylko admin (niszczymy zdjęcia nieodwracalnie)
+            auth_require_admin();
             delete_photos_of($id);
             db()->prepare('DELETE FROM zgloszenia WHERE id = ?')->execute([$id]);
             json_out(['success' => true, 'id' => $id, 'purged' => true]);

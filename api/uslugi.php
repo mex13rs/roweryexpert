@@ -12,6 +12,8 @@ if ($method === 'GET') {
 }
 
 if ($method === 'POST') {
+    // 3.1: katalogiem usług zarządza tylko admin (czytanie = wszyscy)
+    auth_require_admin();
     // Moduł "katalog usług" wyłączony = zapis i usuwanie nieczynne
     if (!modul('uslugi')) {
         json_fail('Moduł katalogu usług jest wyłączony w ustawieniach panelu.', 403);

@@ -7,8 +7,9 @@ auth_require();
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-// Podsumowanie zdjęć (liczba + zajęte miejsce)
+// Podsumowanie zdjęć (liczba + zajęte miejsce) - 3.1: tylko admin
 if ($method === 'GET') {
+    auth_require_admin();
     json_out(['success' => true, 'data' => photos_stats()]);
 }
 

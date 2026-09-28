@@ -19,6 +19,7 @@ try {
     }
 
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'modules') {
+        auth_require_admin();   // 3.1: zmiana modułów tylko przez admina
         $incoming = json_decode((string) ($_POST['moduly'] ?? ''), true);
         if (!is_array($incoming)) {
             json_fail('Nieprawidłowa lista modułów.');

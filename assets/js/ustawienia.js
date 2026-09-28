@@ -19,22 +19,35 @@
         });
 
         // PRZEŁĄCZANIE ZAKŁADEK USTAWIEŃ
+        // 3.1: pracownik widzi tylko "Ogólne" - przyciski/zakładki admina
+        // mogą nie istnieć w DOM, więc wszystko przez ?? i tablicę.
+        const SETTINGS_TABS = [
+            ['general', tabGeneralBtn, tabGeneralContent],
+            ['uslugi',  tabUslugiBtn,  tabUslugiContent],
+            ['moduly',  tabModulyBtn,  tabModulyContent],
+            ['users',   tabUsersBtn,   tabUsersContent],
+        ];
+
         function switchSettingsTab(tabName) {
-            // Zakładka usług nie istnieje, gdy moduł wyłączony
-            if (tabName === 'uslugi' && !modulOn('uslugi')) tabName = 'general';
-            tabGeneralBtn.classList.toggle('active', tabName === 'general');
-            tabUslugiBtn.classList.toggle('active', tabName === 'uslugi');
-            tabModulyBtn.classList.toggle('active', tabName === 'moduly');
-            tabGeneralContent.hidden = tabName !== 'general';
-            tabUslugiContent.hidden = tabName !== 'uslugi';
-            tabModulyContent.hidden = tabName !== 'moduly';
+            const istnieje = Object.fromEntries(SETTINGS_TABS.map(([n, b]) => [n, !!b]));
+            // Zakładka usług nie istnieje, gdy moduł wyłączony albo brak uprawnień
+            if (tabName === 'uslugi' && (!modulOn('uslugi') || !istnieje.uslugi)) tabName = 'general';
+            // Zakładki admina niedostępne dla pracownika -> cofamy do "Ogólne"
+            if ((tabName === 'moduly' || tabName === 'users') && !istnieje[tabName]) tabName = 'general';
+
+            for (const [name, btn, content] of SETTINGS_TABS) {
+                btn?.classList.toggle('active', name === tabName);
+                if (content) content.hidden = name !== tabName;
+            }
             if (tabName === 'uslugi') renderServiceList();
             if (tabName === 'moduly') syncModuleToggles();
+            if (tabName === 'users') loadUsers();
         }
 
         tabGeneralBtn.addEventListener('click', () => switchSettingsTab('general'));
-        tabUslugiBtn.addEventListener('click', () => switchSettingsTab('uslugi'));
-        tabModulyBtn.addEventListener('click', () => switchSettingsTab('moduly'));
+        tabUslugiBtn?.addEventListener('click', () => switchSettingsTab('uslugi'));
+        tabModulyBtn?.addEventListener('click', () => switchSettingsTab('moduly'));
+        tabUsersBtn?.addEventListener('click', () => switchSettingsTab('users'));
 
         // --- MODUŁY: przełączniki w zakładce Ustawienia -> Moduły ---
         const MODUL_NAZWA = {
@@ -47,6 +60,8 @@
         const modulyHint = document.getElementById('moduly-hint');
 
         function syncModuleToggles() {
+            // 3.1: u pracownika nie ma zakładki Moduły - niczego nie ruszamy
+            if (!modulyHint) return;
             modToggles.forEach(cb => { cb.checked = modulOn(cb.dataset.mod); });
             modulyHint.textContent = '';
         }
@@ -166,8 +181,9 @@
             }
         }
 
-        addServiceBtn.addEventListener('click', addService);
-        newServiceInput.addEventListener('keydown', (e) => {
+        // Elementy zakładki "Dodaj usługi" nie istnieją u pracownika (3.1)
+        addServiceBtn?.addEventListener('click', addService);
+        newServiceInput?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 addService();
@@ -243,6 +259,8 @@
         }
 
         async function loadPhotoStats() {
+            // 3.1: blok statystyk renderuje tylko admin - bez niego nic nie pobieramy
+            if (!statsPhotosEl) return;
             statsPhotosEl.textContent = '…';
             statsSizeEl.textContent = '…';
             try {
@@ -273,7 +291,7 @@
             return Math.max(1, Math.round(bytes / 1024)) + ' KB';
         }
 
-        refreshStatsBtn.addEventListener('click', loadPhotoStats);
+        refreshStatsBtn?.addEventListener('click', loadPhotoStats);
 
         // ZMIANA HASŁA
         savePasswordBtn.addEventListener('click', async () => {

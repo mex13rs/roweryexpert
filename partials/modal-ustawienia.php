@@ -1,4 +1,4 @@
-<?php defined('SERWIS_PANEL') or exit; ?>
+<?php defined('SERWIS_PANEL') or exit; $isAdmin = (($currentUser['rola'] ?? '') === 'admin'); ?>
     <!-- MODAL USTAWIEŃ -->
     <div class="modal-overlay" id="settings-modal">
         <div class="modal-card" style="max-width: 560px;">
@@ -9,12 +9,16 @@
 
             <div class="settings-tabs">
                 <button class="settings-tab active" id="tab-btn-general" data-tab="general">Ogólne</button>
+                <?php if ($isAdmin): ?>
                 <button class="settings-tab" id="tab-btn-uslugi" data-tab="uslugi">Dodaj usługi</button>
                 <button class="settings-tab" id="tab-btn-moduly" data-tab="moduly">Moduły</button>
+                <button class="settings-tab" id="tab-btn-users" data-tab="users">Użytkownicy</button>
+                <?php endif; ?>
             </div>
 
             <!-- ZAKŁADKA: OGÓLNE -->
             <div class="settings-tab-content" id="tab-content-general">
+                <?php if ($isAdmin): ?>
                 <div class="form-group" id="photos-stats-group">
                     <label>Zdjęcia rowerów w bazie</label>
                     <div class="stats-box" id="stats-box" style="background: var(--card-lighter); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem;">
@@ -32,6 +36,7 @@
                 </div>
 
                 <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">
+                <?php endif; // statystyki i limit zdjęć tylko dla admina ?>
 
                 <h4 style="margin: 0 0 1rem; font-size: 1rem;">Zmiana hasła do konta</h4>
                 <p class="settings-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin: -0.5rem 0 1rem;">
@@ -55,6 +60,7 @@
                 <p class="settings-hint" id="password-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>
 
+            <?php if ($isAdmin): ?>
             <!-- ZAKŁADKA: DODAJ USŁUGI -->
             <div class="settings-tab-content" id="tab-content-uslugi" hidden>
                 <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">
@@ -120,6 +126,42 @@
                 </div>
                 <p class="settings-hint" id="moduly-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>
+            <?php endif; // katalog usług i moduły tylko dla admina ?>
+
+            <!-- ZAKŁADKA: UŻYTKOWNICY (3.1, tylko admin) -->
+            <?php if ($isAdmin): ?>
+            <div class="settings-tab-content" id="tab-content-users" hidden>
+                <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0 0 1rem;">
+                    Konta pracowników serwisu. Każdy loguje się swoim loginem i hasłem.
+                    Zapomniane hasło resetujesz tutaj — konto zostanie wtedy wylogowane
+                    na wszystkich urządzeniach.
+                </p>
+
+                <label>Nowe konto</label>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="new-user-login">Login (np. imię)</label>
+                        <input type="text" id="new-user-login" autocomplete="off" placeholder="np. marek">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="new-user-rola">Rola</label>
+                        <select id="new-user-rola" class="sort-select" style="width: 100%;">
+                            <option value="pracownik">pracownik</option>
+                            <option value="admin">administrator</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="new-user-pass">Hasło startowe (min. 6 znaków)</label>
+                    <input type="password" id="new-user-pass" autocomplete="new-password">
+                </div>
+                <button class="btn btn-primary" id="add-user-btn">Dodaj konto</button>
+                <p class="settings-hint" id="users-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
+
+                <div id="users-list" data-me="<?= (int) ($currentUser['id'] ?? 0) ?>"
+                     style="margin-top: 1.25rem; display: flex; flex-direction: column; gap: 0.6rem;"></div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 

@@ -10,6 +10,7 @@
         const API_KONTO = 'api/konto.php';
         const API_USLUGI = 'api/uslugi.php';
         const API_USTAWIENIA = 'api/ustawienia.php';
+        const API_UZYTKOWNICY = 'api/uzytkownicy.php';
 
         // Wrapper fetch z obsługą wygasłej autoryzacji (401)
         async function apiFetch(url, options) {
@@ -221,6 +222,8 @@
         const tabGeneralContent = document.getElementById('tab-content-general');
         const tabUslugiContent = document.getElementById('tab-content-uslugi');
         const tabModulyContent = document.getElementById('tab-content-moduly');
+        const tabUsersBtn = document.getElementById('tab-btn-users');
+        const tabUsersContent = document.getElementById('tab-content-users');
         const newServiceInput = document.getElementById('new-service-input');
         const addServiceBtn = document.getElementById('add-service-btn');
         const serviceListEl = document.getElementById('service-list');
