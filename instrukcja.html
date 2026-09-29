@@ -186,7 +186,8 @@
         <header>
             <div>
                 <h1>Instrukcja panelu <span>RoweryExpert</span></h1>
-                <p>Krótki przewodnik po obsłudze zgłoszeń serwisowych — krok po kroku.</p>
+                <p>Prosty przewodnik po panelu — krok po kroku, prostym językiem,
+                bez słów technicznych.</p>
             </div>
             <a class="back-btn" href="serwis.php">← Wróć do panelu</a>
         </header>
@@ -206,23 +207,33 @@
             <a href="#wydruk">Wydruk potwierdzenia</a>
             <a href="#kosz">Kosz</a>
             <a href="#ustawienia">Ustawienia</a>
+            <a href="#konta">Konta pracowników</a>
             <a href="#moduly">Moduły panelu</a>
+            <a href="#aktualizacje">Aktualizacje panelu</a>
         </nav>
 
         <section id="logowanie">
             <h2><span class="num">1</span>Logowanie</h2>
-            <p>Panel loguje się kontem: wpisz <strong>login</strong> (np. <code>admin</code>)
-            i hasło. Sesja trwa <strong>14 dni</strong> — po tym czasie (albo po kliknięciu
-            ikonki wylogowania) strona poprosi o ponowne zalogowanie. Po 5 nieudanych
-            próbach logowanie blokuje się na kilka minut.</p>
-            <p>Zapomniałeś hasła? Poproś administratora o reset — panel nie wysyła
-            maili. Swoje hasło zmieniasz sam w <strong>Ustawieniach → Ogólne</strong>,
-            tam też widzisz, na jakim koncie jesteś zalogowany (nazwa konta jest
-            też w nagłówku strony).</p>
-            <p>Po każdym zalogowaniu wyskakuje okno <strong>Podsumowanie dnia</strong>:
-            ile rowerów jest zaplanowanych na dziś i na jutro (oraz ostrzeżenie
-            „Po terminie”, gdy któryś termin minął). Przycisk <strong>OK</strong> je zamyka.
-            Okno pojawia się tylko przy włączonym module Kalendarza.</p>
+            <p>Wpisz <strong>login</strong> (np. <code>admin</code>) i hasło. Jesteś
+            zalogowany przez <strong>14 dni</strong> — potem (albo po kliknięciu
+            ikonki wylogowania w nagłówku) panel poprosi o zalogowanie od nowa.</p>
+            <p>Panel zna <strong>dwa rodzaje kont</strong>:</p>
+            <ul>
+                <li><strong>administrator</strong> — widzi wszystko: ustawienia serwisu,
+                    moduły, konta pracowników i aktualizacje,</li>
+                <li><strong>pracownik</strong> — obsługuje zgłoszenia; w Ustawieniach
+                    widzi tylko zakładkę „Ogólne”, czyli zmianę własnego hasła.</li>
+            </ul>
+            <p>Zapomniałeś hasła? Hasło resetuje administrator — zobacz
+            <a href="#konta">Konta pracowników</a>. Swoje hasło zmieniasz sam w
+            <strong>Ustawieniach → Ogólne</strong> (min. 6 znaków); tam też widzisz,
+            na jakim koncie jesteś zalogowany (to samo widać w nagłówku strony).</p>
+            <p>Gdy ktoś <strong>pięć razy</strong> poda złe hasło, logowanie blokuje
+            się na <strong>15 minut</strong> — po prostu odczekaj ten czas.</p>
+            <p>Po każdym zalogowaniu (przy włączonym module Kalendarza) wyskakuje okno
+            <strong>Podsumowanie dnia</strong>: ile rowerów jest zaplanowanych na dziś
+            i na jutro (oraz ostrzeżenie „Po terminie”, gdy któryś termin minął).
+            Przycisk <strong>OK</strong> je zamyka.</p>
         </section>
 
         <section id="przyjecie">
@@ -230,15 +241,21 @@
             <p>Formularz „Przyjmij nowy rower” (lewa kolumna) to punkt startowy pracy:</p>
             <ul>
                 <li><strong>Nazwa roweru</strong> — np. „Kross Hexagon”, wpisywana ręcznie.</li>
-                <li><strong>Data przyjęcia</strong> i <strong>planowany odbiór</strong> — termin odbioru widać potem na liście i w kalendarzu.</li>
+                <li><strong>Data przyjęcia</strong> — domyślnie dziś, oraz
+                    <strong>planowany odbiór</strong> — domyślnie za 2 dni. Termin odbioru
+                    widać potem na liście, w kalendarzu i na wydruku.</li>
                 <li><strong>Telefon klienta</strong> — formatowanie dzieje się samo (9 cyfr minimum).</li>
                 <li><strong>Opis usterki</strong> — co klient zgłasza.</li>
-                <li><strong>Zdjęcia</strong> — na komputerze można od razu dołączyć zdjęcia.</li>
+                <li><strong>Usługi</strong> — jeśli administrator włączył katalog usług,
+                    pod opisem są gotowe pozycje do zaznaczenia (np. „Wymiana dętki”).
+                    Zaznaczone usługi pojawią się w karcie zgłoszenia i na wydruku.</li>
+                <li><strong>Zdjęcia</strong> — na komputerze od razu dołączysz fotografie
+                    (jednorazowo maks. 20 plików; więcej dołożysz drugim podejściem).</li>
             </ul>
             <p>
                 <span class="tag orange">Zapisz, Drukuj i Dodaj do Kalendarza</span>
-                — zapis w bazie + wydruk potwierdzenia + dodanie terminu do Kalendarza Google (PC).<br>
-                <span class="tag info">Zapisz tylko w bazie</span>
+                — zapis w panelu + wydruk potwierdzenia + dodanie terminu do Kalendarza Google (na komputerze).<br>
+                <span class="tag info">Zapis do bazy</span>
                 — szybkie zapisanie bez druku i kalendarza (na telefonie).
             </p>
         </section>
@@ -252,6 +269,10 @@
                 <li><span class="tag">Odebrany</span> — klient zabrał rower.</li>
             </ul>
             <p>Najszybciej rower wydaje się z <a href="#karta">karty podglądu</a> przyciskiem „Wydaj rower”.</p>
+            <p>Na każdej karcie widać też <strong>kółka z inicjałami</strong>: przy dacie
+            przyjęcia — <strong>kto rower przyjął</strong>, a przy odznace statusu —
+            <strong>kto go wydał</strong>. Dzięki temu od razu wiadomo, kto się czym
+            zajął (przy zgłoszeniach założonych przed wdrożeniem kont tych kółek nie ma).</p>
         </section>
 
         <section id="mobile">
@@ -271,15 +292,18 @@
             w serwisie, gotowych do odbioru, po terminie oraz ile odbiorów przypada dziś
             i jutro — <strong>kliknięcie kafla od razu włącza odpowiedni widok</strong>
             (podświetlony kafel = aktywny filtr). To główny sposób segregacji zgłoszeń.</p>
-            <p>Pod kaflami zostały trzy przyciski filtrów:</p>
+            <p>Pod kaflami są przyciski filtrów:</p>
             <ul>
                 <li><strong>Wszystkie</strong> — pełna lista zgłoszeń,</li>
+                <li><strong>Moje</strong> — tylko zgłoszenia, które Ty sam przyjąłeś,</li>
                 <li><strong>Odebrane</strong> — historia rowerów oddanych klientom,</li>
                 <li><strong>Kosz</strong> — usunięte zgłoszenia z licznikiem (patrz <a href="#kosz">Kosz</a>).</li>
             </ul>
-            <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą): termin odbioru
-            (najbliższy/odległy), data przyjęcia (najnowsze/najstarsze), nazwa roweru lub status —
-            domyślnie najbliższe terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
+            <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą) ma osiem
+            wariantów: termin odbioru (najbliższy/odległy), data przyjęcia (najnowsze/
+            najstarsze), nazwa roweru A–Z, wg statusu, <strong>wg osoby, która założyła
+            zgłoszenie</strong> oraz <strong>wg wydającego rower</strong> — domyślnie
+            najbliższe terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
             <p>Pole wyszukiwania szuka po <strong>nazwie roweru, telefonie, opisie usterki,
             numerze serwisowym i wykonanych czynnościach</strong> — wystarczy wpisać fragment,
             np. <code>RO-2026</code> albo ostatnie 4 cyfry telefonu.</p>
@@ -296,9 +320,10 @@
             <p>Obok pola wyszukiwania na telefonie jest <strong>ikonka aparatu</strong>:
             klik ją, skieruj obiektyw na naklejkę z kodem QR na rowerze, a panel sam
             wpisze numer do wyszukiwarki i <strong>otworzy kartę zgłoszenia</strong>.</p>
-            <div class="hint">Skaner działa przez HTTPS i wymaga zgody na kamerę.
-            Jeśli aparat nie wystartuje (np. zablokowany CDN z biblioteką skanera),
-            wystarczy przepisać numer ręcznie — tak samo się znajdzie.</div>
+            <div class="hint">Skaner potrzebuje połączenia z internetem (strona otwarta
+            po https) i zgody na użycie kamery.
+            Jeśli aparat nie wystartuje, wystarczy przepisać numer ręcznie —
+            tak samo się znajdzie.</div>
         </section>
 
         <section id="numer">
@@ -318,11 +343,12 @@
             w wyszukiwarkę na telefonie. Widzi tu numer serwisowy, rower, status, daty,
             klikalny telefon, opis usterki oraz <strong>wykonane czynności</strong> —
             <strong>wyłącznie te usługi, które były zaznaczone
-            <a href="#przyjecie">przy przyjęciu</a></strong>, jako puste checkboxy.
+            <a href="#przyjecie">przy przyjęciu</a></strong>, jako puste pola
+            do zaznaczania.
             Zaznaczasz je dopiero w chwili, gdy daną pracę wykonasz — zaznaczenie
             zapisuje się samo, a na <a href="#wydruk">Karcie Wydania Roweru</a>
             drukują się jako ☑ tylko zaznaczone pozycje. Po wydaniu roweru (i w koszu)
-            checkboxy zostają tylko do podglądu. Cała sekcja (i ☑ na wydruku)
+            pola zostają tylko do podglądu. Cała sekcja (i ☑ na wydruku)
             zależy od modułu <strong>Wykonane czynności</strong>. Niżej jest aktywne pole
             <strong>„Notatki”</strong> — dopiszesz tam własny tekst, zapisuje się samo
             (to ten sam tekst, co w <a href="#edycja">edycji</a>).
@@ -342,13 +368,14 @@
             widoczny też na wydruku — na wydruku tylko
             po uzupełnieniu).</p>
             <p>Przycisk <strong>Zdjęcia</strong> pokazuje podgląd wszystkich fotografii —
-            z tego poziomu dodasz kolejne lub usuniesz zbędne.</p>
+            z tego poziomu dodasz kolejne lub usuniesz zbędne. Jednorazowo możesz dodać
+            <strong>maks. 20 zdjęć</strong> — przy większej liczbie dołóż resztę w drugim
+            podejściu.</p>
             <p>Łączny limit na wszystkie zdjęcia w panelu to <strong>100 MB</strong> —
-            po jego osiągnięciu panel odmówi dodania kolejnych. Aktualne zużycie
-            widać w Ustawieniach → Ogólne, przy statystykach (np. „12,4 MB / 100 MB”).
-            Przy <strong>80% limitu</strong> i wyżej w statystykach pojawi się czerwone
-            ostrzeżenie, a po każdym udanym wgrywaniu wyświetli się komunikat, ile
-            procent zużyto i ile jeszcze zostało.</p>
+            po jego osiągnięciu panel odmówi dodania kolejnych. Przy <strong>80% limitu</strong>
+            i wyżej po każdym udanym wgrywaniu wyświetli się komunikat, ile procent zużyto
+            i ile jeszcze zostało. Pełne statystyki zużycia widzi tylko administrator
+            w <a href="#ustawienia">Ustawieniach → Ogólne</a>.</p>
         </section>
 
         <section id="kalendarz">
@@ -396,27 +423,63 @@
 
         <section id="ustawienia">
             <h2><span class="num">14</span>Ustawienia</h2>
-            <p>Ikona zębatki w nagłówku to ustawienia panelu:</p>
+            <p>Ikona zębatki w nagłówku to ustawienia panelu. <strong>Pracownik widzi tylko
+            zakładkę „Ogólne”</strong> (zmiana własnego hasła i informacja, na jakim koncie
+            jest zalogowany). Resztę zakładek widzi wyłącznie administrator:</p>
             <ul>
-                <li><strong>Ogólne</strong> — statystyki zdjęć w bazie oraz zmiana hasła dostępowego,</li>
-                <li><strong>Dodaj usługi</strong> — własna lista usług serwisu (dodawanie i usuwanie pozycji),</li>
-                <li><strong>Moduły</strong> — włączanie i wyłączanie części panelu (przewijana lista; patrz rozdział poniżej).</li>
+                <li><strong>Ogólne</strong> — zmiana hasła; administrator widzi tu też,
+                    ile miejsca zajmują zdjęcia (np. „12,4 MB / 100 MB”),</li>
+                <li><strong>Dane serwisu</strong> — adres, kod pocztowy i miasto, telefon
+                    oraz link do wizytówki Google. Te dane trafiają na
+                    <a href="#wydruk">wydruk</a> i do kodu QR „Oceń nas”. Zmiana zapisuje
+                    się od razu — nie trzeba niczego przeinstalowywać. Nazwa RoweryExpert
+                    jest stała,</li>
+                <li><strong>Dodaj usługi</strong> — własna lista usług serwisu (dodawanie
+                    i usuwanie pozycji),</li>
+                <li><strong>Moduły</strong> — włączanie i wyłączanie części panelu
+                    (przewijana lista; patrz rozdział poniżej),</li>
+                <li><strong>Użytkownicy</strong> — konta zespołu; patrz
+                    <a href="#konta">Konta pracowników</a>.</li>
             </ul>
-            <p>Obok jest przełącznik motywu (jasny/ciemny, domyślnie ciemny), wybór koloru akcentu
-            (przycisk palety — żółty Media Expert domyślnie, do tego zielony,
-            czerwony, niebieski i pomarańczowy; wybór zapamiętuje się na danym
-            urządzeniu) oraz wylogowanie. Razem z akcentem zmienia się też kolor
-            roweru w logo (także na ekranie logowania) oraz ikonka strony
-            (faviconka) w kartach przeglądarki.</p>
+            <p>Obok jest przełącznik motywu (jasny/ciemny, domyślnie ciemny), wybór
+            koloru akcentu (przycisk palety — żółty domyślnie, do tego zielony, czerwony,
+            niebieski i pomarańczowy; wybór zapamiętuje się na danym urządzeniu)
+            oraz wylogowanie. Razem z akcentem zmienia się też kolor roweru w logo
+            (także na ekranie logowania) oraz ikonka strony w kartach przeglądarki.</p>
+        </section>
+
+        <section id="konta">
+            <h2><span class="num">15</span>Konta pracowników</h2>
+            <p>Zakładka <strong>Użytkownicy</strong> (widoczna tylko dla administratora)
+            to miejsce, gdzie zarządzasz kontami zespołu. Każdy loguje się swoim loginem
+            i hasłem, np. <code>marek</code>.</p>
+            <ul>
+                <li><strong>Nowe konto</strong> — wpisujesz login (np. imię), wybierasz rolę
+                    (<em>pracownik</em> albo <em>administrator</em>) i podajesz hasło startowe
+                    (min. 6 znaków). Pracownik przepisze je sobie na pierwszym logowaniu,</li>
+                <li><strong>Kliknięcie konta</strong> otwiera jego kartę: status (konto
+                    włączone/wyłączone), kiedy się ostatnio logował, kiedy zostało założone,
+                    ile zgłoszeń założył i ile rowerów wydał,</li>
+                <li><strong>Reset hasła</strong> — wpisujesz nowe hasło i zapisujesz; konto
+                    zostaje wtedy wylogowane na wszystkich urządzeniach. To sposób na
+                    zapomniane hasło — panel nie wysyła maili,</li>
+                <li><strong>Zmiana roli</strong> — z pracownika na administratora i odwrotnie,</li>
+                <li><strong>Wyłącz konto</strong> — osoba przestaje się logować, ale jej
+                    zgłoszenia zostają,</li>
+                <li><strong>Usuń konto</strong> — tylko dla kont, które nie mają żadnych
+                    zgłoszeń.</li>
+            </ul>
+            <div class="hint">Pracownik nie widzi tej zakładki — może najwyżej zmienić
+            własne hasło w Ustawieniach → Ogólne.</div>
         </section>
 
         <section id="moduly">
-            <h2><span class="num">15</span>Moduły — wyłącz, czego nie używasz</h2>
-            <p>Zakładka <strong>Moduły</strong> w Ustawieniach pozwala ukryć nieużywane części
+            <h2><span class="num">16</span>Moduły — wyłącz, czego nie używasz</h2>
+            <p>Zakładka <strong>Moduły</strong> w Ustawieniach (tylko administrator)
+            pozwala ukryć nieużywane części
             panelu — na komputerze i na telefonie jednocześnie. Wyłączenie modułu <strong>nie kasuje
             danych</strong>: po ponownym włączeniu wszystko wraca. Zmiana zapisuje się natychmiast.
-            Lista przełączników jest długa, więc mieści się w <strong>przewijanym boxie</strong>
-            o stałej wysokości — przewiń ją myszką lub palcem.</p>
+            Listę przełączników przewijasz myszką lub palcem — jest długa.</p>
             <ul>
                 <li><strong>Kalendarz</strong> — znika przycisk kalendarza, pole „Planowany odbiór”,
                     kafle „Po terminie / Odbiory dziś / jutro”, opcje sortowania po terminie
@@ -425,7 +488,7 @@
                     (stare zdjęcia zostają w bazie),</li>
                 <li><strong>Skaner QR</strong> — chowa przycisk skanera; wyszukiwanie tekstowe
                     nadal działa,</li>
-                <li><strong>Katalog usług</strong> — chowa checkboxy usług i zakładkę „Dodaj usługi”
+                <li><strong>Katalog usług</strong> — chowa pola do zaznaczania usług i zakładkę „Dodaj usługi”
                     (usługi wpisane w starych zgłoszeniach zostają),</li>
                 <li><strong>Drukowanie</strong> — wyłącza wydruk potwierdzenia; etykieta przycisku
                     zapisu dopasowuje się do stanu (np. „Zapisz i dodaj do kalendarza”),</li>
@@ -439,17 +502,43 @@
                 <li><strong>Karta wydania</strong> — „Wydaj rower” i status „Odebrany”
                     tylko zmieniają status, bez automatycznego druku karty wydania
                     (ręcznie z przycisku „Drukuj” karta nadal się drukuje),</li>
-                <li><strong>Wykonane czynności</strong> — chowa checkboxy w karcie
-                    zgłoszenia i sekcję ☑ na wydruku; checkboxy przy przyjęciu
-                    (katalog) działają dalej przy włączonym Katalogu usług.</li>
+                <li><strong>Wykonane czynności</strong> — chowa pola do zaznaczania w karcie
+                    zgłoszenia i sekcję ☑ na wydruku; przy przyjęciu usługi z katalogu
+                    da się zaznaczać dalej.</li>
             </ul>
-            <p>Wyłączone moduły są blokowane także po stronie serwera — to nie tylko ukrycie
-            przycisków. Rdzeń panelu (logowanie, przyjęcie, lista, wyszukiwanie, wydanie roweru)
-            jest zawsze włączony.</p>
+            <p>Wyłączone moduły są wyłączone także dla wszystkich innych osób i urządzeń —
+            to nie tylko ukrycie przycisków. Rdzeń panelu (logowanie, przyjęcie, lista,
+            wyszukiwanie, wydanie roweru) jest zawsze włączony.</p>
+        </section>
+
+        <section id="aktualizacje">
+            <h2><span class="num">17</span>Aktualizacje panelu</h2>
+            <p>Panel sam sprawdza, czy nie wyszła nowsza wersja. Gdy tak się stanie,
+            na samej górze strony pojawi się żółty pasek, np.
+            <strong>„Dostępna nowsza wersja: 3.8.4 (masz 3.8.3)”</strong>.</p>
+            <ul>
+                <li>Administrator ma przy pasku dwa przyciski. Pierwszy —
+                    <span class="tag">Sprawdź aktualizacje</span> — odświeża informację
+                    o nowej wersji. Drugi — <span class="tag orange">Zaktualizuj teraz</span> —
+                    uruchamia aktualizację,</li>
+                <li>kliknięcie „Zaktualizuj teraz” otwiera okno <strong>Aktualizacja panelu</strong> —
+                    przyciskiem <span class="tag orange">Zaktualizuj</span> potwierdzasz
+                    (przed zmianą powstaje kopia zapasowa plików, widać pasek postępu),
+                    a na końcu klikasz <strong>Gotowe</strong>,</li>
+                <li>po aktualizacji odśwież stronę — w stopce zobaczysz nowy numer wersji,
+                    a pasek znika,</li>
+                <li>pracownik widzi tylko tekst <strong>„Dostępna nowsza wersja panelu —
+                    powiadom administratora”</strong> (bez przycisków).</li>
+            </ul>
+            <div class="hint">Aktualizacja nigdy nie rusza Twoich danych: zgłoszeń, zdjęć,
+            haseł ani ustawień — pozostają na miejscu. Jeśli pasek się nie pojawia, można
+            sprawdzić ręcznie przyciskiem „Sprawdź aktualizacje”.</div>
         </section>
 
         <footer>
-            <p>RoweryExpert — panel serwisowy. <a href="serwis.php">Wróć do panelu</a></p>
+            <p>RoweryExpert — panel serwisowy. <a href="serwis.php">Wróć do panelu</a><br>
+            Dla informatyków — pełna dokumentacja (instalacja, struktura plików, API):
+            <a href="DOKUMENTACJA.md">DOKUMENTACJA.md</a></p>
         </footer>
     </div>
 </body>
