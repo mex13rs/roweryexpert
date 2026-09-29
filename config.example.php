@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.2';
+const APP_VERSION = '3.8.3';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -686,6 +686,10 @@ function json_out(mixed $data, int $httpCode = 200): never
 {
     http_response_code($httpCode);
     header('Content-Type: application/json; charset=utf-8');
+    // 3.8.3: bez tego LiteSpeed cache'uje GET api/ustawienia.php i panel
+    // dostaje STALE wersje/dane instancji (jak wczesniej z serwis.php).
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }

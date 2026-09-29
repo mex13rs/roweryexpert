@@ -12,6 +12,15 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.3 — 2026-09-29
+
+### Naprawione
+- **`json_out()` wysyła `Cache-Control: no-store` + `Pragma: no-cache`.**
+  Bez tego LiteSpeed mógł cache'ować GET `api/ustawienia.php`, a przez niego
+  lecą `check_update()` (wersja panelu) i `dane_instancji()` — panel
+  dostawałby wystaringowane wersje i dane instancji. Ten sam wykryty wcześniej
+  problem co z `serwis.php` (CHANGELOG 1.2).
+
 ## 3.8.2 — 2026-09-29
 
 ### Naprawione
