@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.3';
+const APP_VERSION = '3.8.4';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -1257,6 +1257,13 @@ function do_update(): array
     $backupDir = __DIR__ . '/uploads/backup';
     if (!is_dir($backupDir)) {
         @mkdir($backupDir, 0755, true);
+    }
+    // 3.8.4: backupy configa (sekrety!) leza w katalogu widocznym z sieci.
+    // Bez tego .htaccess kazdy mogl pobrac kopie z haslami Bazy i haslem
+    // aplikacji - wykryte i zablokowane recznie 2026-09-29.
+    $ht = $backupDir . '/.htaccess';
+    if (!is_file($ht)) {
+        @file_put_contents($ht, "Require all denied\n");
     }
     $backupFile = $backupDir . '/backup-' . date('Y-m-d_H-i-s') . '.zip';
     $backup = new ZipArchive();

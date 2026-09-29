@@ -12,6 +12,16 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.4 — 2026-09-29
+
+### Zabezpieczone
+- **Katalog `uploads/backup/` jest teraz chroniony `.htaccess`
+  (`Require all denied`).** Backupy lądują w katalogu dostępnym z sieci,
+  a kopia `config.php` zawiera sekrety (hasła bazy, hasło aplikacji) —
+  wcześnie katalog był otwarty dla wszystkich (wykryte 2026-09-29 na
+  produkcji, zablokowane ręcznie). `do_update()` zakłada `.htaccess`
+  automatycznie przy tworzeniu katalogu backupu.
+
 ## 3.8.3 — 2026-09-29
 
 ### Naprawione
