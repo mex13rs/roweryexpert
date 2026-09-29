@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.1';
+const APP_VERSION = '3.8.2';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -998,6 +998,92 @@ function validate_services_done(string $raw): array
  |  do_update()     - pobiera Release, backup, podmiana, migracje
  --------------------------------------------------------------- */
 
+/**
+ * Normalizuje wersje do postaci X.Y.Z (semver).
+ * "3.8.1" -> "3.8.1", "3.8-instalator" -> "3.8.0", "3.8" -> "3.8.0".
+ * Bez tego version_compare dostaje sufixy typu "-instalator" i porownuje zle.
+ */
+function wersja_normalizuj(string $v): string
+{
+    if (preg_match('/(\d+\.\d+\.\d+)/', $v, $m)) {
+        return $m[1];
+    }
+    if (preg_match('/(\d+\.\d+)/', $v, $m)) {
+        return $m[1] . '.0';
+    }
+    return '0.0.0';
+}
+
+
+/**
+ * Przebudowuje config.php z NOWEGO wzorca (config.example.php, juz podmienionego
+ * przez aktualizacje), przenoszac wartosci stale ze STAREGO config.php.
+ *
+ * Bez tego do_update() nigdy nie aktualizowal logiki z config.php (db(),
+ * check_update(), do_update()...) - poprawki nie docieraly do instalacji,
+ * a panel zostawal przy kodzie z dnia instalacji.
+ *
+ * Sekrety (hasla, dane bazy) sa przenoszone 1:1 ze starego pliku, wiec
+ * config.php nigdy nie powstaje z paczki GitHuba.
+ *
+ * Zwraca ['ok'=>bool, 'tresc'=>string, 'blad'=>string].
+ */
+function config_przebuduj(string $staryCfg, string $wzorzec): array
+{
+    // Stale, ktore wypelnia instalator (wzorzec ma tu UZUPELNIJ)
+    $klucze = [
+        'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS',
+        'APP_PASSWORD', 'AUTH_COOKIE',
+        'SERVICE_ADDRESS', 'SERVICE_CITY', 'SERVICE_PHONE',
+        'GOOGLE_MAPS_URL', 'SITE_URL',
+    ];
+
+    $tresc = $wzorzec;
+    $brak = [];
+    foreach ($klucze as $k) {
+        // Wyciagnij wartosc ze starego config.php (cudzyslowy z escape'ami)
+        if (preg_match("/const\s+" . preg_quote($k, '/') . "\s*=\s*('(?:[^'\\\\]|\\\\.)*')/", $staryCfg, $m) !== 1) {
+            continue;   // starego pliku nie obslugiwala ta stala - zostaje wartosc wzorca
+        }
+        $nowy = 0;
+        $tresc = preg_replace(
+            "/const\s+" . preg_quote($k, '/') . "\s*=\s*'[^']*'/",
+            'const ' . $k . ' = ' . $m[1],
+            $tresc,
+            1,
+            $nowy
+        );
+        if ($tresc === null || $nowy !== 1) {
+            return ['ok' => false, 'tresc' => '', 'blad' => 'Wzorzec nie zawiera stalej ' . $k . '.'];
+        }
+    }
+
+    // Twarda walidacja: bez tego nie wolno nadpisac dzialajacego config.php.
+    // Liczymy same stale - komentarz wzorca tez zawiera slowo "UZUPELNIJ".
+    if (preg_match_all('/const\s+(\w+)\s*=\s*\'UZUPELNIJ\'/', $tresc, $zle) > 0) {
+        return ['ok' => false, 'tresc' => '',
+            'blad' => 'Nie udalo sie przeniesc stalych: ' . implode(', ', $zle[1]) . '.'];
+    }
+    if (!str_contains($tresc, 'function db(') || !str_contains($tresc, 'const APP_VERSION')) {
+        return ['ok' => false, 'tresc' => '', 'blad' => 'Przebudowany config jest niepelny.'];
+    }
+
+    // Komentarz wzorca („to jest WZORZEC…”) nie pasuje do gotowego pliku
+    $tresc = preg_replace(
+        '/\/\* UWAGA: to jest WZORZEC.*?\*\//s',
+        "/* Plik konfiguracji RoweryExpert (zaktualizowany przez automatyczna aktualizacje).\n"
+        . "   Zawiera sekrety (hasla) - nie udostepniaj nikomu i nie wrzucaj do gita. */",
+        $tresc,
+        1
+    );
+    // Sprawdzamy sam naglowek - fraza zywije tez w komentarzu tej funkcji
+    if ($tresc === null || preg_match('/^\/\* UWAGA: to jest WZORZEC/m', $tresc) === 1) {
+        return ['ok' => false, 'tresc' => '', 'blad' => 'Nie udalo sie przerobic komentarza wzorca.'];
+    }
+
+    return ['ok' => true, 'tresc' => $tresc, 'blad' => ''];
+}
+
 /** Sprawdza dostepnosc aktualizacji. Zwraca tablica z danymi lub null. */
 function check_update(bool $force = false): ?array
 {
@@ -1040,15 +1126,8 @@ function check_update(bool $force = false): ?array
     $current = wersja_aplikacji();
 
     // Normalizacja do X.Y.Z (semver; installed_version moze miec sufix, np. "3.8-instalator")
-    $latestNum = preg_replace('/^.*?(\d+\.\d+\.\d+).*$/', '$1', $latest);
-    $currentNum = preg_replace('/^.*?(\d+\.\d+\.\d+).*$/', '$1', $current);
-    // Fallback dla wersji bez trzeciej cyfry (np. "3.8" -> "3.8.0")
-    if (!preg_match('/^\d+\.\d+\.\d+$/', $latestNum)) {
-        $latestNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1.0', $latest);
-    }
-    if (!preg_match('/^\d+\.\d+\.\d+$/', $currentNum)) {
-        $currentNum = preg_replace('/^.*?(\d+\.\d+).*$/', '$1.0', $current);
-    }
+    $latestNum = wersja_normalizuj($latest);
+    $currentNum = wersja_normalizuj($current);
 
     $result = [
         'dostepna' => version_compare($latestNum, $currentNum, '>'),
@@ -1093,9 +1172,17 @@ function do_update(): array
     }
 
     $tag = $data['tag_name'];
-    // Tag moze byc vX.Y.Z (semver) lub vX.Y (starsze) — oba akceptowale
+    // Tag moze byc vX.Y.Z (semver) lub vX.Y (starsze) — oba akceptowane
     if (!preg_match('/^v\d+\.\d+(\.\d+)?$/', $tag)) {
         return ['success' => false, 'error' => 'Nieprawidłowy format tagu: ' . $tag];
+    }
+
+    // Nie aktualizuj wstecz ani w petli: tag musi byc nowszy niz obecna wersja
+    $nowaW = wersja_normalizuj(ltrim($tag, 'v'));
+    $obecnaW = wersja_normalizuj(wersja_aplikacji());
+    if (version_compare($nowaW, $obecnaW, '<=')) {
+        return ['success' => false, 'error' => 'Masz juz wersje ' . wersja_aplikacji()
+            . ' (na GitHubie ' . $nowaW . ') - nie ma czego aktualizowac.'];
     }
 
     $zipUrl = $data['zipball_url'] ?? '';
@@ -1127,16 +1214,39 @@ function do_update(): array
 
     $hasSerwis = false;
     $hasInstall = false;
+    $wzorzec = null;   // nowy wzorzec konfiguracji - odczytany zanim zamkniemy zip
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = $zip->getNameIndex($i);
         if (str_ends_with($name, '/serwis.php')) $hasSerwis = true;
         if (str_ends_with($name, '/install.php')) $hasInstall = true;
+        // GitHub zipball ma prefix katalogu (repo-<sha>/) - szukamy po sufiksie
+        if (str_ends_with($name, 'config.example.php') && !str_ends_with($name, '/')) {
+            $wzorzec = $zip->getFromIndex($i);
+        }
     }
     $zip->close();
 
     if (!$hasSerwis || !$hasInstall) {
         @unlink($tmpFile);
         return ['success' => false, 'error' => 'Paczka nie zawiera wymaganych plików.'];
+    }
+
+    // Przebuduj config.php z NOWEGO wzorca + stare sekrety - ZANIM cokolwiek
+    // podmienimy. Bez tego aktualizacja aktualizowalaby tylko frontend/api,
+    // a logika z config.php (db(), auth, wlasnie do_update) zostawalaby
+    // przy starej wersji i poprawki nigdy nie trafialyby do instalacji.
+    // Wzorzec czytamy wprost z paczki, bo na dysku leci jeszcze stary.
+    $cfgPath = __DIR__ . '/config.php';
+    $staryCfg = @file_get_contents($cfgPath);
+    if (is_string($wzorzec) && $wzorzec !== '' && $staryCfg !== false) {
+        $nowyCfg = config_przebuduj($staryCfg, $wzorzec);
+        if (!$nowyCfg['ok']) {
+            @unlink($tmpFile);
+            return ['success' => false, 'error' => 'Aktualizacja przerwana przed podmiana plikow: '
+                . $nowyCfg['blad'] . ' Nic sie nie zmienilo - config.php i pliki zostaja po staremu.'];
+        }
+    } else {
+        $nowyCfg = null;   // brak config.php lub wzorca - podmieniamy same pliki
     }
 
     // Kopia zapasowa
@@ -1154,6 +1264,7 @@ function do_update(): array
         foreach ($files as $file) {
             $path = $file->getPathname();
             $relative = substr($path, strlen(__DIR__) + 1);
+            // Nie backupuj config.php, uploads/, .git, backupów
             if (str_starts_with($relative, 'config.php') ||
                 str_starts_with($relative, 'uploads/') ||
                 str_starts_with($relative, '.git/') ||
@@ -1174,11 +1285,18 @@ function do_update(): array
 
     for ($i = 0; $i < $zip->numFiles; $i++) {
         $name = $zip->getNameIndex($i);
+        // GitHub zipball ma prefix katalogu: repo-branch/
         if (preg_match('#^[^/]+/(.+)$#', $name, $m)) {
             $relative = $m[1];
         } else {
             continue;
         }
+        // Wpisy katalogow (koncza sie na /) - file_put_contents na katalogu
+        // zwraca false, wiec musza byc pominiete przed kontrola zapisu
+        if (str_ends_with($relative, '/')) {
+            continue;
+        }
+        // Nie nadpisuj config.php, uploads/, .user.ini
         if ($relative === 'config.php' ||
             str_starts_with($relative, 'uploads/') ||
             $relative === '.user.ini') {
@@ -1190,12 +1308,45 @@ function do_update(): array
             @mkdir($dir, 0755, true);
         }
         $content = $zip->getFromIndex($i);
-        if ($content !== false) {
-            @file_put_contents($dest, $content);
+        if ($content === false) {
+            continue;
+        }
+        // Cicha porazka zapisu = panel polowowo zaktualizowany, wiec zglos blad
+        // zamiast udawac sukces (backup jest juz zrobiony - mozna przywrocic).
+        if (@file_put_contents($dest, $content) === false) {
+            $zip->close();
+            @unlink($tmpFile);
+            return ['success' => false, 'error' => 'Nie udalo sie zapisac pliku '
+                . $relative . ' (brak prawa zapisu?). Aktualizacja przerwana -'
+                . ' pliki przed zmiana sa w kopii zapasowej w uploads/backup/.'];
+        }
+        // OpCache trzyma stary kod - wymusz odswiezenie tego pliku
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($dest, true);
         }
     }
     $zip->close();
     @unlink($tmpFile);
+
+    // config.php zapisujemy NA KONCU - dopiero teraz mamy pewnosc, ze pliki
+    // zostaly podmienione. Najpierw kopia starego, zeby dalo sie przywrocic.
+    if ($nowyCfg !== null) {
+        $bakCfg = $backupDir . '/config-' . date('Y-m-d_H-i-s') . '.php.bak';
+        @file_put_contents($bakCfg, $staryCfg);
+        if (@file_put_contents($cfgPath, $nowyCfg['tresc']) === false) {
+            return ['success' => false, 'error' => 'Pliki zaktualizowane, ale nie udalo sie zapisac nowego config.php'
+                . ' (brak prawa zapisu?). Stary config zostal nietkniety, kopia: uploads/backup/'];
+        }
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($cfgPath, true);
+        }
+    }
+
+    // Pelny reset OpCache - bez tego hosting (revalidate_freq=60) przez ~minute
+    // serwuje STARY kod i panel wydaje sie niezaktualizowany
+    if (function_exists('opcache_reset')) {
+        @opcache_reset();
+    }
 
     // Migracje bazy
     try {
@@ -1207,8 +1358,10 @@ function do_update(): array
     // Zaktualizuj installed_version
     setting_set('installed_version', ltrim($tag, 'v'));
 
-    // Wyczyść cache aktualizacji
+    // Wyczysc cache aktualizacji (wynik + znacznik) - inaczej baner przez do 24h
+    // pokazuje stara wersje jako "dostepna"
     setting_set('update_check_at', '0');
+    setting_set('update_check_result', '');
 
     return ['success' => true, 'data' => ['nowa_wersja' => ltrim($tag, 'v')]];
 }

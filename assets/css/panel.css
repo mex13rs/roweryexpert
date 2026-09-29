@@ -420,6 +420,19 @@
             background: var(--border);
         }
 
+        /* 3.8.2: przycisk "Zapis do bazy" (widoczny tylko na mobile, bo tam
+           glowny przycisk z drukiem/kalendarzem jest ukrywany) dostaje kolor
+           akcentu strony - razem z nim zmienia sie przy zmianie motywu. */
+        #save-only-btn {
+            background: var(--primary);
+            border: 1px solid transparent;
+            color: #141414;
+        }
+
+        #save-only-btn:hover {
+            background: var(--primary-hover);
+        }
+
         .btn-danger-outline {
             background: transparent;
             border: 1px solid var(--danger);

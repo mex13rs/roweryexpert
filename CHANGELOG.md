@@ -2,14 +2,53 @@
 
 > Kopia rozwojowa projektu `serwis`. Wariant A: pełny reset tokenów designu.
 
-Konwencja: wersja `X.Y`
-- `X` — większa zmiana zakresu działania aplikacji
-- `Y` — każda kolejna modyfikacja strony
+Konwencja: wersja `X.Y.Z` (semver)
+- `X` — zmiany organizacyjne (np. `4.0.0`)
+- `Y` — większe zmiany (np. `3.9.0`)
+- `Z` — drobne poprawki (np. `3.8.2`)
 
 Numer bieżącej wersji zapisywany jest w `config.php` (`APP_VERSION`)
 i wyświetlany w stopce strony.
 
 ---
+
+## 3.8.2 — 2026-09-29
+
+### Naprawione
+- **`do_update()` przebudowuje `config.php` z nowego `config.example.php`**
+  (sekrety przenoszone przez `config_przebuduj()`). Do tej pory aktualizacja
+  podmieniała tylko frontend i `api/*`, a logika z `config.php` (`db()`,
+  migracje, `check_update()`, samo `do_update()`) zostawała przy starej
+  wersji — poprawki nigdy nie trafiały do działających instalacji.
+  Stary config ląduje w `uploads/backup/config-*.php.bak`.
+- `config_przebuduj()` twardo waliduje wynik (brak nieuzupełnionych stałych,
+  obecność `function db(` i `APP_VERSION`) **przed** podmianą jakiegokolwiek
+  pliku; przy błędzie aktualizacja przerywa się bez zmian na dysku.
+- Podmiana komentarza wzorca („to jest WZORZEC…”) na komentarz gotowego pliku.
+- **Cache-busting JS przez `wersja_aplikacji()`** zamiast `APP_VERSION` —
+  przy niepodmienionym `config.php` przeglądarka dostawała stary JS.
+- `do_update()` odmawia, gdy na GitHubie nie ma nowszej wersji, i zwraca
+  błąd zamiast cichego sukcesu przy nieudanym zapisie plików.
+- Pomijanie wpisów katalogów w zipballu GitHuba (kończą się na `/`).
+- `opcache_invalidate()` dla każdego podmienionego pliku + `opcache_reset()`
+  na końcu (wcześniej przez ~60 s działał stary kod).
+- Czyszczenie cache `update_check_result` razem z `update_check_at`.
+- Śmiertelny błąd `sys_get_temp_dir() / '…'` (dzielenie zamiast konkatenacji)
+  w ścieżce pliku tymczasowego aktualizacji.
+
+### Zmienione
+- **Przycisk „Zapis do bazy” na mobile dostaje kolor akcentu strony**
+  (`#save-only-btn` → `var(--primary)`) — zmienia się razem z wybraną
+  kolorystyką. Na desktopie przycisk i tak jest ukrywany.
+- Nowa funkcja `wersja_normalizuj()` — doprowadza wersję do postaci `X.Y.Z`
+  (skrawa sufiksy typu `-instalator`), używana przez `check_update()`
+  zamiast zduplikowanych regexów.
+
+## 3.8.1 — 2026-09-28
+
+### Naprawione
+- Poprawka pozycjonowania modala ustawień — stała odległość od górnego
+  marginesu ekranu.
 
 ## 3.8.0 — 2026-09-28
 

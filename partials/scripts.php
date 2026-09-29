@@ -11,15 +11,15 @@
     <script src="assets/js/core.js?v=<?= wersja_aplikacji() ?>"></script>
     <script src="assets/js/motyw.js?v=<?= wersja_aplikacji() ?>"></script>
     <script src="assets/js/api.js?v=<?= wersja_aplikacji() ?>"></script>
-    <script src="assets/js/druk.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/formularz.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/lista.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/karta.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/skaner.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/kalendarz.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/zdjecia.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/filtry.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/ustawienia.js?v=<?= APP_VERSION ?>"></script>
-    <script src="assets/js/uzytkownicy.js?v=<?= APP_VERSION ?>"></script>
+    <script src="assets/js/druk.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/formularz.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/lista.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/karta.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/skaner.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/kalendarz.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/zdjecia.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/filtry.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/ustawienia.js?v=<?= wersja_aplikacji() ?>"></script>
+    <script src="assets/js/uzytkownicy.js?v=<?= wersja_aplikacji() ?>"></script>
 </body>
 </html>
