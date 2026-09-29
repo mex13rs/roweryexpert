@@ -5,3 +5,6 @@ config.php
 # zdjecia zgloszen (zyja tylko na serwerze)
 uploads/
 *.log
+# testy: zaleznosci composerowe i cache phpunit (vendor/ instalowany lokalnie)
+/vendor/
+.phpunit.cache

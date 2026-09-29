@@ -1,0 +1,11 @@
+{
+    "name": "roweryexpert/panel",
+    "description": "Panel serwisowy RoweryExpert - testy jednostkowe",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^12 || ^13"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
