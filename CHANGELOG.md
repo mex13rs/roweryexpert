@@ -12,6 +12,30 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.7 — 2026-10-01
+
+### Dodane
+- **Po zalogowaniu hasłem z maila panel sam otwiera Ustawienia → Ogólne** z podpowiedzią
+  („dla bezpieczeństwa ustaw własne hasło”), a kursor wskazuje pole nowego hasła.
+  Flaga `must_change_password` była ustawiana już w 3.8.6, ale nic jej nie pokazywało —
+  komunikaty obiecywały wymuszoną zmianę, której nie było.
+
+### Naprawione
+- **Zmiana własnego hasła w Ustawieniach → Ogólne zawsze kończyła się
+  błędem „Aktualne hasło jest nieprawidłowe"** (dla każdego, nie tylko po
+  resecie — wykryte przy teście resetu 3.8.6). `change_own_password()`
+  weryfikował podane hasło wobec `password_hash`, którego `auth_user()`
+  nie pobiera z bazy (SELECT obejmuje tylko login, rolę i flagi) —
+  `password_verify` dostawał pusty string. Teraz hash jest dogrywany
+  osobnym zapytaniem. Naprawa obejmuje też okno wymuszanej zmiany hasła
+  po resecie (to samo API).
+
+### Zmienione
+- **Przycisk „Sprawdź aktualizacje" przeniesiony z widoku głównego do
+  karty Ustawień → Ogólne** (admin, pod statystykami zdjęć) — góra strony
+  należy wyłącznie do banera z „Zaktualizuj teraz", który pojawia się,
+  gdy faktycznie jest nowa wersja.
+
 ## 3.8.6 — 2026-10-01
 
 ### Dodane

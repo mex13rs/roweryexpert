@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.6';
+const APP_VERSION = '3.8.7';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -131,7 +131,14 @@ function change_own_password(string $current, string $next): ?string
     if ($user === null) {
         return 'Brak sesji - zaloguj się ponownie.';
     }
-    if (!password_verify($current, (string) $user['password_hash'])) {
+    // auth_user() celowo pobiera wąski zestaw kolumn (bez password_hash) -
+    // bez tego odczytu password_verify dostawałby "" i KAŻDA zmiana hasła
+    // kończyła się błędem „Aktualne hasło jest nieprawidłowe" (wykryte
+    // przy teście resetu 3.8.6 - zmiana działała tylko dla loginu).
+    $st = db()->prepare('SELECT password_hash FROM users WHERE id = ?');
+    $st->execute([(int) $user['id']]);
+    $hash = (string) $st->fetchColumn();
+    if ($hash === '' || !password_verify($current, $hash)) {
         return 'Aktualne hasło jest nieprawidłowe.';
     }
     if (strlen($next) < 6) {

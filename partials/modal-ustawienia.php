@@ -34,6 +34,7 @@
                     </div>
                     <p id="stats-warn" hidden style="margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--danger); font-weight: 600;"></p>
                     <button class="btn btn-secondary" id="refresh-stats-btn" style="margin-top: 0.75rem;">Odśwież statystyki</button>
+                    <button class="btn btn-secondary" id="update-check-btn" style="margin-top: 0.75rem;">Sprawdź aktualizacje</button>
                 </div>
 
                 <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">

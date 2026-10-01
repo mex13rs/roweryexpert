@@ -8,13 +8,6 @@
                     <button class="btn btn-primary" id="update-now-btn" style="padding: 0.45rem 1rem; font-size: 0.85rem;" hidden>Zaktualizuj teraz</button>
                 </div>
             </div>
-            <?php if (($currentUser['rola'] ?? '') === 'admin'): ?>
-            <!-- Ręczne sprawdzenie aktualizacji: WIDOCZNE ZAWSZE (nie tylko,
-                 gdy baner znajdzie nową wersję - wtedy przycisk był nieosiągalny) -->
-            <div style="display: flex; justify-content: flex-end; margin: -0.35rem 0 0.9rem;">
-                <button class="btn btn-secondary" id="update-check-btn" style="padding: 0.4rem 0.9rem; font-size: 0.82rem; opacity: 0.75; width: auto;">Sprawdź aktualizacje</button>
-            </div>
-            <?php endif; ?>
 
             <!-- Header Section -->
             <header>
@@ -71,6 +64,7 @@
                     <!-- Zalogowane konto — trybik ustawień przeniesiony obok (3.7); klik w nazwę otwiera ustawienia -->
                     <span class="header-user" id="current-user" role="button" tabindex="0"
                           data-rola="<?= htmlspecialchars($currentUser['rola'] ?? '') ?>"
+                          data-must-change="<?= (int) ($currentUser['must_change_password'] ?? 0) ?>"
                           title="Kliknij, aby otworzyć ustawienia"><?= htmlspecialchars($currentUser['login'] ?? '') ?></span>
                     <!-- Logout Button -->
                     <button class="btn-icon" id="logout-btn" title="Wyloguj się (<?= htmlspecialchars($currentUser['login'] ?? '') ?>)">

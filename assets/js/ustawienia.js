@@ -63,6 +63,48 @@
         tabModulyBtn?.addEventListener('click', () => switchSettingsTab('moduly'));
         tabUsersBtn?.addEventListener('click', () => switchSettingsTab('users'));
 
+        // --- WYMUSZONA ZMIANA HASŁA PO RESECIE (3.8.7) ---
+        // must_change_password=1 ustawia reset_potwierdz() - otwieramy
+        // Ustawienia -> Ogólne z komunikatem, żeby hasło z maila od razu
+        // zmienić na własne (bez tego użytkownik musiał szukać formularza).
+        // UWAGI:
+        // 1) OWINIĘTE W setTimeout: wywołanie openSettingsModal() w trakcie
+        //    ładowania tego pliku strzelało w TDZ (syncModuleToggles sięga
+        //    po consty zdefiniowane niżej, np. modulyHint) i zatrzymywało
+        //    CAŁY dalszy skrypt - handlery zmiany hasła i zakładek martwe.
+        // 2) Po resecie login idzie z ?powitanie=1 - gdy za chwilę pokaże
+        //    się okno podsumowania dnia (ten sam warunek co w core.js),
+        //    otwieramy ustawienia dopiero po jego zamknięciu, żeby dwa
+        //    modale nie stawały jedno na drugim.
+        if (currentUserEl?.dataset.mustChange === '1') {
+            const otworzUstawienia = () => {
+                setTimeout(() => {
+                    openSettingsModal();
+                    switchSettingsTab('general');
+                    if (passwordHintEl) {
+                        passwordHintEl.textContent = 'Zalogowałeś się hasłem z wiadomości e-mail — '
+                            + 'dla bezpieczeństwa ustaw własne hasło (formularz powyżej).';
+                        passwordHintEl.style.color = 'var(--primary-text)';
+                    }
+                    newPasswordInput?.focus();
+                }, 0);
+            };
+            const powitanieZapowiedziane = !!document.body.dataset.powitanie
+                && modulOn('powitanie') && modulOn('kalendarz');
+            if (powitanieZapowiedziane) {
+                let zrobione = false;
+                const poPowitanju = () => {
+                    if (zrobione) return;
+                    zrobione = true;
+                    otworzUstawienia();
+                };
+                document.getElementById('welcome-modal-ok')?.addEventListener('click', poPowitanju);
+                document.getElementById('welcome-modal-close')?.addEventListener('click', poPowitanju);
+            } else {
+                otworzUstawienia();
+            }
+        }
+
         // --- MODUŁY: przełączniki w zakładce Ustawienia -> Moduły ---
         const MODUL_NAZWA = {
             kalendarz: 'Kalendarz', zdjecia: 'Zdjęcia', skaner: 'Skaner QR',
