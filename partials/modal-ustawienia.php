@@ -89,6 +89,14 @@
                     <label for="inst-site">Adres URL panelu (opcjonalnie)</label>
                     <input type="url" id="inst-site" maxlength="255" placeholder="https://serwis.twojadomena.pl">
                 </div>
+                <div class="form-group">
+                    <label for="inst-reset-email">E-mail do resetu hasła administratora</label>
+                    <input type="email" id="inst-reset-email" maxlength="255" placeholder="np. serwis@twojadomena.pl">
+                    <p class="settings-hint" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem;">
+                        Na ten adres przyjdzie nowe hasło, gdy ktoś kliknie „Nie pamiętam hasła”
+                        przy logowaniu. Hasło zmieni się dopiero po kliknięciu linku w mailu.
+                    </p>
+                </div>
                 <button class="btn btn-primary" id="save-inst-btn">Zapisz dane serwisu</button>
                 <p class="settings-hint" id="inst-hint" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.75rem;"></p>
             </div>

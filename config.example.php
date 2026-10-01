@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.5';
+const APP_VERSION = '3.8.6';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -102,6 +102,9 @@ const AUTH_COOKIE = 'UZUPELNIJ';
 const SESSION_TTL = 14 * 86400;         // sesja ważna 14 dni (ślizgająca)
 const LOGIN_MAX_ATTEMPTS = 5;           // tyle nieudanych prób logowania...
 const LOGIN_ATTEMPT_WINDOW = 15 * 60;   // ...w tym oknie (w sekundach)
+const RESET_MAX_ATTEMPTS = 3;           // tyle żądań resetu hasła...
+const RESET_ATTEMPT_WINDOW = 15 * 60;   // ...w tym oknie (w sekundach)
+const RESET_TOKEN_TTL = 30 * 60;        // link potwierdzający ważny 30 minut
 
 /** Zwraca hash hasła aplikacji (seeded z APP_PASSWORD przy pierwszym uruchomieniu). */
 function app_password_hash(): string
@@ -179,6 +182,7 @@ function dane_instancji(): array
         'telefon'    => setting_get('service_phone', SERVICE_PHONE),
         'maps_url'   => setting_get('google_maps_url', GOOGLE_MAPS_URL),
         'site_url'   => setting_get('site_url', SITE_URL),
+        'reset_email' => setting_get('reset_email', ''),
     ];
 }
 
@@ -412,6 +416,163 @@ function auth_logout(): void
     setcookie(AUTH_COOKIE, '', auth_cookie_options(time() - 3600));
 }
 
+// --- RESET HASŁA ADMINA („nie pamiętam hasła" przy ekranie logowania) ---
+// Na żądanie generujemy losowe hasło i wysyłamy je mailem razem z linkiem
+// potwierdzającym. Stare hasło działa aż do kliknięcia linku - dzięki temu
+// nikt z zewnątrz nie zmieni hasła samym kliknięciem w formularz.
+
+/** Adres, na który lecą nowe hasła (Ustawienia -> Dane serwisu). */
+function reset_email_adres(): string
+{
+    return setting_get('reset_email', '');
+}
+
+/** Losowe hasło bez mylących znaków (0/O, 1/l/I). */
+function reset_nowe_haslo(int $dlugosc = 12): string
+{
+    $alfabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    $max = strlen($alfabet) - 1;
+    $haslo = '';
+    for ($i = 0; $i < $dlugosc; $i++) {
+        $haslo .= $alfabet[random_int(0, $max)];
+    }
+    return $haslo;
+}
+
+/** Bazowy adres panelu w linku: ustawiony „Adres URL panelu" albo bieżące żądanie. */
+function reset_baza(): string
+{
+    $site = rtrim(setting_get('site_url', SITE_URL), '/');
+    if ($site !== '') {
+        return $site;
+    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+    $dir = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/'))), '/');
+    return $scheme . '://' . $host . $dir;
+}
+
+/** Link potwierdzający w mailu (osobno, żeby dało się testować bez bazy). */
+function reset_link(string $baza, string $token): string
+{
+    return rtrim($baza, '/') . '/serwis.php?reset=' . rawurlencode($token);
+}
+
+/** Wysyłka maila (skrzynka hostingu, UTF-8, nadawca = domena panelu). */
+function wyslij_mail(string $do, string $temat, string $tresc): bool
+{
+    $host = preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $headers = 'From: RoweryExpert <no-reply@' . $host . ">\r\n"
+        . "Content-Type: text/plain; charset=UTF-8\r\n";
+    return @mail($do, '=?UTF-8?B?' . base64_encode($temat) . '?=', $tresc, $headers);
+}
+
+/**
+ * Żądanie resetu hasła. Komunikat sukcesu jest uniwersalny i zwracany ZAWSZE
+ * (niezależnie od tego, czy login istnieje, czy wysyłka się udała) - bez tego
+ * ktoś z internetu mógłby wydedukować, jakie loginy istnieją. Wyjątek: limit
+ * prób, bo zależy tylko od IP, nie od konta. Zwraca 'ok' albo 'limit'.
+ */
+function reset_wyslij(string $login): string
+{
+    $login = trim($login);
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+
+    // Cały reset liczy się po stronie MySQL (NOW()/DATE_SUB), a nie PHP -
+    // PHP i MySQL mogą mieć różne strefy czasowe (np. PHP bez date.timezone
+    // = UTC, a baza w czasie lokalnym) i wtedy 30-minutowy link wygasałby
+    // od razu albo ważiłby godzinami za długo.
+    db()->prepare('DELETE FROM password_resets WHERE expires_at < NOW()')->execute();
+    db()->prepare('DELETE FROM login_attempts WHERE created_at < DATE_SUB(NOW(), INTERVAL '
+        . RESET_ATTEMPT_WINDOW . ' SECOND)')->execute();
+
+    // Licznik KADEGO żądania (nie tylko udanych) - gdyby rosnął tylko przy
+    // istniejącym loginie, 4 zapytania z różnymi loginami zdradziłyby,
+    // które konto jest adminem (tylko ono dostałoby „limit").
+    $klucz = 'reset|' . $ip;
+    $stmt = db()->prepare(
+        'SELECT COUNT(*) FROM login_attempts
+         WHERE klucz = ? AND created_at > DATE_SUB(NOW(), INTERVAL '
+        . RESET_ATTEMPT_WINDOW . ' SECOND)'
+    );
+    $stmt->execute([$klucz]);
+    if ((int) $stmt->fetchColumn() >= RESET_MAX_ATTEMPTS) {
+        return 'limit';
+    }
+    db()->prepare('INSERT INTO login_attempts (klucz) VALUES (?)')->execute([$klucz]);
+
+    $email = reset_email_adres();
+    if ($email === '') {
+        error_log('[reset] brak ustawionego adresu e-mail (reset_email)');
+        return 'ok';
+    }
+
+    // Tylko aktywne konto administratora; reakcja identyczna jak dla
+    // nieistniejącego loginu
+    $st = db()->prepare("SELECT id FROM users WHERE login = ? AND rola = 'admin' AND aktywny = 1");
+    $st->execute([$login]);
+    $userId = $st->fetchColumn();
+    if ($userId === false) {
+        return 'ok';
+    }
+
+    $haslo = reset_nowe_haslo();
+    $token = bin2hex(random_bytes(32));
+    db()->prepare(
+        'INSERT INTO password_resets (user_id, token_hash, new_password_hash, ip, expires_at)
+         VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ' . RESET_TOKEN_TTL . ' SECOND))'
+    )->execute([
+        (int) $userId,
+        hash('sha256', $token),
+        password_hash($haslo, PASSWORD_DEFAULT),
+        $ip,
+    ]);
+
+    $tresc = "Dzień dobry,\n\n"
+        . "otrzymaliśmy prośbę o zresetowanie hasła do panelu RoweryExpert "
+        . "(login: {$login}).\n\n"
+        . "Nowe hasło: {$haslo}\n\n"
+        . "Aby je aktywować, kliknij link (ważny 30 minut):\n"
+        . reset_link(reset_baza(), $token) . "\n\n"
+        . "Stare hasło działa do czasu kliknięcia powyższego linku.\n"
+        . "Jeśli to nie Ty prosiłeś o reset - zignoruj tę wiadomość.\n";
+
+    if (!wyslij_mail($email, 'RoweryExpert - nowe hasło do panelu', $tresc)) {
+        // Wiersz zostaje (chroni limit IP przed spamowaniem wysyłek)
+        error_log('[reset] mail() zwrócił false dla ustawionego adresu');
+    }
+    return 'ok';
+}
+
+/**
+ * Potwierdzenie linkiem z maila - to TU zmienia się hasło, nie wcześniej.
+ * Zwraca 'ok' albo 'bledny' (nieprawidłowy, wygasły albo już użyty).
+ */
+function reset_potwierdz(string $token): string
+{
+    if ($token === '' || strlen($token) !== 64) {
+        return 'bledny';
+    }
+
+    $stmt = db()->prepare(
+        'SELECT id, user_id, new_password_hash FROM password_resets
+         WHERE token_hash = ? AND used = 0 AND expires_at > NOW() LIMIT 1'
+    );
+    $stmt->execute([hash('sha256', $token)]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return 'bledny';
+    }
+
+    // Hasło wchodzi wraz z wymuszeniem ustawienia własnego przy zalogowaniu
+    db()->prepare('UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?')
+        ->execute([(string) $row['new_password_hash'], (int) $row['user_id']]);
+    // Każdy link działa tylko raz; pozostałe oczekujące kasujemy
+    db()->prepare('UPDATE password_resets SET used = 1 WHERE user_id = ?')
+        ->execute([(int) $row['user_id']]);
+    return 'ok';
+}
+
 /** Dla endpointów API - przerywa żądanie 401, gdy brak autoryzacji. */
 function auth_require(): void
 {
@@ -553,6 +714,26 @@ function db(): PDO
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
             KEY idx_klucz_czas (klucz, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+
+    // Oczekujące resetu hasła: hasło wchodzi w życie dopiero po kliknięciu
+    // linku (potwierdzenie w mailu), stąd kolumny used/expires_at.
+    $pdo->exec(
+        'CREATE TABLE IF NOT EXISTS password_resets (
+            id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id           INT UNSIGNED NOT NULL,
+            token_hash        CHAR(64) NOT NULL,
+            new_password_hash VARCHAR(255) NOT NULL,
+            ip                VARCHAR(45) NOT NULL DEFAULT "",
+            used              TINYINT(1) NOT NULL DEFAULT 0,
+            expires_at        DATETIME NOT NULL,
+            created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_reset_token (token_hash),
+            KEY idx_reset_ip_czas (ip, created_at),
+            CONSTRAINT fk_reset_user FOREIGN KEY (user_id)
+                REFERENCES users(id) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
 

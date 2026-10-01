@@ -12,6 +12,33 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.6 — 2026-10-01
+
+### Dodane
+- **Reset hasła administratora („Nie pamiętam hasła" przy ekranie logowania).**
+  Przy podaniu loginu system generuje **losowe hasło** (12 znaków, bez mylących
+  0/O/1/l/I), zapisuje je jako *oczekujące* w nowej tabeli `password_resets`
+  i wysyła mailem razem z **linkiem potwierdzającym**. **Stare hasło działa
+  aż do kliknięcia linku** — zmiana następuje dopiero tam, więc samo klikanie
+  w formularz przez obcych z internetu nic nie zmienia.
+  - link ważny 30 minut, jednorazowy (po użyciu wszystkie oczekujące kasowane),
+  - limity: 3 wysyłki / 15 min na IP,
+  - komunikaty uniwersalne (nie zdradzają, czy login istnieje ani czy wysyłka
+    się udała); wyjątek: limit prób (zależy tylko od IP),
+  - po potwierdzeniu `must_change_password = 1` — przy zalogowaniu użytkownik
+    od razu ustawia własne hasło,
+  - adres odbiorczy: nowe pole „E-mail do resetu hasła administratora" w
+    Ustawieniach → Dane serwisu (z walidacją adresu),
+  - wysyłka przez `mail()` skrzynki hostingu (nadawca `no-reply@<domena panelu>`,
+    UTF-8) — test wysyłki na produkcji zaliczony 2026-10-01.
+
+### Naprawione
+- **Przycisk „Sprawdź aktualizacje" był nieosiągalny** — siedział wewnątrz
+  banera aktualizacji, który jest ukryty, dopóki nowa wersja nie zostanie
+  wykryta (a wykrycie bez niego wymagało ręcznego `POST check_update`,
+  bo cache sprawdzenia trwa 24 h). Teraz przycisk jest **widoczny zawsze**
+  (admin, prawy górny róg pod banerem) i omija cache.
+
 ## 3.8.5 — 2026-10-01
 
 ### Dodane

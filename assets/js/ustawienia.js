@@ -374,6 +374,7 @@
         const instTelefon = document.getElementById('inst-telefon');
         const instMaps = document.getElementById('inst-maps');
         const instSite = document.getElementById('inst-site');
+        const instResetEmail = document.getElementById('inst-reset-email');
         const instHint = document.getElementById('inst-hint');
         const saveInstBtn = document.getElementById('save-inst-btn');
 
@@ -389,6 +390,7 @@
                     instTelefon.value = d.telefon || '';
                     instMaps.value = d.maps_url || '';
                     instSite.value = d.site_url || '';
+                    instResetEmail.value = d.reset_email || '';
                 }
             } catch (e) {
                 /* błąd odczuty pomijamy - pola zostaja puste */
@@ -408,6 +410,7 @@
                     service_phone: instTelefon.value.trim(),
                     google_maps_url: instMaps.value.trim(),
                     site_url: instSite.value.trim(),
+                    reset_email: instResetEmail.value.trim(),
                 });
 
                 try {

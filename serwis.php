@@ -37,6 +37,43 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
+// Reset hasła: żądanie wysyłki (bez logowania). Zawsze redirect z flagą -
+// odświeżenie strony nie powtórzy wysyłki.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'request_reset') {
+    $resetWynik = reset_wyslij((string) ($_POST['login'] ?? ''));
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'] ?? '/serwis.php', '?')
+        . ($resetWynik === 'limit' ? '?reset_limit=1' : '?reset_wyslane=1'));
+    exit;
+}
+
+// Potwierdzenie linkiem z maila - hasło zmienia się dopiero tutaj
+if (isset($_GET['reset']) && is_string($_GET['reset'])) {
+    $resetOk = reset_potwierdz($_GET['reset']) === 'ok';
+    header('Location: ' . strtok($_SERVER['REQUEST_URI'] ?? '/serwis.php', '?')
+        . ($resetOk ? '?reset_ok=1' : '?reset_blad=1'));
+    exit;
+}
+
+// Komunikaty ekranu logowania (ustawiane po redirectu)
+$resetMsg = null;
+$resetErr = null;
+if (isset($_GET['reset_wyslane'])) {
+    $resetMsg = 'Jeśli podany login jest kontem administratora, wysłaliśmy nowe hasło '
+        . 'na adres mailowy panelu. Sprawdź pocztę (także folder SPAM) i kliknij link potwierdzający.';
+}
+if (isset($_GET['reset_limit'])) {
+    $resetErr = 'Zbyt wiele prób wysyłki - spróbuj ponownie za kilka minut.';
+}
+if (isset($_GET['reset_ok'])) {
+    $resetMsg = 'Hasło zostało zmienione. Zaloguj się hasłem z wiadomości mailowej '
+        . '- od razu poprosimy o ustawienie własnego.';
+}
+if (isset($_GET['reset_blad'])) {
+    $resetErr = 'Link jest nieprawidłowy, wygasł albo został już użyty. '
+        . 'Możesz poprosić o nowy przez „Nie pamiętam hasła”.';
+}
+$pokazReset = isset($_GET['zapomnia']);   // formularz resetu zamiast logowania
+
 $authenticated = auth_is_authenticated();
 $currentUser = auth_user();
 

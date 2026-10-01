@@ -66,6 +66,7 @@ try {
             'service_phone'    => ['telefon', 32],
             'google_maps_url'  => ['maps_url', 255],
             'site_url'         => ['site_url', 255],
+            'reset_email'      => ['e-mail do resetu', 255],
         ];
         $zapis = [];
         foreach ($pola as $klucz => [$etykieta, $max]) {
@@ -80,6 +81,10 @@ try {
             if ($klucz === 'site_url' && $wartosc !== ''
                 && filter_var($wartosc, FILTER_VALIDATE_URL) === false) {
                 json_fail('Adres URL panelu musi byc poprawnym adresem URL.');
+            }
+            if ($klucz === 'reset_email' && $wartosc !== ''
+                && filter_var($wartosc, FILTER_VALIDATE_EMAIL) === false) {
+                json_fail('Adres e-mail do resetu musi byc poprawny (np. serwis@domena.pl).');
             }
             setting_set($klucz, $wartosc);
             $zapis[$klucz] = $wartosc;
