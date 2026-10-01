@@ -60,6 +60,14 @@ $resetErr = null;
 if (isset($_GET['reset_wyslane'])) {
     $resetMsg = 'Jeśli podany login jest kontem administratora, wysłaliśmy nowe hasło '
         . 'na adres mailowy panelu. Sprawdź pocztę (także folder SPAM) i kliknij link potwierdzający.';
+    // 3.8.9: maskowany adres (med***rs@gmail.com) - admin rozpozna skrzynkę,
+    // a pełny adres nie zdradzamy na publicznym ekranie logowania. Adres
+    // pochodzi z ustawień globalnych, więc komunikat jest identyczny także
+    // dla nieistniejącego loginu (anty-enumeracja zachowana).
+    $mask = reset_email_mask(reset_email_adres());
+    if ($mask !== '') {
+        $resetMsg .= ' Wysłane na: ' . $mask . '.';
+    }
 }
 if (isset($_GET['reset_limit'])) {
     $resetErr = 'Zbyt wiele prób wysyłki - spróbuj ponownie za kilka minut.';

@@ -12,6 +12,28 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.9 — 2026-10-01
+
+### Nowe
+- **Instalator (krok 4): opcjonalny „E-mail do resetu hasła"** — adres, na który
+  leci link do resetu hasła admina. Zapisywany w ustawieniach (`reset_email`),
+  więc działa od razu po instalacji; też da się podać/później zmienić w
+  Ustawieniach → Dane serwisu (funkcja istniała od 3.8.6).
+- **Maskowany adres w komunikacie po wysyłce hasła** — ekran logowania pokazuje
+  np. `med***rs@gmail.com` (3 pierwsze + 2 ostatnie litery części przed @,
+  domena widoczna). Pełnego adresu nie zdradzamy na publicznym ekranie; komunikat
+  jest identyczny niezależnie od tego, czy login istnieje (anty-enumeracja).
+- **Instrukcja w ciemnym i jasnym motywie** — te same kolory co panel (przełącznik
+  w nagłówku, wybór w tym samym localStorage co panel).
+- **Instrukcja jako pierwszy ekran po instalacji** — krok 6 instalatora prowadzi
+  do instrukcji (z banerem „instrukcję zawsze znajdziesz w stopce panelu"),
+  a panel jest przyciskiem drugorzędnym.
+- **„↑ Wróć do spisu treści" po każdej sekcji** instrukcji (17 linków).
+
+### Zmienione
+- Instrukcja: rozdz. 1 (maskowany adres po wysyłce), rozdz. 14 (e-mail do resetu
+  podawany też w instalatorze).
+
 ## 3.8.8 — 2026-10-01
 
 ### Naprawione

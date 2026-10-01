@@ -60,4 +60,28 @@ final class ResetHaslaTest extends TestCase
         self::assertSame('bledny', reset_potwierdz(str_repeat('z', 63)));
         self::assertSame('bledny', reset_potwierdz(str_repeat('z', 65)));
     }
+
+    /* ----------------------- reset_email_mask (3.8.9) -------------------- */
+
+    public function testMaskowanieZostawiaPoczatekIKoniec(): void
+    {
+        self::assertSame('med***rs@gmail.com', reset_email_mask('mediaexpert13rs@gmail.com'));
+        self::assertSame('ada***in@poczta.pl', reset_email_mask('adamin@poczta.pl'));
+    }
+
+    public function testMaskowanieKrotkichLokalow(): void
+    {
+        self::assertSame('a***@x.pl', reset_email_mask('ab@x.pl'));
+        self::assertSame('a***@x.pl', reset_email_mask('abc@x.pl'));
+        self::assertSame('a***@x.pl', reset_email_mask('abcd@x.pl'));
+    }
+
+    public function testMaskowanieBlednychZwracaGwiazdki(): void
+    {
+        self::assertSame('', reset_email_mask(''));
+        self::assertSame('', reset_email_mask('   '));
+        self::assertSame('***', reset_email_mask('brakmalpy'));
+        self::assertSame('***', reset_email_mask('a@'));
+        self::assertSame('***', reset_email_mask('@b.pl'));
+    }
 }

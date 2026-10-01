@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Instrukcja panelu — RoweryExpert</title>
+    <script>
+        // 3.8.9: motyw zgodny z panelem (ten sam klucz localStorage 'theme',
+        // ta sama wartość co body.light-theme w panelu). Skrypt przed CSS,
+        // żeby nie mignęło białym przy ciemnym motywie.
+        (function () {
+            var t = localStorage.getItem('theme') || 'dark-theme';
+            document.documentElement.classList.add(t);
+        })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -25,6 +34,18 @@
             --radius-lg: 10px;
             --radius-md: 8px;
             --radius-sm: 6px;
+        }
+
+        /* 3.8.9: motyw ciemny - te same kolory co panel (panel.css :root) */
+        html.dark-theme {
+            --bg: #0b0b0b;
+            --card: #171717;
+            --text: #f7f7f7;
+            --text-secondary: #9d9d9d;
+            --border: #2c2c2c;
+            --primary-text: #ffdd00;
+            --card-lighter: rgba(255, 255, 255, 0.04);
+            color-scheme: dark;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -100,6 +121,39 @@
             content: "→ ";
             color: var(--primary-text);
         }
+
+        /* 3.8.9: baner powitalny po instalacji */
+        .inst-banner {
+            background: var(--primary-light);
+            border: 1px solid var(--primary-text);
+            border-radius: var(--radius-lg);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .inst-banner .btn {
+            background: var(--primary);
+            color: #0d0d0d;
+            font-weight: 700;
+            text-decoration: none;
+            padding: 0.55rem 1rem;
+            border-radius: var(--radius-md);
+        }
+
+        /* 3.8.9: link powrotu do spisu treści po każdej sekcji */
+        .to-top {
+            display: inline-block;
+            margin-top: 0.9rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .to-top:hover { color: var(--primary-text); }
 
         section {
             background: var(--card);
@@ -190,9 +244,17 @@
                 bez słów technicznych.</p>
             </div>
             <a class="back-btn" href="serwis.php">← Wróć do panelu</a>
+            <button class="back-btn" id="theme-toggle" type="button" title="Przełącz motyw (jak w panelu)">☀️ Jasny</button>
         </header>
 
-        <nav class="toc">
+        <!-- 3.8.9: baner po instalacji - instrukcja jako pierwszy ekran -->
+        <div class="inst-banner" id="inst-banner" hidden>
+            <strong>Witaj w RoweryExpert!</strong> To jest instrukcja obsługi — przeczytaj ją,
+            zanim zaczniesz pracować. Instrukcję zawsze znajdziesz też w <strong>stopce panelu</strong>.
+            <a class="btn" href="serwis.php">Przejdź do panelu</a>
+        </div>
+
+        <nav class="toc" id="spis">
             <a href="#logowanie">Logowanie</a>
             <a href="#przyjecie">Przyjęcie roweru</a>
             <a href="#statusy">Statusy zgłoszeń</a>
@@ -235,7 +297,9 @@
             Warunek: w
             <strong>Ustawieniach → Dane serwisu</strong> jest podany
             „E-mail do resetu hasła administratora”. Po trzech prośbach w 15 minut
-            system każe odczekać.</p>
+            system każe odczekać. Po wysyłce ekran pokaże też <strong>schowany adres</strong>
+            skrzynki (np. <code>med***rs@gmail.com</code>) — pełnego adresu nie zdradzamy
+            na publicznym ekranie logowania.</p>
             <p>Hasło <strong>pracownika</strong> resetuje administrator — zobacz
             <a href="#konta">Konta pracowników</a>. Swoje hasło zmieniasz sam w
             <strong>Ustawieniach → Ogólne</strong> (min. 6 znaków); tam też widzisz,
@@ -247,6 +311,8 @@
             i na jutro (oraz ostrzeżenie „Po terminie”, gdy któryś termin minął).
             Przycisk <strong>OK</strong> je zamyka.</p>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="przyjecie">
             <h2><span class="num">2</span>Przyjęcie roweru</h2>
@@ -272,6 +338,8 @@
             </p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="statusy">
             <h2><span class="num">3</span>Statusy zgłoszeń</h2>
             <p>Każde zgłoszenie przechodzi przez trzy statusy — zmienia się je <strong>klikając odznakę na karcie</strong>:</p>
@@ -287,6 +355,8 @@
             zajął (przy zgłoszeniach założonych przed wdrożeniem kont tych kółek nie ma).</p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="mobile">
             <h2><span class="num">4</span>Zgłoszenia z telefonu</h2>
             <p>Zgłoszenie dodane z telefonu jest do czasu <strong>potwierdzenia zamazane</strong> na liście —
@@ -297,6 +367,8 @@
             <p>Na komputerze klik <span class="tag ok">Potwierdź</span> odblokowuje zgłoszenie
             i od razu uruchamia kalendarz + wydruk potwierdzenia dla klienta.</p>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="lista">
             <h2><span class="num">5</span>Lista, filtry i wyszukiwanie</h2>
@@ -334,6 +406,8 @@
             przy braku — komunikat. Skan QR wpisuje cały numer i od razu otwiera kartę.</p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="skaner">
             <h2><span class="num">6</span>Skaner kodu QR (telefon)</h2>
             <p>Obok pola wyszukiwania na telefonie jest <strong>ikonka aparatu</strong>:
@@ -345,6 +419,8 @@
             tak samo się znajdzie.</div>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="numer">
             <h2><span class="num">7</span>Numer serwisowy i naklejka QR</h2>
             <p>Każde zgłoszenie dostaje automatycznie numer w formacie <strong>RO-ROK-ID</strong>
@@ -352,6 +428,8 @@
             <p>Na wydruku (egzemplarz serwisu) jest też <strong>kwadratowy kod QR z tym numerem</strong> —
             wytnij go i naklej na ramę roweru, żeby potem zeskanować go telefonem i od razu otworzyć zgłoszenie.</p>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="karta">
             <h2><span class="num">8</span>Karta zgłoszenia (podgląd)</h2>
@@ -379,6 +457,8 @@
             Kartę Wydania Roweru</strong> z zaznaczonymi wykonanymi czynnościami.</p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="edycja">
             <h2><span class="num">9</span>Edycja i zdjęcia</h2>
             <p>Przycisk <strong>Edytuj</strong> na karcie otwiera formularz z danymi zgłoszenia
@@ -397,6 +477,8 @@
             w <a href="#ustawienia">Ustawieniach → Ogólne</a>.</p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="kalendarz">
             <h2><span class="num">10</span>Kalendarz w panelu</h2>
             <p>Ikona kalendarza w nagłówku otwiera <strong>widok miesięczny</strong> terminów:</p>
@@ -409,6 +491,8 @@
             </ul>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="kalendarz-google">
             <h2><span class="num">11</span>Kalendarz Google i druk</h2>
             <p>Na każdej karcie (na komputerze) są przyciski:</p>
@@ -417,6 +501,8 @@
                 <li><span class="tag">Drukuj</span> — drukuje potwierdzenie przyjęcia, a po wydaniu roweru Kartę Wydania.</li>
             </ul>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="wydruk">
             <h2><span class="num">12</span>Wydruk potwierdzenia i karty wydania</h2>
@@ -430,6 +516,8 @@
             </ul>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="kosz">
             <h2><span class="num">13</span>Kosz</h2>
             <p>Przycisk kosza na karcie <strong>nie kasuje od razu</strong> — zgłoszenie trafia do kosza
@@ -439,6 +527,8 @@
                 <li><span class="tag warn">Usuń trwale</span> — kasuje zgłoszenie razem ze zdjęciami (nieodwracalne).</li>
             </ul>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="ustawienia">
             <h2><span class="num">14</span>Ustawienia</h2>
@@ -455,6 +545,8 @@
                     oraz link do wizytówki Google. Te dane trafiają na
                     <a href="#wydruk">wydruk</a> i do kodu QR „Oceń nas”. Tu też
                     administrator podaje <strong>e-mail do resetu hasła</strong>
+                    (ten sam adres możesz podać już w <strong>instalatorze</strong> — krok 4,
+                    przy wyborze hasła admina)
                     (patrz rozdział <a href="#logowanie">Logowanie</a>). Zmiana zapisuje
                     się od razu — nie trzeba niczego przeinstalowywać. Nazwa RoweryExpert
                     jest stała,</li>
@@ -471,6 +563,8 @@
             oraz wylogowanie. Razem z akcentem zmienia się też kolor roweru w logo
             (także na ekranie logowania) oraz ikonka strony w kartach przeglądarki.</p>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="konta">
             <h2><span class="num">15</span>Konta pracowników</h2>
@@ -496,6 +590,8 @@
             <div class="hint">Pracownik nie widzi tej zakładki — może najwyżej zmienić
             własne hasło w Ustawieniach → Ogólne.</div>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
 
         <section id="moduly">
             <h2><span class="num">16</span>Moduły — wyłącz, czego nie używasz</h2>
@@ -535,6 +631,8 @@
             wyszukiwanie, wydanie roweru) jest zawsze włączony.</p>
         </section>
 
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
         <section id="aktualizacje">
             <h2><span class="num">17</span>Aktualizacje panelu</h2>
             <p>Panel sam sprawdza, czy nie wyszła nowsza wersja. Gdy tak się stanie,
@@ -567,6 +665,31 @@
             ręcznie w <strong>Ustawieniach → Ogólne</strong> („Sprawdź aktualizacje”), a
             gotową aktualizację uruchomisz przyciskiem „Aktualizuj” obok.</div>
         </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
+    <script>
+        // 3.8.9: przełącznik motywu (ten sam klucz 'theme' co panel) + baner po instalacji
+        (function () {
+            var btn = document.getElementById('theme-toggle');
+            if (btn) {
+                var akt = function () {
+                    var jasny = document.documentElement.classList.contains('light-theme');
+                    btn.textContent = jasny ? '🌙 Ciemny' : '☀️ Jasny';
+                };
+                btn.addEventListener('click', function () {
+                    var jasny = document.documentElement.classList.toggle('light-theme');
+                    document.documentElement.classList.toggle('dark-theme', !jasny);
+                    localStorage.setItem('theme', jasny ? 'light-theme' : 'dark-theme');
+                    akt();
+                });
+                akt();
+            }
+            if (new URLSearchParams(location.search).get('z') === 'instalacja') {
+                document.getElementById('inst-banner').hidden = false;
+            }
+        })();
+    </script>
 
         <footer>
             <p>RoweryExpert — panel serwisowy. <a href="serwis.php">Wróć do panelu</a><br>

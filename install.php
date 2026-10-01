@@ -246,12 +246,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $postStep = 4;
             $p1 = (string) ($_POST['pass1'] ?? '');
             $p2 = (string) ($_POST['pass2'] ?? '');
+            $email = trim((string) ($_POST['email'] ?? ''));
             if (strlen($p1) < 6) {
                 $err = 'Hasło administratora musi mieć co najmniej 6 znaków (zalecane 8+).';
             } elseif ($p1 !== $p2) {
                 $err = 'Hasła nie są identyczne.';
+            } elseif ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                $err = 'Podany adres e-mail jest nieprawidłowy.';
             } else {
                 $inst['pass'] = $p1;
+                $inst['reset_email'] = $email;   // 3.8.9: adres do resetu hasła admina
                 $inst['max'] = max($inst['max'] ?? 1, 5);
                 header('Location: install.php?krok=5');
                 exit;
@@ -282,6 +286,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     db();                            // tworzy bazę, tabele, migracje i konto admin
                     setting_set('installed_version', APP_VERSION);
                     setting_set('installed_at', gmdate('Y-m-d H:i:s'));
+                    if (($inst['reset_email'] ?? '') !== '') {
+                        setting_set('reset_email', (string) $inst['reset_email']);
+                    }
                     unset($_SESSION['inst']);
                     $_SESSION['inst_done'] = true;
                     inst_render_step6();
@@ -534,6 +541,10 @@ function inst_step4(string $err): string
             <input type="' . $passType . '" name="pass1" autocomplete="new-password" required>
             <label>Powtórz hasło</label>
             <input type="' . $passType . '" name="pass2" autocomplete="new-password" required>
+            <!-- 3.8.9: adres, na który leci link do resetu hasła admina.
+                 Opcjonalny - też da się podać później w Ustawieniach -> Dane serwisu -->
+            <label>E-mail do resetu hasła <small>(opcjonalny - np. med.serw@gmail.com)</small></label>
+            <input type="email" name="email" autocomplete="off" placeholder="poczta@twojadomena.pl">
             <label class="checkbox">
                 <input type="checkbox" name="pass_show" value="1" ' . ($show ? 'checked' : '') . ' onchange="this.form.submit()">
                 Pokaż hasło
@@ -586,7 +597,16 @@ function inst_step6_body(): string
             <strong>2.</strong> <span style="color:#ff9ba3"><strong>Usuń plik
             <code>install.php</code> z serwera (FTP)</strong></span> — to konieczne dla bezpieczeństwa.<br>
             <strong>3.</strong> Plik <code>config.php</code> zawiera sekrety — nie udostępniaj go nikomu.
-            <a class="btn" href="' . h($site) . '">Przejdź do panelu</a>
+        </div>
+        <!-- 3.8.9: pierwszy ekran po instalacji = instrukcja obsługi -->
+        <div class="box">
+            <strong>Najpierw zapoznaj się z instrukcją obsługi</strong> — zajmie to kilka minut,
+            a od razu zobaczysz, jak przyjmować rowerzy i wydawać gotowe zlecenia.
+            Instrukcję zawsze znajdziesz też w <strong>stopce panelu</strong>.
+            <div style="display: flex; gap: 0.6rem; margin-top: 0.8rem; flex-wrap: wrap;">
+                <a class="btn" href="instrukcja.html?z=instalacja">Otwórz instrukcję obsługi</a>
+                <a class="btn ghost" href="' . h($site) . '">Przejdź do panelu</a>
+            </div>
         </div>';
 }
 

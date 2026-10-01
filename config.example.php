@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.8';
+const APP_VERSION = '3.8.9';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -432,6 +432,29 @@ function auth_logout(): void
 function reset_email_adres(): string
 {
     return setting_get('reset_email', '');
+}
+
+/** Adres resetu w formie maskowanej: med***rs@gmail.com (3.8.9).
+ *  Komunikat po wysyłce hasła pokazuje tylko tyle, że admin rozpozna
+ *  skrzynkę, ale pełnego adresu nie zdradza (ekran logowania jest publiczny). */
+function reset_email_mask(string $email): string
+{
+    $email = trim($email);
+    if ($email === '') {
+        return '';
+    }
+    $parts = explode('@', $email);
+    if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '') {
+        return '***';
+    }
+    [$local, $domain] = $parts;
+    $len = mb_strlen($local);
+    if ($len <= 4) {
+        $masked = mb_substr($local, 0, 1) . '***';
+    } else {
+        $masked = mb_substr($local, 0, 3) . '***' . mb_substr($local, -2);
+    }
+    return $masked . '@' . $domain;
 }
 
 /** Losowe hasło bez mylących znaków (0/O, 1/l/I). */
