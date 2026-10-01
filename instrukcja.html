@@ -311,14 +311,21 @@
                 <li><strong>Odebrane</strong> — historia rowerów oddanych klientom,</li>
                 <li><strong>Kosz</strong> — usunięte zgłoszenia z licznikiem (patrz <a href="#kosz">Kosz</a>).</li>
             </ul>
-            <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą) ma osiem
+            <p>Obok przycisków filtrów widoczne są <strong>ikony użytkowników</strong> —
+            kółka z inicjałem osoby, która zakładała zgłoszenia. <strong>Kliknięcie ikonki
+            pokazuje tylko jej zgłoszenia</strong>, drugi klik zdejmuje filtr; kolor kółka
+            jest stały dla danej osoby (tak jak plakietki na liście). Jeśli nikt jeszcze
+            nie założył zgłoszeń, ikonek nie ma.</p>
+            <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą) ma siedem
             wariantów: termin odbioru (najbliższy/odległy), data przyjęcia (najnowsze/
-            najstarsze), nazwa roweru A–Z, wg statusu, <strong>wg osoby, która założyła
-            zgłoszenie</strong> oraz <strong>wg wydającego rower</strong> — domyślnie
-            najbliższe terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
-            <p>Pole wyszukiwania szuka po <strong>nazwie roweru, telefonie, opisie usterki,
-            numerze serwisowym i wykonanych czynnościach</strong> — wystarczy wpisać fragment,
-            np. <code>RO-2026</code> albo ostatnie 4 cyfry telefonu.</p>
+            najstarsze), nazwa roweru A–Z, wg statusu oraz <strong>wg wydającego rower</strong>
+            — po autorze zgłoszenia filtrują ikonki obok przycisków. Domyślnie najbliższe
+            terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
+            <p>Pole wyszukiwania <strong>przyjmuje wyłącznie cyfry</strong> — wpisz
+            <strong>numer zlecenia albo telefon</strong> (litery nie są wpuszczane, a pole
+            po każdym odświeżeniu strony startuje puste — nic nie podstawia się samo).
+            Dopasowanie szuka tej liczby w numerze serwisowym, telefonie i pozostałych
+            polach zgłoszenia — wystarczą np. ostatnie 4 cyfry telefonu.</p>
             <p><strong>Na telefonie</strong> lista, kafle podsumowań, filtry i sortowanie są
             ukryte — telefon służy do przyjęcia i wydania roweru. Wyszukiwanie wymaga
             <strong>min. 4 znaków numeru serwisowego</strong> (np. ostatnie cyfry
@@ -440,8 +447,10 @@
             jest zalogowany). Resztę zakładek widzi wyłącznie administrator:</p>
             <ul>
                 <li><strong>Ogólne</strong> — zmiana hasła; administrator widzi tu też,
-                    ile miejsca zajmują zdjęcia (np. „12,4 MB / 100 MB”) oraz przycisk
-                    <span class="tag">Sprawdź aktualizacje</span>,</li>
+                    ile miejsca zajmują zdjęcia (np. „12,4 MB / 100 MB”) oraz przyciski
+                    <span class="tag">Sprawdź aktualizacje</span> i
+                    <span class="tag orange">Aktualizuj</span> (ten drugi włącza się
+                    dopiero, gdy check znajdzie nowszą wersję),</li>
                 <li><strong>Dane serwisu</strong> — adres, kod pocztowy i miasto, telefon
                     oraz link do wizytówki Google. Te dane trafiają na
                     <a href="#wydruk">wydruk</a> i do kodu QR „Oceń nas”. Tu też
@@ -534,10 +543,16 @@
             <ul>
                 <li>Administrator ma przy pasku przycisk
                     <span class="tag orange">Zaktualizuj teraz</span> — uruchamia
-                    aktualizację; ręczne odświeżenie informacji o nowej wersji to
-                    przycisk <span class="tag">Sprawdź aktualizacje</span> w
-                    <strong>Ustawieniach → Ogólne</strong> (pod statystykami zdjęć;
-                    pomija on 24-godzinny cache zwykłego sprawdzania),</li>
+                    aktualizację. Ręczne sprawdzenie to przycisk
+                    <span class="tag">Sprawdź aktualizacje</span> w
+                    <strong>Ustawieniach → Ogólne</strong> (pomija on 24-godzinny cache
+                    zwykłego sprawdzania) — jego wynik to tylko krótki komunikat na dole
+                    ekranu (toast); <strong>pasek na górze nie pojawia się</strong>,
+                    bo żółty pasek zarezerwowany jest wyłącznie dla automatycznego
+                    wykrycia nowej wersji przy starcie panelu. Gdy ręczne sprawdzenie
+                    znajdzie nowszą wersję, obok włącza się przycisk
+                    <span class="tag orange">Aktualizuj</span> (bez aktualizacji jest
+                    wyszarzony),</li>
                 <li>kliknięcie „Zaktualizuj teraz” otwiera okno <strong>Aktualizacja panelu</strong> —
                     przyciskiem <span class="tag orange">Zaktualizuj</span> potwierdzasz
                     (przed zmianą powstaje kopia zapasowa plików, widać pasek postępu),
@@ -548,8 +563,9 @@
                     powiadom administratora”</strong> (bez przycisków).</li>
             </ul>
             <div class="hint">Aktualizacja nigdy nie rusza Twoich danych: zgłoszeń, zdjęć,
-            haseł ani ustawień — pozostają na miejscu. Jeśli pasek się nie pojawia, można
-            sprawdzić ręcznie przyciskiem „Sprawdź aktualizacje”.</div>
+            haseł ani ustawień — pozostają na miejscu. Jeśli pasek się nie pojawia, sprawdź
+            ręcznie w <strong>Ustawieniach → Ogólne</strong> („Sprawdź aktualizacje”), a
+            gotową aktualizację uruchomisz przyciskiem „Aktualizuj” obok.</div>
         </section>
 
         <footer>

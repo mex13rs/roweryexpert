@@ -3,6 +3,7 @@
         let currentFilter = 'all';
         let currentSort = 'planned_asc';   // domyślnie: najbliższy termin odbioru na górze
         let searchQuery = '';
+        let filterUserId = null;   // 3.8.8: ikonka użytkownika = filtr po autorze (null = wszyscy)
 
         // --- ENDPOINTY API (PHP + MySQL) ---
         const API_ZGLOSZENIA = 'api/zgloszenia.php';
@@ -423,6 +424,14 @@
         const updateModalClose = document.getElementById('update-modal-close');
         let updateData = null;
 
+        // 3.8.8: przycisk "Aktualizuj" w Ustawieniach aktywny tylko wtedy,
+        // gdy którykolwiek check (startowy lub ręczny) znalazł nową wersję
+        function syncUpdateApplyBtn() {
+            const b = document.getElementById('update-apply-btn');
+            if (b) b.disabled = !(updateData && updateData.dostepna);
+        }
+
+        // Startowy check (cache 24h) - jako JEDYNY źródło żółtego banera
         async function checkForUpdate() {
             if (!updateBanner) return;
             try {
@@ -430,6 +439,7 @@
                 const data = await res.json();
                 if (!data.success || !data.data.update) return;
                 updateData = data.data.update;
+                syncUpdateApplyBtn();
                 if (!updateData.dostepna) return;
 
                 const isAdmin = (document.getElementById('current-user')?.dataset.rola === 'admin');
@@ -446,7 +456,9 @@
             }
         }
 
-        // Wymuszone sprawdzenie (przycisk "Sprawdź aktualizacje") — omija cache 24h
+        // Wymuszone sprawdzenie (przycisk "Sprawdź aktualizacje") — omija cache 24h.
+        // 3.8.8: NIE rusza banera na górze (to wyłącznie automatyczne wykrycie
+        // przy starcie) — resultat = toast + włączenie "Aktualizuj" obok
         async function forceCheckUpdate() {
             const btn = document.getElementById('update-check-btn');
             if (!btn) return;
@@ -461,16 +473,10 @@
                 const data = await res.json();
                 if (data.success && data.data.update) {
                     updateData = data.data.update;
+                    syncUpdateApplyBtn();
                     if (updateData.dostepna) {
-                        updateBannerText.textContent = 'Dostępna nowsza wersja: ' + updateData.nowa_wersja
-                            + ' (masz ' + updateData.obecna_wersja + ')';
-                        updateNowBtn.hidden = false;
-                        updateBanner.hidden = false;
-                        showToast('Dostępna wersja ' + updateData.nowa_wersja);
+                        showToast('Dostępna wersja ' + updateData.nowa_wersja + ' — kliknij „Aktualizuj".');
                     } else {
-                        updateBannerText.textContent = 'Masz najnowszą wersję (' + updateData.obecna_wersja + ').';
-                        updateNowBtn.hidden = true;
-                        updateBanner.hidden = false;
                         showToast('Brak nowych aktualizacji.');
                     }
                 } else {
@@ -499,6 +505,7 @@
 
         updateNowBtn?.addEventListener('click', openUpdateModal);
         document.getElementById('update-check-btn')?.addEventListener('click', forceCheckUpdate);
+        document.getElementById('update-apply-btn')?.addEventListener('click', openUpdateModal);
         updateModalCancel?.addEventListener('click', closeUpdateModal);
         updateModalClose?.addEventListener('click', closeUpdateModal);
         updateModal?.addEventListener('click', (e) => {

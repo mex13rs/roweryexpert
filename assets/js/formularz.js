@@ -108,7 +108,14 @@
         // Licznik na Koszu + odświeżenie kafli dashboardu (reszta filtrów
         // obsługuje się wyłącznie kliknięciem w kafl)
         function updateFilterCounts() {
-            setFilterCount('count-trash', db.filter(item => !!item.deleted).length, 'count-neutral');
+            // 3.8.8: licznik Kosza = tyle, ile faktycznie zobaczysz po
+            // wejściu w Kosz (z bieżącym wyszukiwaniem i filtrem po
+            // użytkowniku) - inaczej mógł pokazywać np. "2" przy pustej
+            // liście, gdy pole wyszukiwania było czymś zapełnione
+            const wKoszu = db.filter(item => !!item.deleted
+                && itemMatchesSearch(item)
+                && (filterUserId === null || item.createdById === filterUserId)).length;
+            setFilterCount('count-trash', wKoszu, 'count-neutral');
             updateDashboard();
         }
 

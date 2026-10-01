@@ -30,12 +30,16 @@
 
         function renderServicesList() {
             servicesListContainer.innerHTML = '';
-            
+
+            renderUserFilters();   // 3.8.8: ikonki użytkowników (mogą zdjąć wygasły filtr)
             updateFilterCounts();
 
             // Filtruj i szukaj
             let filteredDb = db.filter(item => {
                 const deleted = !!item.deleted;
+
+                // 3.8.8: filtr po ikonce użytkownika (kto założył zgłoszenie)
+                if (filterUserId !== null && item.createdById !== filterUserId) return false;
 
                 if (currentFilter === 'trash') {
                     if (!deleted) return false;

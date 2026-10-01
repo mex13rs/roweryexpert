@@ -12,6 +12,32 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.8 — 2026-10-01
+
+### Naprawione
+- **Pole wyszukiwania nad listą po F5 podstawiało login** (np. „admin") —
+  przeglądarka przywracała wartość z ekranu logowania i cała lista
+  filtrowała się tym tekstem (stąd „brak wyników", częściowe wyniki oraz
+  licznik Kosza „2" przy pustej liście). Pole startuje puste, ma
+  `autocomplete="off"` i **przyjmuje tylko cyfry** (numer zlecenia /
+  telefon) — litery są obcinane także przy późniejszym autofillu.
+- **Licznik przy Koszu** liczy dokładnie to, co widać po wejściu w Kosz
+  (z aktualnym wyszukiwaniem i filtrem po użytkowniku) — znika rozjazd
+  „2 szt." przy pustej liście.
+
+### Zmienione
+- **Ręczne „Sprawdź aktualizacje" (Ustawienia → Ogólne) nie rusza żółtego
+  banera na górze** — wynik to sam toast. Żółty baner pokazuje się tylko,
+  gdy panel sam wykry nową wersję przy starcie (żadnego „Masz najnowszą
+  wersję" na czerwono... żadnego utkniętego banera po kliknięciu).
+- **Nowy przycisk „Aktualizuj" obok „Sprawdź aktualizacje"** — włączany
+  dopiero, gdy check znajdzie nowszą wersję; otwiera standardowe okno
+  aktualizacji (kopia zapasowa + potwierdzenie).
+- Sortowanie „Wg użytkownika (kto założył)" usunięte z listy sortowań
+  (najdłuższa opcja — select od razu węższy); po autorze filtrują nowe
+  **ikonki użytkowników** w wierszu filtrów: kółko z inicjałem w kolorze
+  plakietki, klik = tylko jego zgłoszenia, drugi klik zdejmuje filtr.
+
 ## 3.8.7 — 2026-10-01
 
 ### Dodane

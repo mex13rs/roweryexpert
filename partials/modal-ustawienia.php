@@ -34,7 +34,15 @@
                     </div>
                     <p id="stats-warn" hidden style="margin: 0.6rem 0 0; font-size: 0.85rem; color: var(--danger); font-weight: 600;"></p>
                     <button class="btn btn-secondary" id="refresh-stats-btn" style="margin-top: 0.75rem;">Odśwież statystyki</button>
-                    <button class="btn btn-secondary" id="update-check-btn" style="margin-top: 0.75rem;">Sprawdź aktualizacje</button>
+                    <!-- 3.8.8: ręczne sprawdzenie = tylko toast (żółty baner na
+                         górze pokazuje wyłącznie automatyczne wykrycie nowej
+                         wersji przy starcie). "Aktualizuj" włącza się, gdy
+                         check_find zwróci dostepna=true. -->
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                        <button class="btn btn-secondary" id="update-check-btn" style="flex: 1; width: auto;">Sprawdź aktualizacje</button>
+                        <button class="btn btn-primary" id="update-apply-btn" style="flex: 1; width: auto;" disabled
+                                title="Włączy się, gdy dostępna jest nowsza wersja">Aktualizuj</button>
+                    </div>
                 </div>
 
                 <hr style="border: none; border-top: 1px solid var(--border); margin: 1.5rem 0;">

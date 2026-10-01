@@ -1,6 +1,15 @@
         // --- OBSŁUGA FILTRÓW I WYSZUKIWARKI ---
+        // 3.8.8: pole wyszukiwania przyjmuje TYLKO CYFRY (numer zlecenia /
+        // telefon). Wcześniej po F5 przeglądarka przywracała tu wartość z
+        // ekranu logowania (np. "admin") i cała lista "znikała" - pole
+        // czyścimy przy starcie, a litery obcinamy też przy każdym input
+        // (autofill przeglądarki potrafi dopisać wartość później).
+        searchInput.value = '';
+        searchQuery = '';
         searchInput.addEventListener('input', (e) => {
-            searchQuery = e.target.value;
+            const czyste = e.target.value.replace(/\D/g, '');
+            if (e.target.value !== czyste) e.target.value = czyste;
+            searchQuery = czyste;
             renderServicesList();
             scheduleMobileCard();
         });
@@ -54,6 +63,42 @@
                 currentFilter = btn.dataset.filter;
                 renderServicesList();
             });
+        });
+
+        // --- IKONKI UŻYTKOWNIKÓW W WIERZU FILTRÓW (3.8.8) ---
+        // Kółko z inicjałem każdego, kto założył zgłoszenie; klik = filtr
+        // po autorze (drugi klik zdejmuje filtr). Budowane przy każdym
+        // renderze listy, bo lista użytkowników zależy od bieżących danych.
+        function renderUserFilters() {
+            const box = document.getElementById('user-filters');
+            const sep = document.getElementById('user-filters-sep');
+            if (!box) return;
+            const users = new Map();
+            db.forEach(item => {
+                if (item.createdById && !users.has(item.createdById)) {
+                    users.set(item.createdById, String(item.createdBy || ('#' + item.createdById)));
+                }
+            });
+            // Aktywny filtr, którego użytkownik nie ma już w danych (usunięte
+            // wszystkie jego zgłoszenia) - zdejmujemy, żeby nie została
+            // pusta lista bez widocznego powodu
+            if (filterUserId !== null && !users.has(filterUserId)) filterUserId = null;
+            if (sep) sep.hidden = users.size === 0;
+            box.hidden = users.size === 0;
+            box.innerHTML = Array.from(users, ([id, login]) => {
+                const akt = filterUserId === id;
+                return `<button type="button" class="user-chip user-chip-filter${akt ? ' active' : ''}"` +
+                    ` data-user-id="${id}" style="background: ${userChipColor(login)}"` +
+                    ` title="Pokaż tylko zgłoszenia: ${escapeHtml(login)}">${escapeHtml(Array.from(login)[0].toUpperCase())}</button>`;
+            }).join('');
+        }
+
+        document.getElementById('user-filters')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.user-chip-filter');
+            if (!btn) return;
+            const id = Number(btn.dataset.userId);
+            filterUserId = (filterUserId === id) ? null : id;
+            renderServicesList();
         });
 
         // Kafle dashboardu = skrót do filtrów (klik przewija do listy)
