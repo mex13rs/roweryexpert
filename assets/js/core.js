@@ -275,6 +275,83 @@
             if (e.target === confirmModal) closeConfirmModal(false);
         });
 
+        // --- AUTO-ODŚWIEŻANIE POLLINGIEM (znacznik zmian co 10 s) ---
+        // Komputer z otwartym panelem sam pokaże zmiany zrobione gdzie indziej
+        // (np. przyjęcie na telefonie) - bez F5. Odpytujemy lekki znacznik
+        // (?stamp=1: liczba rekordów + najnowszy updated_at + liczba zdjęć);
+        // lista przemalowuje się tylko przy realnej zmianie w bazie i nigdy
+        // wtedy, gdy ktoś pracuje w otwartym oknie albo trwa zapis.
+        const POLL_MS = 10000;
+        let pollTimer = null;
+        let pollLastStamp = null;
+        let pollBusy = false;
+
+        async function pollGetStamp() {
+            const res = await apiFetch(API_ZGLOSZENIA + '?stamp=1');
+            const data = await res.json();
+            if (!data.success || !data.data || !data.data.stamp) {
+                throw new Error('Brak znacznika zmian.');
+            }
+            return data.data.stamp;
+        }
+
+        // Otwarte okno (karta, edycja, kalendarz, monit po przyjęciu) albo
+        // trwający zapis = nie przemalowujemy listy pod pracownikiem
+        function panelZapelniony() {
+            const overlay = document.getElementById('upload-overlay');
+            return !!document.querySelector('.modal-overlay.active, .modal-overlay.leaving')
+                || !!(overlay && overlay.classList.contains('active'));
+        }
+
+        // Pobranie świeżej listy i przemalowanie widoków (bez reloadu strony -
+        // wypełniany formularz i dane logowania zostają nietknięte)
+        async function pollOdswiezListe() {
+            const res = await apiFetch(API_ZGLOSZENIA);
+            const data = await res.json();
+            if (!data.success) return;
+            db = data.data;
+            renderServicesList();
+            if (modulOn('kalendarz')) renderCalendar();
+        }
+
+        async function pollTick() {
+            if (pollBusy || document.hidden) return;
+            pollBusy = true;
+            try {
+                const stamp = await pollGetStamp();
+                if (pollLastStamp === null) {
+                    pollLastStamp = stamp; // pierwszy odczyt = punkt odniesienia
+                } else if (stamp !== pollLastStamp) {
+                    // Przy otwartym oknie NIE aktualizujemy pollLastStamp:
+                    // zaległość odrobimy przy najbliższym ticku po zamknięciu
+                    if (panelZapelniony()) return;
+                    pollLastStamp = stamp;
+                    await pollOdswiezListe();
+                }
+            } catch (err) {
+                // Chwilowy brak sieci albo wygasła sesja (401 obsłuży apiFetch
+                // z komunikatem) - spróbujemy przy najbliższym ticku
+            } finally {
+                pollBusy = false;
+            }
+        }
+
+        function startPolling() {
+            if (pollTimer || !IS_AUTHENTICATED) return;
+            pollTimer = setInterval(pollTick, POLL_MS);
+            pollTick();
+        }
+
+        // Karta w tle = bez zapytań do hostingu; powrót na plan = natychmiast
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            } else {
+                startPolling();
+            }
+        });
+
         // --- INICJALIZACJA STRONY ---
         window.addEventListener('DOMContentLoaded', async () => {
             // Motyw: domyślnie ciemny od pierwszego renderu (także ekran
@@ -326,6 +403,10 @@
 
             // Aktualizacje (v2): sprawdź dostępność przy starcie (check raz/24h po stronie PHP)
             checkForUpdate();
+
+            // Auto-odświeżanie: pierwszy odczyt znacznika + start co 10 s,
+            // żeby panel sam pokazywał zmiany zrobione na innym urządzeniu
+            startPolling();
         });
 
         // --- AKTUALIZACJE (v2): baner + modal + wykonywanie ---

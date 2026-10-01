@@ -30,6 +30,22 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 try {
     auth_require();
     if ($method === 'GET') {
+        // ?stamp=1 - lekki znacznik zmian dla auto-odswiezania panelu (polling
+        // co 10 s): liczba zgloszen + najnowszy updated_at + liczba zdjec.
+        // Kazda zmiana w bazie (nowe zgloszenie, status, potwierdzenie, kosz,
+        // zdjecie) zmienia znacznik, wiec front przemalowuje liste sam - bez
+        // odswiezania strony i bez pobierania calej listy przy kazdym tiku.
+        if (($_GET['stamp'] ?? '') === '1') {
+            $r = db()->query(
+                'SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), 0) AS m FROM zgloszenia'
+            )->fetch();
+            $photos = (int) db()->query('SELECT COUNT(*) FROM zdjecia')->fetchColumn();
+            json_out([
+                'success' => true,
+                'data'    => ['stamp' => (int) $r['n'] . '|' . $r['m'] . '|' . $photos],
+            ]);
+        }
+
         $rows = db()->query(
             'SELECT * FROM zgloszenia ORDER BY id DESC'
         )->fetchAll();

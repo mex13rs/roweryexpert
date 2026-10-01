@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.4';
+const APP_VERSION = '3.8.5';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -587,6 +587,7 @@ function db(): PDO
     // service_notes - notatki serwisowe (tekst)
     // services_done - wykonane czynnosci jako JSON z nazwami uslug (checkboxy)
     // deleted_at - kosz (soft delete zamiast twardego usuwania)
+    // updated_at - znacznik ostatniej zmiany (auto-odswiezanie listy na PC)
     $zgCols = [];
     foreach ($pdo->query('SHOW COLUMNS FROM zgloszenia') as $col) {
         $zgCols[] = $col['Field'];
@@ -664,6 +665,18 @@ function db(): PDO
     }
     if (!in_array('confirmed_by', $zgCols, true)) {
         $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN confirmed_by INT UNSIGNED DEFAULT NULL AFTER created_by');
+    }
+
+    // updated_at - znacznik ostatniej zmiany zgloszenia. Dzieki niemu komputer
+    // z otwartym panelem odpytuje co 10 s (api/zgloszenia.php?stamp=1) i sam
+    // pokazuje zmiany zrobione gdzie indziej (np. przyjecie na telefonie) -
+    // bez odswiezania strony. MySQL aktualizuje kolumne sam przy kazdym UPDATE,
+    // wiec endpointy edycji pozostaja bez zmian.
+    if (!in_array('updated_at', $zgCols, true)) {
+        $pdo->exec(
+            'ALTER TABLE zgloszenia ADD COLUMN updated_at TIMESTAMP NOT NULL '
+            . 'DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER confirmed_by'
+        );
     }
 
     // Modul "kalendarz" moze byc wylaczony przez uzytkownika - wtedy termin

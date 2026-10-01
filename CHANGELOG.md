@@ -12,6 +12,22 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.5 — 2026-10-01
+
+### Dodane
+- **Panel na komputerze sam pokazuje zmiany zrobione gdzie indziej (bez F5).**
+  Nowa kolumna `zgloszenia.updated_at` (migracja w `db()`, MySQL aktualizuje
+  ją sam przy każdym UPDATE — endpointy edycji bez zmian) + lekki znacznik
+  `api/zgloszenia.php?stamp=1` (liczba zgłoszeń + najnowszy `updated_at`
+  + liczba zdjęć). Front co 10 s odpytuje znacznik; przy zmianie ponownie
+  pobiera listę i przemalowuje listę zgłoszeń oraz kalendarz — **bez reloadu
+  strony**, więc wypełniany formularz zostaje nietknięty. Scenariusz:
+  przyjęcie na telefonie → zgłoszenie (z maską „Potwierdź") pojawia się
+  na PC maksymalnie po 10 s.
+  Odpytywanie wstrzymuje się, gdy: ktoś ma otwarte okno (karta, edycja,
+  kalendarz, monit po przyjęciu), trwa zapis, albo karta panelu jest
+  w tle przeglądarki (`visibilitychange` — brak zapytań do hostingu).
+
 ## 3.8.4 — 2026-09-29
 
 ### Zabezpieczone
