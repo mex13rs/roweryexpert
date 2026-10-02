@@ -84,13 +84,28 @@
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px; color: var(--primary-text);">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                         </svg>
-                        Przyjmij nowy rower
+                        <span id="intake-title-text">Przyjmij nowy rower</span>
                     </h2>
-                    
+
+                    <!-- 3.9: wybor typu sprzetu (modul "hulajnogi"). Przed wyborem
+                         formularz jest zablokowany, a naglowek brzmi "Przyjmij nowy" -->
+                    <div class="intake-type" id="intake-type">
+                        <button type="button" class="intake-type-btn" data-typ="rower" title="Przyjmij rower">🚲 Rower</button>
+                        <button type="button" class="intake-type-btn" data-typ="hulajnoga" title="Przyjmij hulajnogę">🛴 Hulajnoga</button>
+                    </div>
+                    <p class="intake-hint" id="intake-hint">Najpierw wybierz typ sprzętu</p>
+
                     <form id="service-form">
                         <div class="form-group">
-                            <label for="bike-name">Nazwa Roweru</label>
+                            <label for="bike-name" id="bike-name-label">Nazwa Roweru</label>
                             <input type="text" id="bike-name" placeholder="np. Kross Hexagon 5.0, Giant Talon 1" required>
+                        </div>
+
+                        <!-- 3.9: numer seryjny - wylacznie hulajnoga, opcjonalny
+                             (pusty nie pojawia sie na zadnym wydruku) -->
+                        <div class="form-group" id="serial-group" hidden>
+                            <label for="numer-seryjny">Numer seryjny (opcjonalny)</label>
+                            <input type="text" id="numer-seryjny" maxlength="64" placeholder="np. RF22A00123" autocomplete="off">
                         </div>
                         
                         <div class="form-group">
@@ -157,7 +172,7 @@
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 22px; height: 22px; color: var(--primary-text);">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 17.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
                             </svg>
-                            Historia i statusy rowerów
+                            Historia i statusy
                         </h2>
                         
                         <div class="search-box">
@@ -206,6 +221,14 @@
                             <!-- 3.8.8: ikonki użytkowników - klik filtruje listę po autorze -->
                             <span class="filters-sep" id="user-filters-sep" hidden></span>
                             <div class="user-filters" id="user-filters"></div>
+                            <!-- 3.9: filtr typu sprzetu (modul "hulajnogi") - ukryty przez CSS,
+                                 gdy modul wylaczony -->
+                            <span class="filters-sep" id="typ-filters-sep"></span>
+                            <div class="typ-filters" id="typ-filters">
+                                <button type="button" class="filter-btn typ-btn active" data-typ-filter="all">Wszystkie typy</button>
+                                <button type="button" class="filter-btn typ-btn" data-typ-filter="rower" title="Pokaż tylko rowery">🚲 Rower</button>
+                                <button type="button" class="filter-btn typ-btn" data-typ-filter="hulajnoga" title="Pokaż tylko hulajnogi">🛴 Hulajnoga</button>
+                            </div>
                         </div>
                         <label class="sort-box">Sortuj
                             <select class="sort-select" id="sort-select">
@@ -213,7 +236,7 @@
                                 <option value="planned_desc">Termin odbioru (odległy)</option>
                                 <option value="dateIn_desc">Przyjęcia: najnowsze</option>
                                 <option value="dateIn_asc">Przyjęcia: najstarsze</option>
-                                <option value="name">Nazwa roweru A–Z</option>
+                                <option value="name">Nazwa sprzętu A–Z</option>
                                 <option value="status">Wg statusu</option>
                                 <!-- 3.8.8: "Wg użytkownika" wyrzucone - po autorze
                                      filtrują ikonki obok przycisków (pole select

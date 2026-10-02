@@ -272,6 +272,7 @@
             <a href="#konta">Konta pracowników</a>
             <a href="#moduly">Moduły panelu</a>
             <a href="#aktualizacje">Aktualizacje panelu</a>
+            <a href="#hulajnogi">Hulajnogi i numer seryjny</a>
         </nav>
 
         <section id="logowanie">
@@ -307,8 +308,9 @@
             <p>Gdy ktoś <strong>pięć razy</strong> poda złe hasło, logowanie blokuje
             się na <strong>15 minut</strong> — po prostu odczekaj ten czas.</p>
             <p>Po każdym zalogowaniu (przy włączonym module Kalendarza) wyskakuje okno
-            <strong>Podsumowanie dnia</strong>: ile rowerów jest zaplanowanych na dziś
-            i na jutro (oraz ostrzeżenie „Po terminie”, gdy któryś termin minął).
+            <strong>Podsumowanie dnia</strong>: ile sprzętu jest zaplanowanego na dziś
+            i na jutro (przy włączonym module Hulajnogi pod licznikami widać rozbicie
+            na rowery i hulajnogi; oraz ostrzeżenie „Po terminie”, gdy któryś termin minął).
             Przycisk <strong>OK</strong> je zamyka.</p>
         </section>
 
@@ -317,6 +319,12 @@
         <section id="przyjecie">
             <h2><span class="num">2</span>Przyjęcie roweru</h2>
             <p>Formularz „Przyjmij nowy rower” (lewa kolumna) to punkt startowy pracy:</p>
+            <div class="hint">Od wersji 3.9 panel potrafi obsługiwać też hulajnogi —
+            gdy administrator włączy moduł <strong>Hulajnogi</strong>, zamiast stałego
+            nagłówka pojawi się wybór typu (<strong>Rower</strong> / <strong>Hulajnoga</strong>),
+            a formularz będzie zablokowany aż do kliknięcia. Szczegóły w rozdziale
+            <a href="#hulajnogi">Hulajnogi i numer seryjny</a>. Wyłączony moduł = ten
+            rozdział działa dokładnie jak dawniej.</div>
             <ul>
                 <li><strong>Nazwa roweru</strong> — np. „Kross Hexagon”, wpisywana ręcznie.</li>
                 <li><strong>Data przyjęcia</strong> — domyślnie dziś, oraz
@@ -381,7 +389,10 @@
                 <li><strong>Wszystkie</strong> — pełna lista zgłoszeń,</li>
                 <li><strong>Moje</strong> — tylko zgłoszenia, które Ty sam przyjąłeś,</li>
                 <li><strong>Odebrane</strong> — historia rowerów oddanych klientom,</li>
-                <li><strong>Kosz</strong> — usunięte zgłoszenia z licznikiem (patrz <a href="#kosz">Kosz</a>).</li>
+                <li><strong>Kosz</strong> — usunięte zgłoszenia z licznikiem (patrz <a href="#kosz">Kosz</a>),</li>
+                <li><strong>Wszystkie typy / 🚲 Rower / 🛴 Hulajnoga</strong> — filtr
+                    typu sprzętu; widoczny tylko przy włączonym module
+                    <a href="#hulajnogi">Hulajnogi</a> (bez niego panel zna wyłącznie rowery).</li>
             </ul>
             <p>Obok przycisków filtrów widoczne są <strong>ikony użytkowników</strong> —
             kółka z inicjałem osoby, która zakładała zgłoszenia. <strong>Kliknięcie ikonki
@@ -390,13 +401,14 @@
             nie założył zgłoszeń, ikonek nie ma.</p>
             <p>Wybrane <strong>sortowanie</strong> (prawy górny róg nad listą) ma siedem
             wariantów: termin odbioru (najbliższy/odległy), data przyjęcia (najnowsze/
-            najstarsze), nazwa roweru A–Z, wg statusu oraz <strong>wg wydającego rower</strong>
+            najstarsze), nazwa sprzętu A–Z, wg statusu oraz <strong>wg wydającego rower</strong>
             — po autorze zgłoszenia filtrują ikonki obok przycisków. Domyślnie najbliższe
             terminy są na górze, a wybór zapamiętuje się w przeglądarce.</p>
             <p>Pole wyszukiwania <strong>przyjmuje wyłącznie cyfry</strong> — wpisz
             <strong>numer zlecenia albo telefon</strong> (litery nie są wpuszczane, a pole
             po każdym odświeżeniu strony startuje puste — nic nie podstawia się samo).
-            Dopasowanie szuka tej liczby w numerze serwisowym, telefonie i pozostałych
+            Dopasowanie szuka tej liczby w numerze serwisowym, telefonie, numerze
+            seryjnym hulajnogi i pozostałych
             polach zgłoszenia — wystarczą np. ostatnie 4 cyfry telefonu.</p>
             <p><strong>Na telefonie</strong> lista, kafle podsumowań, filtry i sortowanie są
             ukryte — telefon służy do przyjęcia i wydania roweru. Wyszukiwanie wymaga
@@ -601,6 +613,10 @@
             danych</strong>: po ponownym włączeniu wszystko wraca. Zmiana zapisuje się natychmiast.
             Listę przełączników przewijasz myszką lub palcem — jest długa.</p>
             <ul>
+                <li><strong>Hulajnogi</strong> — panel obsługuje wtedy dwa typy sprzętu:
+                    wybór Rower/Hulajnoga przy przyjęciu, ikonki i filtr typu na liści,
+                    drugi katalog usług i numer seryjny; po wyłączeniu panel wraca do
+                    obsługi samych rowerów (patrz rozdział <a href="#hulajnogi">18</a>),</li>
                 <li><strong>Kalendarz</strong> — znika przycisk kalendarza, pole „Planowany odbiór”,
                     kafle „Po terminie / Odbiory dziś / jutro”, opcje sortowania po terminie
                     i linki do Kalendarza Google,</li>
@@ -664,6 +680,62 @@
             haseł ani ustawień — pozostają na miejscu. Jeśli pasek się nie pojawia, sprawdź
             ręcznie w <strong>Ustawieniach → Ogólne</strong> („Sprawdź aktualizacje”), a
             gotową aktualizację uruchomisz przyciskiem „Aktualizuj” obok.</div>
+        </section>
+
+        <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>
+
+        <section id="hulajnogi">
+            <h2><span class="num">18</span>Hulajnogi i numer seryjny</h2>
+            <p>Moduł <strong>Hulajnogi</strong> (Ustawienia → Moduły, tylko administrator)
+            sprawia, że panel obsługuje dwa typy sprzętu. <strong>Domyślnie jest wyłączony</strong> —
+            bez niego wszystko wygląda i działa dokładnie jak dawniej, a zgłoszenia można
+            zakładać wyłącznie jako rowery. Włączenie niczego nie kasuje: stare zgłoszenia
+            zostają rowerami, a Ty w każdej chwili możesz moduł wyłączyć — panel wróci
+            do obsługi samych rowerów.</p>
+
+            <p><strong>Wybór typu przy przyjęciu.</strong> Nagłówek formularza zmienia się
+            na „Przyjmij nowy”, a pod nim pojawiają się dwa przyciski:
+            <span class="tag">🚲 Rower</span> i <span class="tag">🛴 Hulajnoga</span>.
+            Dopóki nie klikniesz żadnego, <strong>formularz jest zablokowany</strong>
+            (pola wyszarzone, przyciski zapisu i zdjęcia nieaktywne, podpowiedź
+            „Najpierw wybierz typ sprzętu”). Po kliknięciu formularz się odblokowuje,
+            a nagłówek mówi „Przyjmij rower” albo „Przyjmij hulajnogę”.</p>
+            <ul>
+                <li><strong>Typ zmienisz w każdej chwili</strong> także w trakcie
+                    wypełniania — wpisane dane zostają, przerysowują się tylko checkboxy
+                    usług (każdy typ ma własny katalog),</li>
+                <li>przy hulajnodze pojawia się pole <strong>Numer seryjny (opcjonalny)</strong>
+                    — pusty może zostać; przy rowerze pole nie istnieje,</li>
+                <li><strong>po zapisie formularz wraca do „wybierz typ”</strong>
+                    (znów zablokowany), a komunikat mówi „Zapisano zgłoszenie
+                    rowerowe/hulajnogowe w bazie!”,</li>
+                <li><strong>typu nie da się zmienić po zapisie</strong> — ani z poziomu
+                    edycji, ani przez API; edycja pozwala poprawić wyłącznie numer seryjny.</li>
+            </ul>
+
+            <p><strong>Lista.</strong> Przy włączonym module każda karta dostaje ikonkę
+            typu (🚲 albo 🛴) przy nazwie, a obok filtrów statusu pojawia się grupa
+            <span class="tag">Wszystkie typy</span> <span class="tag">🚲 Rower</span>
+            <span class="tag">🛴 Hulajnoga</span>. Nazwa sprzętu wyszukuje się
+            po nazwie i — dla hulajnogi — także po <strong>numerze seryjnym</strong>
+            (wpisujesz do wyszukiwarki cyfry z numeru).</p>
+
+            <p><strong>Katalog usług.</strong> W Ustawieniach → „Dodaj usługi” nad polem
+            na nową usługę jest segment <span class="tag">🚲 Rower</span>
+            <span class="tag">🛴 Hulajnoga</span> — usługa trafia do wybranego katalogu
+            (segment zapamiętuje Twój wybór). Ta sama nazwa może występować w obu
+            katalogach; checkboxy w formularzu pokazują zawsze katalog wybranego typu.</p>
+
+            <p><strong>Wydruki.</strong> Potwierdzenie Przyjęcia i Karta Wydania zmieniają
+            tytuł na wersję dla hulajnogi (np. „Karta Wydania Hulajnogi”), etykieta
+            „Rower:” zamienia się na „Hulajnoga:”, a <strong>wiersz z numerem seryjnym
+            drukuje się tylko wtedy, gdy numer jest uzupełniony</strong> — pusty serial
+            nie zostawia pustego pola na wydruku.</p>
+
+            <div class="hint">Wyłączenie modułu nie kasuje danych: zgłoszenia hulajnogowe
+            zostają w bazie (z ikonkami ukrytymi), a formularz wraca do postaci
+            „Przyjmij nowy rower” bez wyboru typu. Ponowne włączenie przywraca wszystko
+            od razu.</div>
         </section>
 
         <a class="to-top" href="#spis">↑ Wróć do spisu treści</a>

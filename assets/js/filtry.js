@@ -14,6 +14,17 @@
             scheduleMobileCard();
         });
 
+        // --- 3.9: FILTR TYPU SPRZETU (Rower / Hulajnoga / Wszystkie typy) ---
+        // Widoczny tylko przy wlaczonym module hulajnogi (body.off-hulajnogi
+        // ukrywa go w CSS); przy wylaczonym module filterTyp trzyma 'all'.
+        document.getElementById('typ-filters')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.typ-btn');
+            if (!btn) return;
+            filterTyp = btn.dataset.typFilter || 'all';
+            renderServicesList();
+            scheduleMobileCard();
+        });
+
         // --- MOBILE: lista ukryta, więc wynik wyszukiwania pokazuje karta zgłoszenia ---
         let mobileCardTimer = null;
 

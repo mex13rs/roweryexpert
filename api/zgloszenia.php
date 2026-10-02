@@ -58,7 +58,17 @@ try {
         $action = $_POST['action'] ?? '';
 
         if ($action === 'create') {
-            [$bikeName, $dateIn, $datePlanned, $phone, $fault, $status] =
+            // 3.9: typ sprzetu. Modul "hulajnogi" wylaczony = przyjmujemy wylacznie
+            // rowery (wymuszamy typ, serial pomijamy - obejscie przez API nie
+            // zalozyc hulajnogi). Z wlaczonym modulem front musi podac typ.
+            if (!modul('hulajnogi')) {
+                $_POST['typ'] = 'rower';
+                $_POST['numer_seryjny'] = '';
+            } elseif (trim((string) ($_POST['typ'] ?? '')) === '') {
+                json_fail('Najpierw wybierz typ sprzętu: Rower lub Hulajnoga.');
+            }
+
+            [$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $typ, $serial] =
                 validate_zgloszenie($_POST);
 
             // Zgłoszenie z mobile wymaga potwierdzenia na komputerze
@@ -81,11 +91,15 @@ try {
             $me = (int) (auth_user()['id'] ?? 0);
             $stmt = db()->prepare(
                 'INSERT INTO zgloszenia
-                    (bike_name, date_in, date_planned, customer_phone,
+                    (bike_name, typ, numer_seryjny, date_in, date_planned, customer_phone,
                      fault_description, status, confirmed, services_done, created_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
-            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $confirmed, $servicesJson, $me ?: null]);
+            $stmt->execute([
+                $bikeName, $typ, $serial !== '' ? $serial : null,
+                $dateIn, $datePlanned, $phone, $fault, $status,
+                $confirmed, $servicesJson, $me ?: null,
+            ]);
             $id = (int) db()->lastInsertId();
 
             // Numer serwisowy: RO-ROK-NUMER_ID (etykieta QR na rowerze)
@@ -171,7 +185,15 @@ try {
                 json_fail('Zgłoszenie nie istnieje.', 404);
             }
 
-            [$bikeName, $dateIn, $datePlanned, $phone, $fault, $status] =
+            // 3.9: typ zgloszenia jest niezmienny po zapisie - podmieniamy go na
+            // wartosc z bazy, dzieki czemu walidacja dostaje wlasciwy kontekst
+            // (komunikaty "nazwa hulajnogi", numer seryjny tylko dla hulajnogi),
+            // a przez API nie zmieni sie typu istniejacego zgloszenia
+            $typRow = db()->prepare('SELECT typ FROM zgloszenia WHERE id = ?');
+            $typRow->execute([$id]);
+            $_POST['typ'] = ((string) $typRow->fetchColumn()) === 'hulajnoga' ? 'hulajnoga' : 'rower';
+
+            [$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $typIgnored, $serial] =
                 validate_zgloszenie($_POST);
 
             $notes = trim((string) ($_POST['service_notes'] ?? ''));
@@ -185,10 +207,13 @@ try {
                 'UPDATE zgloszenia
                     SET bike_name = ?, date_in = ?, date_planned = COALESCE(?, date_planned),
                         customer_phone = ?, fault_description = ?,
-                        status = ?, service_notes = ?
+                        status = ?, service_notes = ?, numer_seryjny = ?
                   WHERE id = ?'
             );
-            $stmt->execute([$bikeName, $dateIn, $datePlanned, $phone, $fault, $status, $notes ?: null, $id]);
+            $stmt->execute([
+                $bikeName, $dateIn, $datePlanned, $phone, $fault, $status,
+                $notes ?: null, $serial !== '' ? $serial : null, $id,
+            ]);
 
             $row = db()->prepare('SELECT * FROM zgloszenia WHERE id = ?');
             $row->execute([$id]);

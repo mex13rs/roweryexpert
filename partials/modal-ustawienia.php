@@ -21,7 +21,7 @@
             <div class="settings-tab-content" id="tab-content-general">
                 <?php if ($isAdmin): ?>
                 <div class="form-group" id="photos-stats-group">
-                    <label>Zdjęcia rowerów w bazie</label>
+                    <label>Zdjęcia sprzętu w bazie</label>
                     <div class="stats-box" id="stats-box" style="background: var(--card-lighter); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1.15rem;">
                         <p style="margin: 0; display: flex; justify-content: space-between;">
                             <span>Liczba zdjęć:</span>
@@ -116,6 +116,12 @@
                     Dodane usługi pojawią się jako checkboxy w polu „Opis usterki”. Zaznaczone usługi
                     zostaną dopisane do zgłoszenia, Kalendarza Google oraz wydruku.
                 </p>
+                <!-- 3.9: osobne katalogi per typ; segment widoczny tylko przy wlaczonym
+                     module "hulajnogi" (body.off-hulajnogi ukrywa go w CSS) -->
+                <div class="svc-typ-seg" id="svc-typ-seg" role="group" aria-label="Typ katalogu usług">
+                    <button type="button" class="filter-btn svc-typ-btn active" data-svc-typ="rower">🚲 Rower</button>
+                    <button type="button" class="filter-btn svc-typ-btn" data-svc-typ="hulajnoga">🛴 Hulajnoga</button>
+                </div>
                 <label for="new-service-input">Nowa usługa</label>
                 <div class="service-add-row">
                     <input type="text" id="new-service-input" placeholder="np. Wymiana dętki">
@@ -132,6 +138,10 @@
                     Zmiana zapisuje się natychmiast.
                 </p>
                 <div class="mod-list">
+                    <label class="mod-row">
+                        <input type="checkbox" class="mod-toggle" data-mod="hulajnogi">
+                        <span><strong>Hulajnogi</strong><br><small>Wybór typu Rower | Hulajnoga przy przyjęciu, ikonki i filtr typu na liści, drugi katalog usług, numer seryjny; po wyłączeniu panel obsługuje tylko rowery</small></span>
+                    </label>
                     <label class="mod-row">
                         <input type="checkbox" class="mod-toggle" data-mod="kalendarz" checked>
                         <span><strong>Kalendarz</strong><br><small>Widok kalendarza, terminy odbioru, kafle „Odbiory" i linki do Kalendarza Google</small></span>
@@ -166,7 +176,7 @@
                     </label>
                     <label class="mod-row">
                         <input type="checkbox" class="mod-toggle" data-mod="karta_wydania" checked>
-                        <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania Roweru przy wydaniu; sam przycisk „Wydaj rower” zostaje</small></span>
+                        <span><strong>Karta wydania</strong><br><small>Automatyczny druk Karty Wydania sprzętu przy wydaniu; sam przycisk „Wydaj” zostaje</small></span>
                     </label>
                     <label class="mod-row">
                         <input type="checkbox" class="mod-toggle" data-mod="wykonane" checked>
@@ -238,7 +248,7 @@
                 <span class="d-val" id="user-modal-passflag">—</span>
                 <span class="d-label">Założył zgłoszeń:</span>
                 <span class="d-val" id="user-modal-zgloszenia">0</span>
-                <span class="d-label">Wydanych rowerów:</span>
+                <span class="d-label">Wydanych sprzętów:</span>
                 <span class="d-val" id="user-modal-wydane">0</span>
                 <span class="d-label">Rola:</span>
                 <span class="d-val">

@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.8.10';
+const APP_VERSION = '3.9.0';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -202,12 +202,23 @@ function wersja_aplikacji(): string
 /** Pelna lista modulow, ktore moga byc wylaczone przez uzytkownika. */
 function moduly_dostepne(): array
 {
-    return ['kalendarz', 'zdjecia', 'skaner', 'uslugi', 'druk', 'kosz', 'kolorystyka', 'powitanie', 'karta_wydania', 'wykonane'];
+    return ['kalendarz', 'zdjecia', 'skaner', 'uslugi', 'druk', 'kosz', 'kolorystyka', 'powitanie', 'karta_wydania', 'wykonane', 'hulajnogi'];
+}
+
+/**
+ * Wartosc domyslna modulu, gdy nie ma go jeszcze w bazie (kompatybilnosc
+ * wstecz: stary panel bez klucza w ustawieniach). Wyjatkiem "hulajnogi" -
+ * startuje wylaczony, zeby po aktualizacji panel zostal bez zmian (wybor
+ * Rower/Hulajnoga w Ustawieniach -> Moduly wlacza go recznie).
+ */
+function modul_domyslnie(string $nazwa): bool
+{
+    return $nazwa !== 'hulajnogi';
 }
 
 /**
  * Wlączone moduly (nazwa => bool). Odczyt z cache - jedno zapytanie na żądanie.
- * Brak klucza w bazie = modul wlaczony (kompatybilnosc wstecz: przed 2.3 wszystko bylo widoczne).
+ * Brak klucza w bazie = wartosc domyslna modulu (patrz modul_domyslnie).
  */
 function moduly(bool $refresh = false): array
 {
@@ -220,7 +231,7 @@ function moduly(bool $refresh = false): array
         $saved = $raw !== '' ? (json_decode($raw, true) ?: []) : [];
         $cache = [];
         foreach (moduly_dostepne() as $m) {
-            $cache[$m] = array_key_exists($m, $saved) ? (bool) $saved[$m] : true;
+            $cache[$m] = array_key_exists($m, $saved) ? (bool) $saved[$m] : modul_domyslnie($m);
         }
     }
     return $cache;
@@ -244,28 +255,31 @@ function photos_stats(): array
     ];
 }
 
-/** Lista skonfigurowanych usług. */
+/** Lista skonfigurowanych usług (z typem: rower / hulajnoga). */
 function uslugi_list(): array
 {
-    $rows = db()->query('SELECT id, nazwa FROM uslugi ORDER BY id ASC')->fetchAll();
+    $rows = db()->query('SELECT id, nazwa, typ FROM uslugi ORDER BY id ASC')->fetchAll();
     return array_map(static fn(array $r) => [
         'id'    => (int) $r['id'],
         'nazwa' => $r['nazwa'],
+        'typ'   => ($r['typ'] ?? '') === 'hulajnoga' ? 'hulajnoga' : 'rower',
     ], $rows);
 }
 
-/** Dodaje usługę. Zwraca null przy sukcesie albo komunikat błędu. */
-function uslugi_add(string $nazwa): ?string
+/** Dodaje usługę do katalogu wskazanego typu. Zwraca null przy sukcesie albo komunikat błędu. */
+function uslugi_add(string $nazwa, string $typ = 'rower'): ?string
 {
     $nazwa = trim($nazwa);
     if ($nazwa === '') {
         return 'Podaj nazwę usługi.';
     }
+    $typ = $typ === 'hulajnoga' ? 'hulajnoga' : 'rower';
     $nazwa = function_exists('mb_substr') ? mb_substr($nazwa, 0, 255) : substr($nazwa, 0, 255);
     try {
-        db()->prepare('INSERT INTO uslugi (nazwa) VALUES (?)')->execute([$nazwa]);
+        // Unikalnosc (typ, nazwa): te sama usluga moze byc w obu katalogach
+        db()->prepare('INSERT INTO uslugi (nazwa, typ) VALUES (?, ?)')->execute([$nazwa, $typ]);
     } catch (PDOException) {
-        return 'Taka usługa już istnieje.';
+        return 'Taka usługa już jest na tej liście.';
     }
     return null;
 }
@@ -655,6 +669,8 @@ function db(): PDO
         'CREATE TABLE IF NOT EXISTS zgloszenia (
             id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
             bike_name         VARCHAR(255) NOT NULL,
+            typ               ENUM("rower","hulajnoga") NOT NULL DEFAULT "rower",
+            numer_seryjny     VARCHAR(64) DEFAULT NULL,
             date_in           DATE NOT NULL,
             date_planned      DATE NOT NULL,
             customer_phone    VARCHAR(32)  NOT NULL,
@@ -701,8 +717,9 @@ function db(): PDO
         'CREATE TABLE IF NOT EXISTS uslugi (
             id    INT UNSIGNED NOT NULL AUTO_INCREMENT,
             nazwa VARCHAR(255) NOT NULL,
+            typ   ENUM("rower","hulajnoga") NOT NULL DEFAULT "rower",
             PRIMARY KEY (id),
-            UNIQUE KEY uk_nazwa (nazwa)
+            UNIQUE KEY uk_typ_nazwa (typ, nazwa)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
 
@@ -896,6 +913,42 @@ function db(): PDO
         if (($col['Null'] ?? 'NO') === 'NO') {
             $pdo->exec('ALTER TABLE zgloszenia MODIFY COLUMN date_planned DATE DEFAULT NULL');
         }
+    }
+
+    // 3.9: typ sprzetu (rower/hulajnoga) i numer seryjny hulajnogi.
+    // Stare rekordy dostaja domyslny typ "rower" - po migracji widoczne bez zmian.
+    if (!in_array('typ', $zgCols, true)) {
+        $pdo->exec(
+            "ALTER TABLE zgloszenia ADD COLUMN typ ENUM('rower','hulajnoga')"
+            . " NOT NULL DEFAULT 'rower' AFTER bike_name"
+        );
+    }
+    if (!in_array('numer_seryjny', $zgCols, true)) {
+        $pdo->exec('ALTER TABLE zgloszenia ADD COLUMN numer_seryjny VARCHAR(64) DEFAULT NULL AFTER typ');
+    }
+
+    // 3.9: katalog uslug rozdzielony na typy - osobne listy w Ustawieniach i w
+    // formularzu. Unikalnosc nazwy zdejmujemy ze samej nazwy i przenosimy na
+    // (typ, nazwa): "Wymiana detki" moze wystepowac w obu katalogach.
+    $usCols = [];
+    foreach ($pdo->query('SHOW COLUMNS FROM uslugi') as $col) {
+        $usCols[] = $col['Field'];
+    }
+    if (!in_array('typ', $usCols, true)) {
+        $pdo->exec(
+            "ALTER TABLE uslugi ADD COLUMN typ ENUM('rower','hulajnoga')"
+            . " NOT NULL DEFAULT 'rower' AFTER nazwa"
+        );
+    }
+    $klucze = [];
+    foreach ($pdo->query('SHOW INDEX FROM uslugi') as $idx) {
+        $klucze[] = $idx['Key_name'] ?? '';
+    }
+    if (in_array('uk_nazwa', $klucze, true)) {
+        $pdo->exec('ALTER TABLE uslugi DROP INDEX uk_nazwa');
+    }
+    if (!in_array('uk_typ_nazwa', $klucze, true)) {
+        $pdo->exec('ALTER TABLE uslugi ADD UNIQUE KEY uk_typ_nazwa (typ, nazwa)');
     }
 
     if (!is_dir(UPLOAD_DIR)) {
@@ -1106,6 +1159,9 @@ function map_zgloszenie(array $row): array
     return [
         'id'               => $id,
         'bikeName'         => $row['bike_name'],
+        // 3.9: typ sprzetu i numer seryjny (stare rekordy = rower, pusty serial)
+        'typ'              => ($row['typ'] ?? '') === 'hulajnoga' ? 'hulajnoga' : 'rower',
+        'numerSeryjny'     => (string) ($row['numer_seryjny'] ?? ''),
         'dateIn'           => $row['date_in'],
         'datePlanned'      => (string) ($row['date_planned'] ?? ''),
         'customerPhone'    => $row['customer_phone'],
@@ -1130,22 +1186,48 @@ function map_zgloszenie(array $row): array
     ];
 }
 
-/** Walidacja danych zgłoszenia z formularza. Zwraca oczyszczone dane. */
+/**
+ * Walidacja danych zgłoszenia z formularza. Zwraca oczyszczone dane:
+ * [nazwa, data_przyjecia, data_odbioru, telefon, opis, status, typ, numer_seryjny].
+ *
+ * 3.9: typ (rower/hulajnoga) czytany jest na samym początku - wcześniejsze
+ * odrzucenia idą przed modul('kalendarz') -> db(), więc testy nie wymagają
+ * bazy. Typ jest opcjonalny (stare wywołania i edycja go nie wysyłają),
+ * a numer seryjny dotyczy wyłącznie hulajnogi (przy rowerze ignorowany).
+ */
 function validate_zgloszenie(array $in): array
 {
     $bikeName    = trim((string) ($in['bike_name'] ?? ''));
+    $typ         = trim((string) ($in['typ'] ?? ''));
+    $serial      = trim((string) ($in['numer_seryjny'] ?? ''));
     $dateIn      = trim((string) ($in['date_in'] ?? ''));
     $datePlanned = trim((string) ($in['date_planned'] ?? ''));
     $phone       = trim((string) ($in['customer_phone'] ?? ''));
     $fault       = trim((string) ($in['fault_description'] ?? ''));
     $status      = trim((string) ($in['status'] ?? 'in_progress'));
 
+    if ($typ !== '' && !in_array($typ, ['rower', 'hulajnoga'], true)) {
+        json_fail('Nieprawidłowy typ sprzętu.');
+    }
+    $hulajnoga = $typ === 'hulajnoga';
+
     if ($bikeName === '') {
-        json_fail('Podaj nazwę roweru.');
+        json_fail($hulajnoga ? 'Podaj nazwę hulajnogi.' : 'Podaj nazwę roweru.');
     }
     if (mb_strlen($bikeName) > 255) {
-        json_fail('Nazwa roweru jest za długa (max 255 znaków).');
+        json_fail($hulajnoga
+            ? 'Nazwa hulajnogi jest za długa (max 255 znaków).'
+            : 'Nazwa roweru jest za długa (max 255 znaków).');
     }
+
+    if ($hulajnoga) {
+        if (mb_strlen($serial) > 64) {
+            json_fail('Numer seryjny jest za długi (max 64 znaki).');
+        }
+    } else {
+        $serial = '';   // numer seryjny tylko przy hulajnodze
+    }
+
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateIn) || !checkdate(
         (int) substr($dateIn, 5, 2),
         (int) substr($dateIn, 8, 2),
@@ -1171,7 +1253,7 @@ function validate_zgloszenie(array $in): array
         json_fail('Podaj poprawny numer telefonu (min. 9 cyfr).');
     }
     if ($fault === '') {
-        json_fail('Opisz usterkę roweru.');
+        json_fail($hulajnoga ? 'Opisz usterkę hulajnogi.' : 'Opisz usterkę roweru.');
     }
     if (!in_array($status, STATUSES, true)) {
         json_fail('Nieprawidłowy status zgłoszenia.');
@@ -1184,6 +1266,8 @@ function validate_zgloszenie(array $in): array
         $phone,
         $fault,
         $status,
+        $typ,          // '' = wywolanie bez typu (stare fronty / edycja)
+        $serial,       // numer seryjny hulajnogi ('' przy rowerze)
     ];
 }
 

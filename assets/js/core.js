@@ -4,6 +4,7 @@
         let currentSort = 'planned_asc';   // domyślnie: najbliższy termin odbioru na górze
         let searchQuery = '';
         let filterUserId = null;   // 3.8.8: ikonka użytkownika = filtr po autorze (null = wszyscy)
+        let filterTyp = 'all';     // 3.9: filtr typu sprzetu na liscie: all | rower | hulajnogi
 
         // --- ENDPOINTY API (PHP + MySQL) ---
         const API_ZGLOSZENIA = 'api/zgloszenia.php';
@@ -26,8 +27,9 @@
 
         // --- MODUŁY PANELU (Ustawienia -> Moduły) ---
         // Użytkownik może wyłączyć nieużywane opcje; flagi żyją w bazie,
-        // więc PC i telefon widzą to samo. Domyślnie wszystko włączone.
-        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true, kolorystyka: true, powitanie: true, karta_wydania: true, wykonane: true };
+        // więc PC i telefon widzą to samo. Domyślnie wszystko włączone
+        // (hulajnogi startują wyłączone - patrz modul_domyslnie w config.php).
+        let MODULY = { kalendarz: true, zdjecia: true, skaner: true, uslugi: true, druk: true, kosz: true, kolorystyka: true, powitanie: true, karta_wydania: true, wykonane: true, hulajnogi: false };
 
         function modulOn(nazwa) {
             return MODULY[nazwa] !== false;
@@ -104,6 +106,8 @@
             // Filtry, które zniknęły, resetujemy do bezpiecznego stanu
             if (currentFilter === 'trash' && !modulOn('kosz')) currentFilter = 'all';
             if (!kalendarz && ['today', 'tomorrow', 'overdue'].includes(currentFilter)) currentFilter = 'all';
+            // 3.9: wylaczony modul hulajnogi = wylaczony filtr typu
+            if (!modulOn('hulajnogi') && filterTyp !== 'all') filterTyp = 'all';
 
             // Opcje sortowania po terminie tylko z włączonym kalendarzem
             const sortEl = document.getElementById('sort-select');
@@ -122,10 +126,17 @@
             updateSaveButtons();
 
             // Stan aktywnych filtrów po resecie
-            document.querySelectorAll('.filter-btn').forEach(btn =>
+            // (tylko .filters - .svc-typ-btn w Ustawieniach tez ma filter-btn,
+            //  ale ma wlasna klase active zarzadzana przez syncSvcTypSeg)
+            document.querySelectorAll('.filters .filter-btn:not(.typ-btn)').forEach(btn =>
                 btn.classList.toggle('active', btn.dataset.filter === currentFilter));
             document.querySelectorAll('.dash-tile').forEach(tile =>
                 tile.classList.toggle('active', tile.dataset.filter === currentFilter));
+            document.querySelectorAll('.typ-btn').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.typFilter === filterTyp));
+
+            // 3.9: wybor typu sprzetu + blokada formularza (formularz.js)
+            if (typeof zastosujTypSprzetu === 'function') zastosujTypSprzetu();
         }
 
         // Nakładka "Zapisywanie" + blokada przycisków (zapobiega podwójnemu kliknięciu)
@@ -202,7 +213,8 @@
 
         const searchInput = document.getElementById('search-input');
         const servicesListContainer = document.getElementById('services-list-container');
-        const filterButtons = document.querySelectorAll('.filters .filter-btn');
+        // .typ-btn (filtr rower/hulajnoga) ma wlasna obsluge - patrz filtry.js
+        const filterButtons = document.querySelectorAll('.filters .filter-btn:not(.typ-btn)');
         
         const openSettingsBtn = document.getElementById('open-settings-btn');
         const closeSettingsBtn = document.getElementById('close-settings-btn');

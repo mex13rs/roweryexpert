@@ -48,8 +48,9 @@ try {
 
         $clean = [];
         foreach (moduly_dostepne() as $m) {
-            // Brak klucza w zadaniu = bez zmian (modul domyslnie wlaczony)
-            $clean[$m] = array_key_exists($m, $incoming) ? (bool) $incoming[$m] : true;
+            // Brak klucza w zadaniu = wartosc domyslna modulu
+            // (patrz modul_domyslnie: "hulajnogi" startuje wylaczony)
+            $clean[$m] = array_key_exists($m, $incoming) ? (bool) $incoming[$m] : modul_domyslnie($m);
         }
 
         setting_set('moduly', json_encode($clean));

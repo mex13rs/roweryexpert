@@ -161,4 +161,96 @@ final class ValidateZgloszenieTest extends TestCase
             'Nieprawidłowy status zgłoszenia.'
         );
     }
+
+    /* ------------------ 3.9: typ sprzętu i numer seryjny ------------------ */
+    // Typ i serial walidowane SĄ WCZEŚNIE (przed modul('kalendarz') -> db()),
+    // więc te ścieżki przechodzą też bez lokalnej bazy.
+
+    public function testNieprawidlowyTyp(): void
+    {
+        $this->assertJsonFail(
+            $this->call($this->base(['typ' => 'hulajnogi'])),
+            'Nieprawidłowy typ sprzętu.'
+        );
+    }
+
+    public function testBrakTypuNieJestBledem(): void
+    {
+        // stare wywołania (edycja, API sprzed 3.9) nie wysyłają typu -
+        // walidacja idzie dalej, a typ zostaje '' (endpoint wstawia 'rower')
+        $r = $this->runPhp($this->call($this->base(['date_in' => 'wczoraj'])));
+        self::assertStringContainsString(
+            'Nieprawidłowa data przyjęcia.',
+            $r['stdout'] . $r['stderr'],
+            'brak typu nie powinien blokować dalszej walidacji'
+        );
+    }
+
+    public function testTypHulajnogaPrzechodziDoDat(): void
+    {
+        // typ=hulajnoga akceptowany tak samo wcześnie jak brak typu
+        $r = $this->runPhp($this->call($this->base([
+            'typ' => 'hulajnoga',
+            'date_in' => 'wczoraj',
+        ])));
+        self::assertStringContainsString(
+            'Nieprawidłowa data przyjęcia.',
+            $r['stdout'] . $r['stderr']
+        );
+    }
+
+    public function testPustaNazwaHulajnogi(): void
+    {
+        $this->assertJsonFail(
+            $this->call($this->base(['typ' => 'hulajnoga', 'bike_name' => ''])),
+            'Podaj nazwę hulajnogi.'
+        );
+    }
+
+    public function testNazwaHulajnogiZaDluga(): void
+    {
+        $this->assertJsonFail(
+            $this->call($this->base([
+                'typ' => 'hulajnoga',
+                'bike_name' => str_repeat('x', 256),
+            ])),
+            'Nazwa hulajnogi jest za długa (max 255 znaków).'
+        );
+    }
+
+    public function testSerialZaDlugiPrzyHulajnodze(): void
+    {
+        $this->assertJsonFail(
+            $this->call($this->base([
+                'typ' => 'hulajnoga',
+                'numer_seryjny' => str_repeat('S', 65),
+            ])),
+            'Numer seryjny jest za długi (max 64 znaki).'
+        );
+    }
+
+    public function testSerialPrzyRowerzeIgnorowany(): void
+    {
+        // przy typie rower numer seryjny jest pomijany (nawet za długi) -
+        // walidacja przechodzi dalej, więc napotyka błąd daty
+        $r = $this->runPhp($this->call($this->base([
+            'typ' => 'rower',
+            'numer_seryjny' => str_repeat('S', 65),
+            'date_in' => 'wczoraj',
+        ])));
+        self::assertStringContainsString(
+            'Nieprawidłowa data przyjęcia.',
+            $r['stdout'] . $r['stderr'],
+            'serial przy rowerze powinien być pominięty, nie odrzucony'
+        );
+    }
+
+    public function testPustaUsterkaHulajnogi(): void
+    {
+        $this->requireDatabase();
+        $this->assertJsonFail(
+            $this->call($this->base(['typ' => 'hulajnoga', 'fault_description' => '  '])),
+            'Opisz usterkę hulajnogi.'
+        );
+    }
 }

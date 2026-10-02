@@ -135,7 +135,7 @@
             searchQuery = '';
             searchInput.value = '';
             scanTick.warned = false;
-            scanHint.textContent = 'Skieruj aparat na kod QR z numerem serwisowym (naklejka na rowerze).';
+            scanHint.textContent = 'Skieruj aparat na kod QR z numerem serwisowym (naklejka na sprzęcie).';
             scanModal.classList.add('active');
 
             try {

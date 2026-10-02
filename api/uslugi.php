@@ -29,7 +29,10 @@ if ($method === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
 
     if ($action === 'add') {
-        $error = uslugi_add((string) ($_POST['nazwa'] ?? ''));
+        // 3.9: usluga trafia do katalogu wskazanego typu; przy wylaczonym
+        // module "hulajnogi" zawsze do katalogu rowerow
+        $typ = modul('hulajnogi') ? (string) ($_POST['typ'] ?? 'rower') : 'rower';
+        $error = uslugi_add((string) ($_POST['nazwa'] ?? ''), $typ);
         if ($error !== null) {
             json_fail($error, 400);
         }

@@ -36,15 +36,18 @@
             </div>
 
             <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1rem;">
-                Rowery zaplanowane do odbioru:
+                Sprzęt zaplanowany do odbioru:
             </p>
 
             <div class="welcome-grid">
                 <div class="welcome-stat">
                     <strong id="welcome-today">–</strong><span>na dziś</span>
+                    <!-- 3.9: rozbicie na typy (modul "hulajnogi") - patrz formularz.js -->
+                    <small class="welcome-split" id="welcome-today-split" hidden></small>
                 </div>
                 <div class="welcome-stat">
                     <strong id="welcome-tomorrow">–</strong><span>na jutro</span>
+                    <small class="welcome-split" id="welcome-tomorrow-split" hidden></small>
                 </div>
             </div>
 
@@ -63,8 +66,13 @@
             </div>
             <form id="edit-form">
                 <div class="form-group">
-                    <label for="edit-bike-name">Nazwa roweru</label>
+                    <label for="edit-bike-name" id="edit-bike-name-label">Nazwa roweru</label>
                     <input type="text" id="edit-bike-name" required>
+                </div>
+                <!-- 3.9: numer seryjny - tylko przy zgloszeniu hulajnogi -->
+                <div class="form-group" id="edit-serial-group" hidden>
+                    <label for="edit-serial">Numer seryjny (opcjonalny)</label>
+                    <input type="text" id="edit-serial" maxlength="64" autocomplete="off">
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -121,7 +129,7 @@
                 <video id="scan-video" playsinline muted autoplay></video>
                 <div class="scan-frame"></div>
             </div>
-            <p class="scan-hint" id="scan-hint">Skieruj aparat na kod QR z numerem serwisowym (naklejka na rowerze).</p>
+            <p class="scan-hint" id="scan-hint">Skieruj aparat na kod QR z numerem serwisowym (naklejka na sprzęcie).</p>
             <button type="button" class="btn btn-secondary" id="scan-cancel-btn" style="width: 100%;">Anuluj</button>
         </div>
     </div>

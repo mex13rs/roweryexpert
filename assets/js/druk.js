@@ -12,12 +12,26 @@
         function triggerPrint(item, tryb) {
             const isIssue = tryb === 'wydanie';
 
-            // Tytuł zależy od okazji
+            // Tytuł zależy od okazji i od typu sprzętu (3.9)
+            const gen = item.typ === 'hulajnoga' ? 'Hulajnogi' : 'Roweru';
+            const label = item.typ === 'hulajnoga' ? 'Hulajnoga:' : 'Rower:';
             document.getElementById('print-title-client').textContent =
-                isIssue ? 'Karta Wydania Roweru' : 'Potwierdzenie Przyjęcia Roweru';
+                isIssue ? 'Karta Wydania ' + gen : 'Potwierdzenie Przyjęcia ' + gen;
             document.getElementById('print-title-service').textContent =
-                isIssue ? 'Karta Wydania Roweru - Egzemplarz Serwisu'
+                isIssue ? 'Karta Wydania ' + gen + ' - Egzemplarz Serwisu'
                         : 'Zlecenie Serwisowe - Egzemplarz Serwisu';
+
+            // Etykieta "Rower:" / "Hulajnoga:" na obu egzemplarzach
+            document.getElementById('print-bike-label').textContent = label;
+            document.getElementById('print-bike-label-service').textContent = label;
+
+            // Numer seryjny: wiersz istnieje tylko przy hulajnodze z numerem
+            // (pusty serial = nie drukuje sie - rower nigdy go nie ma)
+            const hasSerial = item.typ === 'hulajnoga' && !!(item.numerSeryjny || '').trim();
+            document.getElementById('print-serial-row-client').hidden = !hasSerial;
+            document.getElementById('print-serial-row-service').hidden = !hasSerial;
+            document.getElementById('print-serial-client').textContent = item.numerSeryjny || '—';
+            document.getElementById('print-serial-service').textContent = item.numerSeryjny || '—';
 
             // Wypełnij template wydruku A4 (dane roweru, telefonu, opis usterki)
             document.getElementById('print-bike-name').textContent = item.bikeName;

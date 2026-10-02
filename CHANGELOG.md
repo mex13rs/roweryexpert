@@ -12,7 +12,68 @@ i wyświetlany w stopce strony.
 
 ---
 
-## 3.8.10 — 2026-10-01
+## 3.9.0 — 2026-10-02
+
+### Nowe
+- **Moduł „Hulajnogi"** — panel obsługuje dwa typy sprzętu: rowery i hulajnogi.
+  Nowy przełącznik w Ustawieniach → Moduły, **domyślnie wyłączony**: bez niego
+  panel wygląda i działa dokładnie jak dotychczas (zero zmian w UI), a API przy
+  tworzeniu zgłoszenia wymusza `typ='rower'`. Włączenie daje:
+  - **Okno wyboru typu przy przyjęciu** — nagłówek „Przyjmij nowy" + przyciski
+    `🚲 Rower` / `🛴 Hulajnoga`. Przed wyborem formularz jest zablokowany
+    (wszystkie pola, upload i przyciski `disabled`, przyciemnienie, podpowiedź
+    „Najpierw wybierz typ sprzętu"). Przełączenie typu w trakcie wypełniania
+    jest dozwolone — pola tekstowe zostają, przerysowują się tylko checkboxy
+    usług. **Po zapisie formularz wraca do „wybierz typ"**, a nagłówek zmienia
+    się na „Przyjmij rower" / „Przyjmij hulajnogę".
+  - **Dynamiczne etykiety i komunikaty per typ** (PHP + JS): „Nazwa
+    Hulajnogi", „Podaj nazwę hulajnogi.", „Zapisano zgłoszenie hulajnogowe…",
+    „Zmieniono status hulajnogi…", „Wydaj hulajnogę", „Hulajnoga wydana
+    klientowi", nagłówki druków itd.
+  - **Ikony typu 🚲/🛴 na liście** (badge przy nazwie — same ikonki, bez tekstu)
+    oraz **filtr „Wszystkie typy | 🚲 Rower | 🛴 Hulajnoga"** obok filtrów
+    statusu.
+  - **Osobne katalogi usług** — kolumna `uslugi.typ` (migracja: stare rekordy =
+    `rower`), segment `Rower | Hulajnoga` w zakładce „Dodaj usługi" (pamięta
+    wybór w sesji), unikalność nazwy przeniesiona na `(typ, nazwa)` — tę samą
+    usługę można mieć w obu katalogach. Checkboxy formularza filtrują się wg
+    typu przyjęcia.
+- **Numer seryjny hulajnogi** — pole opcjonalne widoczne wyłącznie przy typie
+  „Hulajnoga" (przy rowerze pomijane i wyzerowywane). Zapis w `zgloszenia.numer_seryjny`
+  (NULL = brak): widoczny w karcie zgłoszenia, edytowalny w edycji, wchodzi
+  w wyszukiwarkę, a na Potwierdzeniu Przyjęcia i Karcie Wydania pojawia się
+  tylko wtedy, gdy numer jest uzupełniony (pusty = wiersz nie istnieje).
+- **Typ zgłoszenia niezmienny po zapisie** — endpoint `update` podmienia typ
+  na wartość z bazy, więc przez API ani przez edycję nie da się „przepisać"
+  roweru na hulajnogę.
+
+### Zmienione
+- **Neutralne nagłówki i statystyki**: „Historia i statusy" (zamiast
+  „…rowerów"), sortowanie „Nazwa sprzętu A–Z", powitanie „Sprzęt zaplanowany
+  do odbioru:" z **rozbiciem liczników na typy** („1 rower · 2 hulajnogi"),
+  pusty stan listy „Tu pojawią się przyjęte sprzęty…", statystyki
+  „Zdjęcia sprzętu w bazie" / „Wydanych sprzętów". Branding RoweryExpert
+  bez zmian.
+- Tabela `uslugi`: nowa kolumna `typ ENUM('rower','hulajnoga') DEFAULT 'rower'`,
+  klucz unikalny `(typ, nazwa)` zamiast samej `nazwa`.
+- Tabela `zgloszenia`: nowe kolumny `typ ENUM(...) DEFAULT 'rower'` i
+  `numer_seryjny VARCHAR(64) NULL` (migracje przez `SHOW COLUMNS` w `db()`).
+- `uslugi_add()` przyjmuje typ, `uslugi_list()` zwraca go; komunikat duplikatu:
+  „Taka usługa już jest na tej liście."
+- Podpowiedzi skanera: „naklejka na sprzęcie" (zamiast „na rowerze").
+
+### Testy
+- PHPUnit: 9 nowych przypadków `validate_zgloszenie()` (nieprawidłowy typ,
+  brak typu = zgodność wsteczna, komunikaty „nazwa hulajnogi", za długi serial,
+  serial ignorowany przy rowerze, usterka hulajnogi). Typ i serial walidowane
+  wcześnie (przed `modul()` → `db()`), więc ścieżki działają bez MySQL.
+- E2E Playwright (12 scenariuszy): moduł wyłączony = stary panel, wymuszanie
+  `rower` w API, włączenie modułu, blokada formularza, wybór i przełączanie
+  typu, zapis + powrót do wyboru, filtr i badge, wyszukiwanie po serialu,
+  karta/wydruki/edycja serialu, API bez typu przy module włączonym, powitanie
+  z rozbiciem, wyłączenie modułu = powrót do stanu „jak wczesniej".
+
+---
 
 ### Naprawione
 - **Fałszywy toast „Nie udało się pobrać listy usług." po każdym odświeżeniu

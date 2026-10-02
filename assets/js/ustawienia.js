@@ -110,7 +110,7 @@
             kalendarz: 'Kalendarz', zdjecia: 'Zdjęcia', skaner: 'Skaner QR',
             uslugi: 'Katalog usług', druk: 'Drukowanie', kosz: 'Kosz',
             kolorystyka: 'Kolorystyka', powitanie: 'Powitanie', karta_wydania: 'Karta wydania',
-            wykonane: 'Wykonane czynności'
+            wykonane: 'Wykonane czynności', hulajnogi: 'Hulajnogi'
         };
         const modToggles = document.querySelectorAll('.mod-toggle');
         const modulyHint = document.getElementById('moduly-hint');
@@ -155,6 +155,24 @@
         // --- USŁUGI (katalog usług w checkboxach) ---
         let services = [];
 
+        // 3.9: osobne katalogi per typ. Segment w zakladce "Dodaj uslugi"
+        // pamietajacy wybor na czas sesji; ukryty, gdy modul hulajnogi wylaczony
+        // (wtedy renderServiceList pokazuje wszystko - same rekordy "rower").
+        let uslugiTypZarz = 'rower';
+
+        function syncSvcTypSeg() {
+            document.querySelectorAll('.svc-typ-btn').forEach(b =>
+                b.classList.toggle('active', b.dataset.svcTyp === uslugiTypZarz));
+        }
+
+        document.getElementById('svc-typ-seg')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('.svc-typ-btn');
+            if (!btn) return;
+            uslugiTypZarz = btn.dataset.svcTyp === 'hulajnoga' ? 'hulajnoga' : 'rower';
+            syncSvcTypSeg();
+            renderServiceList();
+        });
+
         async function loadServices() {
             // 3.8.10: pobranie i render rozdzielone - wcześniej wyjątek z
             // renderServiceList() (element tylko dla admina, null u pozostałych
@@ -183,11 +201,17 @@
         // Checkboxy pod polem "Opis usterki"
         function renderFormServiceCheckboxes() {
             serviceCheckboxList.innerHTML = '';
-            if (!services.length) {
-                serviceCheckboxList.innerHTML = '<p class="service-checkbox-empty">Brak skonfigurowanych usług — dodaj je w Ustawieniach.</p>';
+            // 3.9: tylko uslugi aktywnego typu (przed wyborem typu - tlo rowerowe,
+            // i tak zablokowane; modul wylaczony = zawsze rower)
+            const typ = aktywnyTyp();
+            const lista = services.filter(s => (s.typ || 'rower') === typ);
+            if (!lista.length) {
+                serviceCheckboxList.innerHTML = typ === 'hulajnoga'
+                    ? '<p class="service-checkbox-empty">Brak usług dla hulajnogi — dodaj je w Ustawieniach.</p>'
+                    : '<p class="service-checkbox-empty">Brak skonfigurowanych usług — dodaj je w Ustawieniach.</p>';
                 return;
             }
-            services.forEach(item => {
+            lista.forEach(item => {
                 const label = document.createElement('label');
                 label.className = 'service-check';
                 const cb = document.createElement('input');
@@ -206,11 +230,18 @@
             // pozostałych użytkowników #service-list nie istnieje w DOM
             if (!serviceListEl) return;
             serviceListEl.innerHTML = '';
-            if (!services.length) {
-                serviceListEl.innerHTML = '<li class="service-list-empty">Brak dodanych usług.</li>';
+            // 3.9: segment typu filtruje liste (modul hulajnogi wlaczony);
+            // wylaczony = pokazujemy caly katalog jak wczesniej
+            const lista = modulOn('hulajnogi')
+                ? services.filter(s => (s.typ || 'rower') === uslugiTypZarz)
+                : services;
+            if (!lista.length) {
+                serviceListEl.innerHTML = modulOn('hulajnogi')
+                    ? `<li class="service-list-empty">Brak usług dla typu ${uslugiTypZarz === 'hulajnoga' ? 'hulajnoga' : 'rower'}.</li>`
+                    : '<li class="service-list-empty">Brak dodanych usług.</li>';
                 return;
             }
-            services.forEach(item => {
+            lista.forEach(item => {
                 const li = document.createElement('li');
                 const span = document.createElement('span');
                 span.textContent = item.nazwa;
@@ -272,7 +303,9 @@
                 const res = await apiFetch(API_USLUGI, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    // 3.9: usluga trafia do katalogu wybranego typu
                     body: 'action=add&nazwa=' + encodeURIComponent(nazwa)
+                        + '&typ=' + (modulOn('hulajnogi') ? uslugiTypZarz : 'rower')
                 });
                 const data = await res.json();
                 if (!data.success) throw new Error(data.error || 'Nie udało się dodać usługi.');

@@ -13,8 +13,13 @@
 
             <table class="receipt-details">
                 <tr class="receipt-row">
-                    <td class="receipt-label">Rower:</td>
+                    <td class="receipt-label" id="print-bike-label">Rower:</td>
                     <td class="receipt-value" id="print-bike-name" style="font-weight:bold;">Kross Hexagon</td>
+                </tr>
+                <!-- 3.9: numer seryjny - wiersz pokazuje sie tylko przy hulajnodze z numerem -->
+                <tr class="receipt-row" id="print-serial-row-client" hidden>
+                    <td class="receipt-label">Numer seryjny:</td>
+                    <td class="receipt-value" id="print-serial-client">—</td>
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Data przyjęcia:</td>
@@ -85,8 +90,13 @@
 
             <table class="receipt-details">
                 <tr class="receipt-row">
-                    <td class="receipt-label">Rower:</td>
+                    <td class="receipt-label" id="print-bike-label-service">Rower:</td>
                     <td class="receipt-value" id="print-bike-name-service" style="font-weight:bold;">Kross Hexagon</td>
+                </tr>
+                <!-- 3.9: numer seryjny - wiersz pokazuje sie tylko przy hulajnodze z numerem -->
+                <tr class="receipt-row" id="print-serial-row-service" hidden>
+                    <td class="receipt-label">Numer seryjny:</td>
+                    <td class="receipt-value" id="print-serial-service">—</td>
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Data przyjęcia:</td>

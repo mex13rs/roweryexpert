@@ -2152,8 +2152,90 @@
         body.off-kolorystyka #accent-picker,
         body.off-wykonane #detail-done-label,
         body.off-wykonane #detail-done-list,
-        body.off-kosz .filter-btn[data-filter="trash"] {
+        body.off-kosz .filter-btn[data-filter="trash"],
+        /* 3.9: modul hulajnogi wylaczony = panel dokladnie jak wczesniej */
+        body.off-hulajnogi #intake-type,
+        body.off-hulajnogi #intake-hint,
+        body.off-hulajnogi #typ-filters,
+        body.off-hulajnogi #typ-filters-sep,
+        body.off-hulajnogi #svc-typ-seg {
             display: none !important;
+        }
+
+        /* --- 3.9: WYBÓR TYPU SPRZĘTU (modul "hulajnogi") --- */
+        .intake-type {
+            display: flex;
+            gap: 0.5rem;
+            margin: -0.3rem 0 0.7rem;
+        }
+
+        .intake-type-btn {
+            flex: 1 1 0;
+            padding: 0.55rem 0.75rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .intake-type-btn:hover {
+            border-color: var(--primary-text);
+            color: var(--text-primary);
+        }
+
+        .intake-type-btn.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #141414;
+        }
+
+        .intake-hint {
+            margin: -0.35rem 0 0.85rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        /* Blokada formularza przed wyborem typu: przyciemnienie + brak
+           interakcji (uzupełnia disabled na polach w formularz.js) */
+        #service-form.typ-locked {
+            opacity: 0.5;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        /* Ikona typu przy nazwie na liście (modul hulajnogi) */
+        .typ-badge {
+            margin-right: 0.4rem;
+            font-size: 0.95em;
+            line-height: 1;
+        }
+
+        .typ-filters {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Segment Rower | Hulajnoga w zakładce "Dodaj usługi" */
+        .svc-typ-seg {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.9rem;
+        }
+
+        /* Rozbicie liczników powitania na typy sprzętu */
+        .welcome-split {
+            display: block;
+            margin-top: 0.1rem;
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: var(--text-secondary);
         }
 
         /* Wiersz przełącznika w zakładce Moduły */

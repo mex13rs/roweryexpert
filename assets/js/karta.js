@@ -19,6 +19,15 @@
             if (!item || item.deleted) return;
 
             editModalId = id;
+            // 3.9: typ zgloszenia niezmienny - pokazujemy pola wg typu rekordu
+            const jestHul = item.typ === 'hulajnoga';
+            const editNameLabel = document.getElementById('edit-bike-name-label');
+            if (editNameLabel) editNameLabel.textContent = jestHul ? 'Nazwa hulajnogi' : 'Nazwa roweru';
+            const editSerialGroup = document.getElementById('edit-serial-group');
+            if (editSerialGroup) editSerialGroup.hidden = !jestHul;
+            const editSerialInputEl = document.getElementById('edit-serial');
+            if (editSerialInputEl) editSerialInputEl.value = item.numerSeryjny || '';
+
             editBikeNameInput.value = item.bikeName;
             editDateInInput.value = item.dateIn;
             editDatePlannedInput.value = item.datePlanned;
@@ -56,6 +65,11 @@
                 formData.append('fault_description', editFaultInput.value.trim());
                 formData.append('status', item.status);
                 formData.append('service_notes', editServiceNotesInput.value.trim());
+                // 3.9: numer seryjny edytowany tylko w hulajnodze (przy rowerze
+                // serwer i tak go wyzeruje - typ zgloszenia jest niezmienny)
+                formData.append('numer_seryjny', item.typ === 'hulajnoga'
+                    ? (document.getElementById('edit-serial')?.value || '').trim()
+                    : '');
 
                 const res = await apiFetch(API_ZGLOSZENIA, { method: 'POST', body: formData });
                 const data = await res.json();
@@ -202,6 +216,16 @@
 
             document.getElementById('detail-bike-name').textContent = item.bikeName;
 
+            // 3.9: etykieta i numer seryjny wg typu (serial tylko z wartoscia)
+            const jestHul = item.typ === 'hulajnoga';
+            document.getElementById('detail-bike-label').textContent = jestHul ? 'Hulajnoga:' : 'Rower:';
+            const hasSerial = jestHul && !!item.numerSeryjny;
+            const serialLabelEl = document.getElementById('detail-serial-label');
+            const serialEl = document.getElementById('detail-serial');
+            serialLabelEl.hidden = !hasSerial;
+            serialEl.hidden = !hasSerial;
+            serialEl.textContent = item.numerSeryjny || '—';
+
             const badge = document.getElementById('detail-status');
             badge.textContent = statusLabelFor(item);
 
@@ -225,10 +249,13 @@
             notesEl.value = item.serviceNotes || '';
             notesEl.disabled = !!item.deleted;
 
-            // Wydanie roweru dostępne tylko dla zgłoszeń spoza kosza i nieodebranych
+            // Wydanie sprzętu dostępne tylko dla zgłoszeń spoza kosza i nieodebranych
+            // 3.9: tekst przycisku wg typu zgloszenia
             const canIssue = !item.deleted && item.status !== 'picked_up';
             detailIssueBtn.disabled = !canIssue;
-            detailIssueBtn.textContent = canIssue ? 'Wydaj rower' : 'Rower już wydany';
+            detailIssueBtn.textContent = canIssue
+                ? (jestHul ? 'Wydaj hulajnogę' : 'Wydaj rower')
+                : (jestHul ? 'Hulajnoga już wydana' : 'Rower już wydany');
 
             // Wykonane czynności: wyłącznie usługi z pierwotnego zgłoszenia,
             // jako puste checkboxy — zaznaczasz je w chwili wykonania pracy;
@@ -313,7 +340,9 @@
                 }
                 fillDetailModal(fresh);
                 renderServicesList();
-                showToast(`Rower wydany klientowi: ${fresh.bikeName}`);
+                showToast(fresh.typ === 'hulajnoga'
+                    ? `Hulajnoga wydana klientowi: ${fresh.bikeName}`
+                    : `Rower wydany klientowi: ${fresh.bikeName}`);
 
                 // Karta wydania roweru: druk od razu (komputer + moduły
                 // druku i Karta wydania)

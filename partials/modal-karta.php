@@ -10,8 +10,11 @@
                 <button class="modal-close" id="detail-modal-close">&times;</button>
             </div>
             <div class="detail-grid">
-                <span class="d-label">Rower:</span>
+                <span class="d-label" id="detail-bike-label">Rower:</span>
                 <span class="d-val" id="detail-bike-name">—</span>
+                <!-- 3.9: numer seryjny - widoczny tylko przy hulajnodze z numerem -->
+                <span class="d-label" id="detail-serial-label" hidden>Numer seryjny:</span>
+                <span class="d-val" id="detail-serial" hidden>—</span>
                 <span class="d-label">Status:</span>
                 <span class="d-val" id="detail-status">—</span>
                 <span class="d-label">Przyjęto:</span>
@@ -40,6 +43,7 @@
             </div>
             <div class="button-group">
                 <button type="button" class="btn btn-primary" id="detail-issue-btn">Wydaj rower</button>
+                <!-- tekst przycisku ustala karta.js wg typu zgloszenia -->
                 <button type="button" class="btn btn-secondary" id="detail-cancel-btn">Zamknij</button>
             </div>
         </div>

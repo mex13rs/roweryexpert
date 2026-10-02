@@ -163,6 +163,16 @@ Szczegóły techniczne w Częściach III–VI.
   (domyślnie +2 dni), **Telefon klienta** (autoformatowanie polskie, min. 9 cyfr, walidacja),
   **Opis usterki**, **Zdjęcia** (do 20 plików na zgłoszenie; limit łączny 100 MB na konto;
   ostrzeżenie od 80% zużycia), **Usługi** (checkboxy z katalogu — przy włączonym module).
+- **3.9 — moduł „Hulajnogi”** (domyślnie wyłączony): bez niego formularz jest dokładnie
+  jak powyżej. Przy włączonym module zamiast nagłówka „Przyjmij nowy rower” jest wybór
+  typu (**Rower** / **Hulajnoga**), a formularz jest zablokowany (`disabled` +
+  `.typ-locked` + hint „Najpierw wybierz typ sprzętu”) do czasu kliknięcia. Etykiety,
+  komunikaty walidacji i toast zapisu są dynamiczne per typ („Podaj nazwę hulajnogi.”,
+  „Zapisano zgłoszenie hulajnogowe w bazie!”). Przy hulajnodze pojawia się opcjonalne pole
+  **Numer seryjny** (pusty = nie drukuje się, kasowany przy rowerze). Przełączenie typu
+  w trakcie jest dozwolone (pola tekstowe zostają, checkboxy przerysowane), **po zapisie
+  formularz wraca do wyboru typu**, a **typ po zapisie jest niezmienny** (update wstrzykuje
+  go z DB). Wyłączony moduł → endpoint create wymusza `typ='rower'` i czyści serial.
 - Dwa tryby zapisu: **„Zapisz, Drukuj i Dodaj do Kalendarza”** (PC) oraz **„Zapisz tylko
   w bazie”** (telefon) — etykieta dopasowuje się do włączonych modułów.
 - Każde zgłoszenie dostaje **numer serwisowy** formatu `RO-ROK-ID` (np. `RO-2026-0042`).
@@ -175,9 +185,11 @@ Szczegóły techniczne w Częściach III–VI.
 
 - Trzy statusy zmieniane **kliknięciem odznaki na karcie**: **W serwisie → Gotowy →
   Odebrany** (kolejne kliknięcie cykluje status, `cycleStatus()`).
-- Najszybsze wydanie: przycisk **„Wydaj rower”** w karcie podglądu — ustawia „Odebrany”,
+- Najszybsze wydanie: przycisk **„Wydaj rower”** (3.9: per typ — „Wydaj hulajnogę”)
+  w karcie podglądu — ustawia „Odebrany”,
   zapisuje `confirmed_by` (kto wydał), a przy modułach **druk** + **Karta wydania** od razu
-  drukuje Kartę Wydania Roweru; potem przycisk gaśnie („Rower już wydany”). Cofnięcie
+  drukuje Kartę Wydania Roweru/Hulajnogi; potem przycisk gaśnie („Rower już wydany” /
+  „Hulajnoga już wydana”). Cofnięcie
   wydania nie zostawia trwałej plakietki „kto wydał”.
 - Na liście: kółko z inicjałem **kto przyjął** przy dacie przyjęcia i drugie kółko
   **kto wydał** przy odznace statusu.
@@ -244,7 +256,8 @@ Szczegóły techniczne w Częściach III–VI.
 ## 9. Wydruk (potwierdzenie przyjęcia i karta wydania)
 
 - Arkusz **A4 poziomo**, dwie kolumny:
-  - **lewa — klient**: nazwa roweru, telefon, numer serwisowy, opis, daty; na Karcie
+  - **lewa — klient**: nazwa roweru/hulajnogi (3.9: etykieta `#print-bike-label`
+    „Rower:”/„Hulajnoga:”), telefon, numer serwisowy, opis, daty; na Karcie
     Wydania dodatkowo lista wykonanych czynności (☑), **podpis klienta** i **pieczątka
     serwisu** (nad kreską z adresem z Ustawień) oraz **QR z linkiem do oceny w Google**
     („Oceń nas”);
@@ -252,6 +265,10 @@ Szczegóły techniczne w Częściach III–VI.
     gdy puste lub moduł wyłączony) + „Notatki” (tylko po uzupełnieniu) + na samym dole
     **kwadratowy QR z numerem serwisowym** — do naklejenia na ramę.
 - Dwa tryby `triggerPrint()`: **przyjęcie** i **wydanie**.
+- **3.9 — tytuły per typ**: „Potwierdzenie Przyjęcia Roweru/Hulajnogi”,
+  „Karta Wydania Roweru/Hulajnogi”; **wiersz numeru seryjnego** (`#print-serial-row-*`)
+  drukuje się **wyłącznie** przy hulajnodze z uzupełnionym numerem — pusty serial nie
+  zostawia pustego pola (rekordy rowerowe wiersza nie mają w ogóle).
 - QR generowane lokalnie przez **QRious** (z `head.php`), zapasowo `api.qrserver.com`;
   treść QR oceny z `APP_CFG.mapsUrl`.
 - Opcjonalne automatyczne dodanie terminu do kalendarza przy zapisie z drukiem.
@@ -268,18 +285,25 @@ Szczegóły techniczne w Częściach III–VI.
 
 ## 11. Katalog usług
 
-- Własne usługi serwisu: **Ustawienia → Dodaj usługi** (nazwa + cena; `api/uslugi.php`).
-- Usługi to checkboxy w formularzu przyjęcia i podstawa sekcji „Wykonane czynności”.
-  Moduł **Katalog usług** chowa checkboxy i zakładkę (dane zostają).
+- Własne usługi serwisu: **Ustawienia → Dodaj usługi** (nazwa; `api/uslugi.php`).
+- Od 3.9 **dwa katalogi per typ** — segment `🚲 Rower | 🛴 Hulajnoga`
+  (`#svc-typ-seg`, widoczny tylko przy włączonym module Hulajnogi) nad polem nowej
+  usługi; wybór zapamiętywany na sesję (`uslugiTypZarz`, start od „Rower”),
+  a lista pokazuje wyłącznie katalog wybranego typu (unikalność nazwy per typ —
+  tę samą usługę można mieć w obu katalogach).
+- Usługi to checkboxy w formularzu przyjęcia (filtrowane wg typu przyjęcia) i podstawa
+  sekcji „Wykonane czynności”. Moduł **Katalog usług** chowa checkboxy i zakładkę
+  (dane zostają).
 
 ## 12. Ustawienia panelu
 
 Ikona zębatki → modal (`partials/modal-ustawienia.php`), zakładki:
 
-- **Ogólne** — statystyki zużycia zdjęć, zmiana hasła bieżącego konta, info o koncie.
+- **Ogólne** — statystyki zużycia zdjęć (3.9: neutralne nagłówki „Zdjęcia sprzętu
+  w bazie” i „Wydanych sprzętów”), zmiana hasła bieżącego konta, info o koncie.
 - **Dane serwisu** — edycja po instalacji: `SERVICE_ADDRESS`, `SERVICE_CITY`,
   `SERVICE_PHONE`, `GOOGLE_MAPS_URL` (trafiają na wydruk i QR).
-- **Dodaj usługi** — zarządzanie katalogiem usług.
+- **Dodaj usługi** — zarządzanie katalogiem usług (segment typu przy module Hulajnogi).
 - **Użytkownicy** (admin) — lista kont (login, rola, flagi), dodawanie, karta konta
   `#user-modal` (status, ostatnie logowanie, utworzenie konta, stan hasła, zmiana hasła,
   zmiana roli, wyłączanie/włączanie, usuwanie tylko kont bez zgłoszeń).
@@ -292,11 +316,12 @@ pomarańczowy — zapamiętywana w przeglądarce; zmienia logo, faviconkę i akc
 ## 13. Moduły (włączanie/wyłączanie funkcji)
 
 Wyłączenie ukrywa i **blokuje po stronie serwera** część panelu (PC i telefon jednocześnie),
-**nie kasuje danych**, zmiana zapisuje się natychmiast. 10 modułów (domyślnie wszystkie
-włączone):
+**nie kasuje danych**, zmiana zapisuje się natychmiast. 11 modułów (10 domyślnie włączonych;
+wyjątek: **Hulajnogi** — patrz niżej):
 
 | Moduł | Skutki wyłączenia |
 |---|---|
+| **Hulajnogi** *(domyślnie wyłączony)* | brak wyboru typu przyjęcia, filtrów i ikonek typu, segmentu katalogów w Ustawieniach i numeru seryjnego; formularz jak w wersji 3.8.x („Przyjmij nowy rower”), a API przy tworzeniu wymusza `typ='rower'` — **stare i nowe zgłoszenia zostają rowerami** |
 | **Kalendarz** | znika ikona, pole „Planowany odbiór”, kafle terminowe, sortowanie po terminie, linki Google Calendar, powitanie |
 | **Zdjęcia** | brak wgrywania, miniatur i licznika |
 | **Skaner QR** | znika przycisk aparatu (tekstowe szukanie działa) |
@@ -343,10 +368,10 @@ Siedem tabel MySQL (tworzonych/modyfikowanych automatycznie przez migracje w `co
 
 | Tabela | Zawartość |
 |---|---|
-| `zgloszenia` | zgłoszenia: rower, telefon, opis, daty, status, numer `service_no`, notatki, `services_done`, autorzy, `deleted_at` |
+| `zgloszenia` | zgłoszenia: rower, telefon, opis, daty, status, numer `service_no`, notatki, `services_done`, autorzy, `deleted_at`, **`typ`** (rower/hulajnoga, od 3.9), **`numer_seryjny`** (opcjonalny, hulajnogi) |
 | `zdjecia` | zdjęcia zgłoszeń (nazwy plików, powiązanie) |
 | `ustawienia` | ustawienia klucz/wartość (dane serwisu, moduły, wersja) |
-| `uslugi` | katalog usług (nazwa, cena) |
+| `uslugi` | katalog usług (nazwa + **typ** — dwa katalogi: rower i hulajnoga) |
 | `users` | konta (login, hash hasła, rola, flagi, ostatnie logowanie) |
 | `sesje` | sesje (token-hash, wygaśnięcie) |
 | `login_attempts` | próby logowania (anti brute-force) |
@@ -659,16 +684,19 @@ panelu hostingu i podaj jej dane jeszcze raz.”
 
 | Tabela | Kolumny / indeksy |
 |---|---|
-| **`zgloszenia`** | `id INT UNSIGNED AUTO_INCREMENT`, `bike_name VARCHAR(255)`, `date_in DATE`, `date_planned DATE`, `customer_phone VARCHAR(32)`, `fault_description TEXT`, `service_notes TEXT NULL`, `services_done TEXT NULL`, `status ENUM('in_progress','completed','picked_up') DEFAULT 'in_progress'`, `service_no VARCHAR(32)` (UNIQUE `uk_service_no`), `confirmed TINYINT(1) DEFAULT 1`, `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, `deleted_at TIMESTAMP NULL`; KEY `idx_status`; InnoDB utf8mb4_unicode_ci |
+| **`zgloszenia`** | `id INT UNSIGNED AUTO_INCREMENT`, `bike_name VARCHAR(255)`, `date_in DATE`, `date_planned DATE`, `customer_phone VARCHAR(32)`, `fault_description TEXT`, `service_notes TEXT NULL`, `services_done TEXT NULL`, `status ENUM('in_progress','completed','picked_up') DEFAULT 'in_progress'`, `typ ENUM('rower','hulajnoga') DEFAULT 'rower'` *(3.9)*, `numer_seryjny VARCHAR(64) NULL` *(3.9)*, `service_no VARCHAR(32)` (UNIQUE `uk_service_no`), `confirmed TINYINT(1) DEFAULT 1`, `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, `deleted_at TIMESTAMP NULL`; KEY `idx_status`; InnoDB utf8mb4_unicode_ci |
 | **`zdjecia`** | `id`, `zgloszenie_id` (FK `fk_zdjecia_zgloszenie` → `zgloszenia(id)` ON DELETE CASCADE), `filename`, `original_name`, `size_bytes BIGINT`, `created_at`; KEY `idx_zgloszenie` |
 | **`ustawienia`** | `klucz VARCHAR(64)` PRIMARY, `wartosc VARCHAR(255) DEFAULT ''` |
-| **`uslugi`** | `id`, `nazwa VARCHAR(255)` (UNIQUE `uk_nazwa`) |
+| **`uslugi`** | `id`, `nazwa VARCHAR(255)`, `typ ENUM('rower','hulajnoga') DEFAULT 'rower'` *(3.9)*; UNIQUE `uk_typ_nazwa (typ, nazwa)` *(3.9 — wcześniejsze `uk_nazwa` usuwane migracją, ta sama usługa może być w obu katalogach)* |
 | **`users`** | `id`, `login VARCHAR(64)` (UNIQUE `uk_login`), `password_hash VARCHAR(255)`, `rola ENUM('admin','pracownik') DEFAULT 'pracownik'`, `aktywny TINYINT(1) DEFAULT 1`, `must_change_password TINYINT(1) DEFAULT 0`, `created_at`, `last_login_at NULL` |
 | **`sesje`** | `id`, `token_hash CHAR(64)` (UNIQUE `uk_token`), `user_id` (FK `fk_sesje_user` → `users(id)` ON DELETE CASCADE), `expires_at DATETIME`, `created_at`; KEY `idx_sesje_user` |
 | **`login_attempts`** | `id`, `klucz VARCHAR(160)`, `created_at`; KEY `idx_klucz_czas (klucz, created_at)` |
 
 Dodatkowo `db()` robi migracje na istniejących bazach (np. dodanie kolumny `size_bytes`
-w `zdjecia` i uzupełnienie jej z dysku).
+w `zdjecia` i uzupełnienie jej z dysku). Od 3.9 dodaje też kolumny `typ` i
+`numer_seryjny` w `zgloszenia`, `typ` w `uslugi` (stare rekordy = `rower`) oraz
+zamienia klucz unikalny `uk_nazwa` na `uk_typ_nazwa` — wszystko przez `SHOW COLUMNS` /
+`SHOW INDEX` (idempotentne).
 
 **Tworzenie konta admin**: dopiero gdy `SELECT COUNT(*) FROM users` = 0, wykonywane jest
 `INSERT INTO users (login, password_hash, rola) VALUES ('admin', app_password_hash(), 'admin')`,
@@ -781,10 +809,20 @@ niezalogowany; wewnątrz `<div class="container">`.
 
 **c) `.dashboard-grid`** (CSS: `grid-template-columns: 460px 1fr`) — dwie karty:
 
-**Karta lewa — „Przyjmij nowy rower”** (`.card`, tytuł z ikoną + `h2.card-title`),
+**Karta lewa — „Przyjmij nowy rower”** (`.card`, tytuł z ikoną + `h2.card-title`;
+od 3.9 tytuł ma id `#intake-title-text` i bywa dynamiczny: „Przyjmij nowy” bez modułu,
+„Przyjmij nowy rower/hulajnogę” bez wyboru, „Przyjmij rower/hulajnogę” po wyborze),
 formularz **`#service-form`** z polami:
-* `#bike-name` — „Nazwa Roweru”, `type=text`, `required`,
-  placeholder `np. Kross Hexagon 5.0, Giant Talon 1`,
+* **`#intake-type`** *(3.9, tylko moduł `hulajnogi`)* — dwa przyciski
+  `.intake-type-btn[data-typ="rower|hulajnoga"]` („🚲 Rower” / „🛴 Hulajnoga”)
+  + `#intake-hint` („Najpierw wybierz typ sprzętu”); przed wyborem formularz dostaje
+  klasę **`.typ-locked`** (`opacity .5`, `pointer-events none`) i wszystkie pola
+  `disabled` (w `zastosujTypSprzetu()`),
+* `#bike-name` — „Nazwa Roweru” / *(3.9)* etykieta `#bike-name-label` zmienia się na
+  „Nazwa Hulajnogi”, `type=text`, `required`,
+  placeholder `np. Kross Hexagon 5.0, Giant Talon 1` (per typ w `TYP_PLACEHOLDER`),
+* **`#serial-group` / `#numer-seryjny`** *(3.9)* — „Numer seryjny (opcjonalny)”,
+  widoczny wyłącznie przy wybranej hulajnodze; pusty = nie drukuje się,
 * `#date-in` — „Data przyjęcia”, `type=date`, `required`,
 * `#date-planned-group` / `#date-planned` — „Planowany odbiór (kalendarz)”, `type=date`,
   `required` (cała grupa ukrywana przez moduł Kalendarz),
@@ -802,7 +840,7 @@ formularz **`#service-form`** z polami:
   `#save-btn-label` = „Zapisz, Drukuj i Dodaj do Kalendarza”) oraz
   `#save-only-btn` (`btn btn-secondary`, „Zapis do bazy”).
 
-**Karta prawa — „Historia i statusy rowerów”**:
+**Karta prawa — „Historia i statusy”** (3.9 — bez dopisku „rowerów”):
 * `.history-header` z `.card-title` + `.search-box`: `#search-input`
   (placeholder „Szukaj roweru, telefonu, numeru…”) oraz `.scan-btn#scan-qr-btn`
   („Zeskanuj kod QR numeru serwisowego”),
@@ -819,10 +857,13 @@ formularz **`#service-form`** z polami:
 * `.list-controls` — `.filters` z przyciskami `.filter-btn`:
   `all` „Wszystkie” (`active`), `mine` „Moje”, `picked_up` „Odebrane”,
   `trash` „Kosz” z licznikiem `.filter-count.count-neutral#count-trash` (`hidden`);
+  po nich (3.9, tylko moduł `hulajnogi` — grupa `#typ-filters` z separatorem
+  `#typ-filters-sep`) **filtr typu**: `.typ-btn` `all` „Wszystkie typy” (`active`),
+  `rower` „🚲 Rower”, `hulajnoga` „🛴 Hulajnoga” (`data-typ-filter`);
 * `.sort-box` — „Sortuj” + `#sort-select` (`.sort-select`) z opcjami:
   `planned_asc` „Termin odbioru (najbliższy)”, `planned_desc` „… (odległy)”,
   `dateIn_desc` „Przyjęcia: najnowsze”, `dateIn_asc` „Przyjęcia: najstarsze”,
-  `name` „Nazwa roweru A–Z”, `status` „Wg statusu”, `user` „Wg użytkownika (kto
+  `name` „Nazwa sprzętu A–Z” (3.9 — było „Nazwa roweru A–Z”), `status` „Wg statusu”, `user` „Wg użytkownika (kto
   założył)”, `issuer` „Wg wydającego”,
 * `.services-list#services-list-container` — „Items rendered dynamically from JS”.
 
@@ -867,7 +908,7 @@ własnym panelem:
 5. **`#scan-modal`** — „MODAL SKANERA QR (aparat)”: `.scan-panel` z `.scan-header`
    („Skanuj kod QR” + `#scan-modal-close`), `.scan-video-wrap` z `<video id="scan-video"
    playsinline muted autoplay>` i `.scan-frame`, `.scan-hint#scan-hint`
-   („Skieruj aparat na kod QR z numerem serwisowym (naklejka na rowerze).”) oraz
+   („Skieruj aparat na kod QR z numerem serwisowym (naklejka na sprzęcie).”) oraz
    `#scan-cancel-btn` („Anuluj”).
 6. **`#calendar-modal`** — „MODAL KALENDARZA TERMINÓW (widok miesięczny)”:
    `.calendar-panel` z `.calendar-header` (`#cal-prev-btn` ‹, `#cal-title`,
@@ -955,6 +996,7 @@ zapisuje się natychmiast. `.mod-list` z `.mod-row` i `input.mod-toggle[data-mod
 
 | `data-mod` | nazwa | opis w UI |
 |---|---|---|
+| `hulajnogi` | Hulajnogi *(3.9, domyślnie wyłączony)* | wybór typu przyjęcia (Rower/Hulajnoga), filtry i ikonki typu na liści, drugi katalog usług, numer seryjny; wyłączony = panel jak w 3.8.x |
 | `kalendarz` | Kalendarz | widok kalendarza, terminy odbioru, kafle „Odbiory” i linki do Kalendarza Google |
 | `zdjecia` | Zdjęcia | wgrywanie i podgląd zdjęć z telefonu oraz miniatury na liście |
 | `skaner` | Skaner QR | przycisk skanera kodów QR przy wyszukiwarce |
@@ -1193,7 +1235,7 @@ flagami w obiekcie `MODULY` (patrz `core.js`).
 
 W tym samym bloku: `.mod-row` (wiersz przełącznika), `.mod-row input[type=checkbox]`
 (`accent-color: var(--primary)`), `.mod-list { max-height: 240px; overflow-y: auto }`
-— „box o stałej wysokości ze scrolliem, żeby 10 modułów mieściło się na jednym
+— „box o stałej wysokości ze scrolliem, żeby 11 modułów mieściło się na jednym
 ekranie”, `.mod-row:has(input:checked) { border-color: var(--primary) }`.
 
 Dalej: `.pending-detail` (info o zgłoszeniu z telefonu w karcie), `#phone-success-modal`
@@ -1237,11 +1279,11 @@ font Barlow, `.wrap` max-width 860 px. Elementy architektoniczne:
 * `<header>`: **„Instrukcja panelu RoweryExpert”** + podtytuł „Krótki przewodnik po
   obsłudze zgłoszeń serwisowych — krok po kroku.” + przycisk `.back-btn`
   **„← Wróć do panelu”** → `serwis.php`.
-* `<nav class="toc">` — spis 15 kotwic (kolumny 2, `columns: 2`):
+* `<nav class="toc">` — spis 18 kotwic (kolumny 2, `columns: 2`):
   `#logowanie`, `#przyjecie`, `#statusy`, `#mobile`, `#lista`, `#skaner`, `#numer`,
   `#karta`, `#edycja`, `#kalendarz`, `#kalendarz-google`, `#wydruk`, `#kosz`,
-  `#ustawienia`, `#moduly`.
-* 15 sekcji `section` z `h2` z okrągłym numeratorem `.num` (`.tag` wariantów:
+  `#ustawienia`, `#konta`, `#moduly`, `#aktualizacje`, `#hulajnogi` *(3.9)*.
+* 18 sekcji `section` z `h2` z okrągłym numeratorem `.num` (`.tag` wariantów:
   `.ok`, `.warn`, `.info`, `.orange`; bloki `.hint`).
 * `<footer>`: „RoweryExpert — panel serwisowy. Wróć do panelu” → `serwis.php`.
 * `@media (max-width: 640px)`: TOC w jedną kolumnę, mniejsze sekcje.
@@ -1252,12 +1294,16 @@ font Barlow, `.wrap` max-width 860 px. Elementy architektoniczne:
    (albo wylogowanie ikonką); po 5 nieudanych próbach blokada na kilka minut; brak
    maili — reset przez administratora; zmiana hasła w **Ustawieniach → Ogólne** (tam
    też info o koncie, nazwa konta także w nagłówku); po zalogowaniu okno
-   **„Podsumowanie dnia”** (ile rowerów na dziś/jutro, ostrzeżenie „Po terminie”,
+   **„Podsumowanie dnia”** (ile sprzętu na dziś/jutro — przy module Hulajnogi pod
+   licznikami rozbicie „N rowerów · M hulajnogi”, ostrzeżenie „Po terminie”,
    zamykane **OK**), widoczne tylko przy włączonym module Kalendarza.
 2. **Przyjęcie roweru (`#przyjecie`)** — formularz „Przyjmij nowy rower” (lewa kolumna);
    pola: Nazwa roweru, Data przyjęcia i planowany odbiór, Telefon klienta
    (autoformatowanie, min. 9 cyfr), Opis usterki, Zdjęcia; dwa przyciski:
    **„Zapisz, Drukuj i Dodaj do Kalendarza”** (PC) i **„Zapisz tylko w bazie”** (telefon).
+   *(3.9, moduł Hulajnogi: zamiast nagłówka wybór typu Rower/Hulajnoga, blokada do
+   kliknięcia, pole numeru seryjnego przy hulajnodze, po zapisie powrót do wyboru —
+   patrz rozdział 18 instrukcji `#hulajnogi`.)*
 3. **Statusy zgłoszeń (`#statusy`)** — trzy statusy zmieniane **klikając odznakę na
    karcie**: „W serwisie”, „Gotowy”, „Odebrany”; najszybsze wydanie przyciskiem
    „Wydaj rower” w karcie podglądu.
@@ -1286,7 +1332,8 @@ font Barlow, `.wrap` max-width 860 px. Elementy architektoniczne:
    jako ☑ tylko zaznaczone; po wydaniu/w koszu — tylko podgląd; sekcja zależy od modułu
    **Wykonane czynności**); aktywne pole **„Notatki”** (autozapis, ten sam tekst co w
    edycji); info o wymaganiu potwierdzenia z telefonu; na dole **„Wydaj rower”**
-   (zmienia status na „Odebrany”, potem „Rower już wydany” i gaśnie); przy modułach
+   (zmienia status na „Odebrany”, potem „Rower już wydany” i gaśnie; 3.9 — teksty
+   zależne od typu, dla hulajnogi „Wydaj hulajnogę”/„Hulajnoga już wydana”); przy modułach
    **druk** + **Karta wydania** wydanie od razu drukuje Kartę Wydania Roweru.
 9. **Edycja i zdjęcia (`#edycja`)** — przycisk „Edytuj” (nazwa, daty, telefon, opis,
    „Notatki”); przycisk „Zdjęcia” (podgląd, dodawanie, usuwanie); **limit łączny 100 MB**,
@@ -1317,7 +1364,9 @@ font Barlow, `.wrap` max-width 860 px. Elementy architektoniczne:
     w logo (także na ekranie logowania) i faviconka.
 15. **Moduły (`#moduly`)** — wyłączenie ukrywa części panelu na PC i telefonie jednocześnie,
     **nie kasuje danych**, zmiana zapisuje się natychmiast, lista w przewijanym boxie
-    (max-height). Opisane skutki 10 modułów: **Kalendarz** (znika przycisk, pole
+    (max-height). Opisane skutki 11 modułów: **Hulajnogi** *(3.9, domyślnie
+    wyłączony)* (wybór typu przyjęcia, filtry i ikonki typu, drugi katalog usług,
+    numer seryjny; wyłączony = panel jak w 3.8.x), **Kalendarz** (znika przycisk, pole
     „Planowany odbiór”, kafle „Po terminie/Odbiory dziś/jutro”, sortowanie po terminie,
     linki do Kalendarza Google), **Zdjęcia** (wgrywanie, miniatury, licznik), **Skaner QR**
     (przycisk; tekstowe szukanie działa), **Katalog usług** (checkboxy + zakładka), **Drukowanie**
@@ -1522,15 +1571,16 @@ Migracje są **idempotentne** (wykrywanie stanu przez `SHOW COLUMNS` / `SELECT`)
 - **`setting_set(string $klucz, string $wartosc): void`** — zapis/upsert (`INSERT ... ON DUPLICATE KEY UPDATE`).
 - **`dane_instancji(): array`** — tablica `['adres','miasto','telefon','maps_url','site_url']` odczytana z bazy, z fallbackiem do stałych z `config.php`.
 - **`wersja_aplikacji(): string`** — `setting_get('installed_version', APP_VERSION)`.
-- **`moduly_dostepne(): array`** — pełna lista modułów możliwych do wyłączenia: `kalendarz`, `zdjecia`, `skaner`, `uslugi`, `druk`, `kosz`, `kolorystyka`, `powitanie`, `karta_wydania`, `wykonane`.
-- **`moduly(bool $refresh = false): array`** — mapa `nazwa => bool` z cache (`static`); odczytuje JSON z klucza `moduly`; **brak klucza = moduł włączony** (kompatybilność wstecz). `$refresh = true` wymusza odświeżenie.
+- **`moduly_dostepne(): array`** — pełna lista modułów możliwych do wyłączenia: `hulajnogi`, `kalendarz`, `zdjecia`, `skaner`, `uslugi`, `druk`, `kosz`, `kolorystyka`, `powitanie`, `karta_wydania`, `wykonane`.
+- **`modul_domyslnie(string $nazwa): bool`** — wartość startowa modułu przy braku zapisu w bazie: `hulajnogi => false` (wyłączony), pozostałe `true`. Używana przez `moduly()` i `api/ustawienia.php`.
+- **`moduly(bool $refresh = false): array`** — mapa `nazwa => bool` z cache (`static`); odczytuje JSON z klucza `moduly`; **brak klucza = wartość domyślna z `modul_domyslnie()`** (tj. `hulajnogi` startuje wyłączony, reszta włączona — kompatybilność wstecz z bazami bez nowego modułu). `$refresh = true` wymusza odświeżenie.
 - **`modul(string $nazwa): bool`** — czy dany moduł jest włączony (nieznany = `false`).
 - **`users_login_map(): array`** — mapa `id => login` użytkowników (statyczny cache, jedno zapytanie na żądanie — eliminuje N+1 na liście zgłoszeń).
 
 ### 2.4. Katalog usług
 
-- **`uslugi_list(): array`** — lista `[{id, nazwa}]` posortowana po `id`.
-- **`uslugi_add(string $nazwa): ?string`** — dodaje usługę (trim, max 255 znaków przez `mb_substr`); pusty opis = błąd, duplikat (PDOException na UNIQUE) = „Taka usługa już istnieje.”. Zwraca `null` (sukces) lub komunikat.
+- **`uslugi_list(): array`** — lista `[{id, nazwa, typ}]` posortowana po `id` (`typ` = `rower`/`hulajnoga`).
+- **`uslugi_add(string $nazwa, string $typ = 'rower'): ?string`** — dodaje usługę do katalogu wskazanego typu (trim, max 255 znaków przez `mb_substr`); pusty opis = błąd, duplikat w obrębie **tego samego typu** (PDOException na UNIQUE `uk_typ_nazwa`) = „Taka usługa już jest na tej liście.”. Zwraca `null` (sukces) lub komunikat.
 - **`uslugi_remove(int $id): bool`** — usuwa usługę po id; `true` gdy usunięto choć jeden wiersz.
 
 ### 2.5. Statystyki i zdjęcia
@@ -1543,8 +1593,8 @@ Migracje są **idempotentne** (wykrywanie stanu przez `SHOW COLUMNS` / `SELECT`)
 
 ### 2.6. Mapowanie i walidacja
 
-- **`map_zgloszenie(array $row): array`** — buduje rekord w formacie oczekiwanym przez frontend: `id`, `bikeName`, `dateIn`, `datePlanned`, `customerPhone`, `faultDescription`, `status`, `confirmed` (bool), `serviceNo`, `serviceNotes`, `servicesDone` (`null` = nie zapisywano, tablica = zapisano), `deleted` (bool), `createdAt`, `createdById`/`createdBy`, `confirmedById`/`confirmedBy`, `photos` (z `photos_for`). Uwaga: **`confirmedById/confirmedBy` są zerowane gdy `status !== 'picked_up'`** („kto wydal” widoczne tylko przy faktycznym wydaniu).
-- **`validate_zgloszenie(array $in): array`** — walidacja formularza zgłoszenia; zwraca oczyszczoną tablicę `[$bikeName, $dateIn, $datePlanned|null, $phone, $fault, $status]`. Wymaga: niepustej nazwy roweru (≤255), daty `YYYY-MM-DD` sprawdzonej `checkdate()` (przyjęcia — zawsze; planowanej — gdy włączony moduł `kalendarz`, przy wyłączonym pusty termin zamieniany na `null`), ≥9 cyfr w telefonie, niepustego opisu usterki, statusu z `STATUSES`. Błędy przez `json_fail()`.
+- **`map_zgloszenie(array $row): array`** — buduje rekord w formacie oczekiwanym przez frontend: `id`, `bikeName`, `dateIn`, `datePlanned`, `customerPhone`, `faultDescription`, `status`, `typ` (3.9: `rower`/`hulajnoga`), `numerSeryjny` (3.9, `null` = brak), `confirmed` (bool), `serviceNo`, `serviceNotes`, `servicesDone` (`null` = nie zapisywano, tablica = zapisano), `deleted` (bool), `createdAt`, `createdById`/`createdBy`, `confirmedById`/`confirmedBy`, `photos` (z `photos_for`). Uwaga: **`confirmedById/confirmedBy` są zerowane gdy `status !== 'picked_up'`** („kto wydal” widoczne tylko przy faktycznym wydaniu).
+- **`validate_zgloszenie(array $in): array`** — walidacja formularza zgłoszenia; zwraca oczyszczoną tablicę `[$bikeName, $dateIn, $datePlanned|null, $phone, $fault, $status, $typ, $numerSeryjny]` (8 elementów od 3.9). **Typ i serial walidowane są na samym początku** (przed `modul()` → `db()`, stąd testowalne bez MySQL): `typ` pusty/`rower`/`hulajnoga` (inny = „Nieprawidłowy typ sprzętu.”; pusty = kompatybilność wstecz — wstawia go endpoint), nazwa per typ („Podaj nazwę hulajnogi.” / „Nazwa hulajnogi jest za długa (max 255 znaków).”), `numer_seryjny` tylko przy `hulajnoga` (inaczej czyszczony do `''`; >64 = „Numer seryjny jest za długi (max 64 znaki).”). Dalej: niepusta nazwa (≤255), daty `YYYY-MM-DD` sprawdzone `checkdate()` (przyjęcia — zawsze; planowanej — gdy włączony moduł `kalendarz`, przy wyłączonym pusty termin → `null`), ≥9 cyfr w telefonie, niepusty opis usterki (komunikat też per typ: „Opisz usterkę hulajnogi.”), status z `STATUSES`. Błędy przez `json_fail()`.
 - **`validate_services_done(string $raw): array`** — walidacja listy wykonanych czynności (string JSON → tablica): odrzuca nie-tablice, pomija puste i nietekstowe, każdy element ≤200 znaków, maks. 50 elementów, deduplikacja (`array_unique`). Pusty string = `[]`.
 
 ### 2.7. Pomocniki HTTP/JSON
@@ -1577,10 +1627,10 @@ Uwierzytelnienie: `auth_require()` dla wszystkich metod. Blok `try/catch (Throwa
 | Metoda | `action` / parametry | Uprawnienia | Efekt / odpowiedź |
 |---|---|---|---|
 | **GET** | brak | każda zalogowana rola | `SELECT * FROM zgloszenia ORDER BY id DESC` (razem z koszem!), każde przez `map_zgloszenie`. Odp.: `{success, data: [rekordy]}`. **Brak filtrowania po właścicielu — każdy widzi wszystkie zgłoszenia.** |
-| **POST** | `action=create` (multipart): `bike_name`, `date_in`, `date_planned`, `customer_phone`, `fault_description`, `status`, `source` (`desktop`/`mobile`), `services_done` (kompatybilność ze starym frontem), pliki `photos` | każda rola | Walidacja `validate_zgloszenie`; `source=mobile` → `confirmed=0`, inaczej `1`; moduł `zdjecia` wyłączony + obecne pliki → 400 („Moduł zdjęć jest wyłączony w ustawieniach panelu.”); INSERT z `created_by = id bieżącego` (pole `services_done` zapisywane tylko gdy lista niepusta, inaczej `NULL`); numer serwisowy `RO-<rok>-%04d(id)`; `store_photos()`. Odp. **201** `{success, data: <map_zgloszenie>}`. |
+| **POST** | `action=create` (multipart): `bike_name`, `date_in`, `date_planned`, `customer_phone`, `fault_description`, `status`, `source` (`desktop`/`mobile`), `typ` (3.9: `rower`/`hulajnoga`), `numer_seryjny` (3.9, tylko hulajnoga), `services_done` (kompatybilność ze starym frontem), pliki `photos` | każda rola | **Moduł `hulajnogi` wyłączony → `typ` wymuszany na `rower`, `numer_seryjny` czyszczony**; przy włączonym brak `typ` → 400 „Najpierw wybierz typ sprzętu: Rower lub Hulajnoga.”. Dalej `validate_zgloszenie`; `source=mobile` → `confirmed=0`, inaczej `1`; moduł `zdjecia` wyłączony + obecne pliki → 400 („Moduł zdjęć jest wyłączony w ustawieniach panelu.”); INSERT z `created_by = id bieżącego` (pole `services_done` zapisywane tylko gdy lista niepusta, inaczej `NULL`); numer serwisowy `RO-<rok>-%04d(id)`; `store_photos()`. Odp. **201** `{success, data: <map_zgloszenie>}`. |
 | **POST** | `action=status`: `id`, `status` | każda rola | Walidacja `id > 0` i statusu z `STATUSES`; 404 gdy brak. Przejście do `picked_up` → zapis `confirmed_by = id bieżącego`; powrót z `picked_up` → `confirmed_by = NULL`; inaczej tylko `status`. Odp.: `{success, id, status, data: <map_zgloszenie>}` (pełny rekord, żeby frontend odświeżył „kto wydał”). |
 | **POST** | `action=confirm`: `id` | każda rola | `UPDATE ... SET confirmed = 1, confirmed_by = id`; 404 gdy rekord nie istnieje. Odp.: `{success, id, confirmed: true}`. |
-| **POST** | `action=update`: `id` + pola formularza, `service_notes` | każda rola | 404 gdy brak; pełna walidacja; notatka ≤6000 znaków; `date_planned` przez `COALESCE(?, date_planned)` (NULL = brak zmiany). Odp.: `{success, data: <map_zgloszenie>}`. |
+| **POST** | `action=update`: `id` + pola formularza, `service_notes`, `numer_seryjny` (3.9) | każda rola | 404 gdy brak; **typ wstrzykiwany z bazy przed walidacją (niezmienny — ani przez API, ani przez edycji nie zmieni się rower na hulajnogę)**; `numer_seryjny` aktualizowany tylko gdy typ to `hulajnoga` (inaczej `NULL`); pełna walidacja; notatka ≤6000 znaków; `date_planned` przez `COALESCE(?, date_planned)` (NULL = brak zmiany). Odp.: `{success, data: <map_zgloszenie>}`. |
 | **POST** | `action=services`: `id`, `services_done` (JSON) | każda rola + **włączony moduł `wykonane`** (403) | Zapis checkboxów „Wykonane czynności”; pusta lista = `'[]'` (nie `null`). Odp.: `{success, data}`. |
 | **POST** | `action=notes`: `id`, `service_notes` | każda rola | Autozapis notatek z karty (≤6000 znaków); pusty = `NULL`. Odp.: `{success, data}`. |
 | **POST** | `action=restore`: `id` | każda rola + moduł `kosz` (403) + **`owner_guard($id)`** | `deleted_at = NULL`. Odp.: `{success, id}`. |
@@ -1611,8 +1661,8 @@ Uwierzytelnienie: `auth_require()` na starcie. **Brak bloku `try/catch`** (błę
 
 | Metoda | `action` / parametry | Uprawnienia | Odpowiedź |
 |---|---|---|---|
-| **GET** | brak | każda zalogowana rola (odczyt = wszyscy) | `{success, data: [{id, nazwa}]}`. |
-| **POST** | `action=add`, `nazwa` | **admin** (`auth_require_admin()`) + moduł `uslugi` (403) | `uslugi_add()`; błąd → 400; sukces → `{success, data: <pełna lista>}`. |
+| **GET** | brak | każda zalogowana rola (odczyt = wszyscy) | `{success, data: [{id, nazwa, typ}]}`. |
+| **POST** | `action=add`, `nazwa`, `typ` (3.9: `rower`/`hulajnoga`) | **admin** (`auth_require_admin()`) + moduł `uslugi` (403) | Moduł `hulajnogi` wyłączony → `typ` wymuszany na `rower`; `uslugi_add()` (duplikat sprawdzany **w obrębie typu**); błąd → 400; sukces → `{success, data: <pełna lista>}`. |
 | **POST** | `action=remove`, `id` | **admin** + moduł `uslugi` (403) | `uslugi_remove()`; nie usunięto → 404 „Nie znaleziono usługi.”; sukces → `{success, data: <pełna lista>}`. |
 | **POST** | nieznany `action` | admin | **400** „Nieznana akcja.” |
 | inne metody | — | — | **400** „Nieznane żądanie.” |
@@ -1641,7 +1691,7 @@ Uwierzytelnienie: `auth_require()` na starcie; konkretne akcje dodatkowo wymagaj
 | **GET** | brak | każda zalogowana rola | `{success, data: {moduly: {...}, dane_instancji: {...}, update: <check_update() bez force — cache 24 h>}}`. |
 | **POST** | `check_update` | każda zalogowana rola | `check_update(true)` (wymuszenie odpytania GitHuba). Odp.: `{success, data: {update: ...|null}}`. |
 | **POST** | `do_update` | **admin** | `do_update()` — odpowiedź przekazywana wprost: `{success:false, error}` lub `{success:true, data:{nowa_wersja}}`. **Efekty uboczne:** pobranie paczki z GitHuba, kopia zapasowa ZIP w `uploads/backup/` (+ `.htaccess` blokujący dostęp), podmiana plików (z pominięciem `config.php`, `uploads/`, `.user.ini`), przebudowa `config.php` z nowego wzorca ze starymi sekretami + kopia `config-<data>.php.bak`, `opcache_reset()`, migracje `db()`, zapis `installed_version`, wyczyszczenie cache aktualizacji. |
-| **POST** | `modules` | **admin** | Pole `moduly` = JSON; wejście **sanityzowane do listy `moduly_dostepne()`** (brak klucza = `true`), zapis `setting_set('moduly', json)` + odświeżenie cache `moduly(true)`. Odp.: `{success, data: {moduly}}`. |
+| **POST** | `modules` | **admin** | Pole `moduly` = JSON; wejście **sanityzowane do listy `moduly_dostepne()`** (brak klucza = `modul_domyslnie($m)`, tj. `hulajnogi` startuje wyłączony, pozostałe włączone), zapis `setting_set('moduly', json)` + odświeżenie cache `moduly(true)`. Odp.: `{success, data: {moduly}}`. |
 | **POST** | `dane_instancji` | **admin** | Pola i limity: `service_address` ≤120, `service_city` ≤120, `service_phone` ≤32, `google_maps_url` ≤255 (**`FILTER_VALIDATE_URL`, puste dozwolone**), `site_url` ≤255 (**`FILTER_VALIDATE_URL`**). Zapis do `ustawienia`. Odp.: `{success, data: {dane_instancji}}`. |
 | **POST** | inne | — | **400** „Nieznane żądanie.” |
 
@@ -1754,10 +1804,11 @@ wyłącznie w `install.php`, nie w tych wywołaniach AJAX.
 ### 1.2 System ładowania modułów (`MODULY`, `loadModules`, `saveModules`, `modulOn`, `applyModules`)
 
 #### `MODULY` (obiekt)
-Domyślna mapa flag modułów: `{ kalendarz, zdjecia, skaner, uslugi, druk, kosz,
-kolorystyka, powitanie, karta_wydania, wykonane }` — wszystkie ustawione na `true`.
+Domyślna mapa flag modułów: `{ hulajnogi, kalendarz, zdjecia, skaner, uslugi, druk, kosz,
+kolorystyka, powitanie, karta_wydania, wykonane }` — **`hulajnogi: false`** (moduł
+domyślnie wyłączony), pozostałe `true`.
 Flagi żyją w bazie, dzięki czemu PC i telefon widzą te same ustawienia; przy braku API
-zostają wartości domyślne (wszystko włączone).
+zostają wartości domyślne (wszystko włączone oprócz hulajnog).
 
 #### `modulOn(nazwa)`
 Zwraca `MODULY[nazwa] !== false`, tzn. nieznana/wygasła flaga traktowana jest jako
@@ -2092,8 +2143,11 @@ Przebudowuje `#services-list-container` od zera i na początku wywołuje
    `bikeName`), `status` (wg `STATUS_ORDER`, dalej `datePlanned`), `user`
    (wg `createdBy`), `issuer` (wg `confirmedBy`) — rekordy bez autora (`null`)
    idą na koniec przez znak `U+FFFD`. Równorzędność rozstrzyga malejące `id`.
-3. **Pusty stan (trzy warianty):** bez kryteriów — ikona 🚲 i tekst
-   „Tu pojawią się przyjęte rowery. Zacznij od formularza „Przyjmij nowy rower".",
+3. **Pusty stan (trzy warianty):** bez kryteriów — ikona 🚲 (z modułem Hulajnogi 🚲🛴)
+   i tekst
+   „Tu pojawią się przyjęte rowery. Zacznij od formularza „Przyjmij nowy rower".”
+   (3.9, moduł włączony: 🚲🛴 i „Tu pojawią się przyjęte sprzęty. Zacznij od formularza
+   „Przyjmij nowy”."),
    filtr `trash` — 🗑️ „Kosz jest pusty. Usunięte zgłoszenia trafią tutaj i będzie
    można je przywrócić.", inaczej — 🔍 „Żadne zgłoszenie nie pasuje do wyszukiwania
    ani filtru. Zmień kryteria.".
@@ -2119,7 +2173,8 @@ Przebudowuje `#services-list-container` od zera i na początku wywołuje
 8. **Plakietki „kto przyjął / kto wydał":** `intakeHtml` = kółko + login
    `createdBy` w `.chip-inline` (bez autora — szare „—" z tytułem
    „Konto sprzed wdrożenia użytkowników"); `issuerHtml` = kółko `confirmedBy`
-   z tytułem „Rower wydał: <login>" doklejone obok odznaki statusu w `.status-wrap`.
+   z tytułem „Rower wydał: <login>" (3.9: dla hulajnogi „Hulajnogę wydał: <login>")
+   doklejone obok odznaki statusu w `.status-wrap`.
 9. **Maska oczekiwania (`pending-mask`):** gdy zgłoszenie nie zostało potwierdzone,
    doklejana jest przesłona z notą „Zgłoszenie zablokowane — wymaga potwierdzenia
    na komputerze" (mobile) / „wymaga potwierdzenia" (desktop) oraz przyciskiem
@@ -2149,7 +2204,8 @@ Przełącza status w cyklu `in_progress → completed → picked_up → in_progr
 przez `action=status` (pole `status`). Po sukcesie podmienia cały rekord z
 `data.data` (serwer zwraca pełny obiekt — zmienia się też „kto wydał"
 =`confirmedBy`), renderuje listę i pokazuje toast
-„Zmieniono status roweru: <nazwa>". Gdy nowy status to `picked_up` i włączone są
+„Zmieniono status roweru: <nazwa>" (3.9: dla hulajnogi „Zmieniono status hulajnogi:
+<nazwa>"). Gdy nowy status to `picked_up` i włączone są
 moduły `druk` oraz `karta_wydania`, a urządzenie to desktop — drukuje kartę
 wydania przez `triggerPrint(item, 'wydanie')`.
 
@@ -2221,7 +2277,8 @@ selectedFiles)` → `showUploading(false)`, `resetForm()`, wyczyszczenie
 `selectedFiles` i `renderPhotoPreviews()`. Na **mobile**: pełnoekranowy monit
 `showPhoneSuccess(photoCount)` (kalendarz i druk nastąpią po potwierdzeniu na
 komputerze) oraz, gdy były zdjęcia, `notifyFotoWarn()` (toast o progu 80 % limitu).
-Na **desktopie**: toast „Zapisano zgłoszenie rowerowe w bazie!", potem
+Na **desktopie**: toast „Zapisano zgłoszenie rowerowe/hulajnogowe w bazie!" (3.9 —
+tekst zależny od `item.typ`, odczytanego przed `resetForm()`), potem
 `notifyFotoWarn()`, a następnie wspólna akcja `printAndAddToCalendar(saved)`.
 Błąd zapisu → `showUploading(false)` + toast `error` z komunikatem wyjątku.
 
@@ -2466,7 +2523,7 @@ Poniższy fragment opisuje siedem plików JS z katalogu `assets/js/`:
 
 Wspólne symbole definiowane w `core.js` (używane niemal wszędzie): `db` (tablica zgłoszeń),
 `apiFetch()` (fetch z obsługą 401 i przeładowaniem sesji), `modulOn(nazwa)` (flaga modułu,
-`MODULY[nazwa] !== false`), `MODULY` (10 flag: `kalendarz`, `zdjecia`, `skaner`, `uslugi`, `druk`,
+`MODULY[nazwa] !== false`), `MODULY` (11 flag: `hulajnogi`, `kalendarz`, `zdjecia`, `skaner`, `uslugi`, `druk`,
 `kosz`, `kolorystyka`, `powitanie`, `karta_wydania`, `wykonane`), `IS_MOBILE`, endpointy
 `API_ZGLOSZENIA`, `API_ZDJECIA`, `API_KONTO`, `API_USLUGI`, `API_USTAWIENIA`, `API_UZYTKOWNICY`,
 `showConfirmModal()`, `renderServicesList()` (`lista.js`), `updateDashboard()` / `isOverdue()`
@@ -2566,7 +2623,8 @@ Plik zawiera **dwa modale**: modal edycji zgłoszenia (`#edit-modal`) oraz modal
     (w koszu tylko do odczytu), w przeciwnym razie aktywne z autozapisem;
   - **bramka wydania**: `canIssue = !item.deleted && item.status !== 'picked_up'`;
     przycisk `#detail-issue-btn` jest wtedy `disabled = !canIssue`, a jego tekst to
-    „Wydaj rower" lub „Rower już wydany";
+    „Wydaj rower" lub „Rower już wydany" (3.9 — zależny od typu: „Wydaj hulajnogę" /
+    „Hulajnoga już wydana");
   - **wykonane czynności**: sekcja widoczna tylko gdy `modulOn('wykonane')` **oraz**
     `getPlannedServices(item).length > 0` (w innym wypadku chowane są `#detail-done-label`
     i `#detail-done-list`); dla każdej usługi tworzony jest `label.service-check` z
@@ -2785,7 +2843,8 @@ Plik zawiera **dwa modale**: modal edycji zgłoszenia (`#edit-modal`) oraz modal
 
 ### 3.5 Zakładka „Moduły"
 
-- **`MODUL_NAZWA`** — mapa flag → czytelne nazwy (m.in. `kalendarz`: „Kalendarz",
+- **`MODUL_NAZWA`** — mapa flag → czytelne nazwy (m.in. `hulajnogi`: „Hulajnogi",
+  `kalendarz`: „Kalendarz",
   `zdjecia`: „Zdjęcia", `skaner`: „Skaner QR", `uslugi`: „Katalog usług", `druk`: „Drukowanie",
   `kosz`: „Kosz", `kolorystyka`: „Kolorystyka", `powitanie`: „Powitanie",
   `karta_wydania`: „Karta wydania", `wykonane`: „Wykonane czynności").
@@ -2868,7 +2927,7 @@ lista, karta konta, role, reset hasła) znajduje się w `uzytkownicy.js` — pat
   login (`escapeHtml`), `roleBadge`, opcjonalne flagi („konto wyłączone" na czerwono,
   „wymusza zmianę hasła", „(to Twoje konto)"), **„ostatnie logowanie: …"** (przez
   `formatLastLogin(u.last_login_at)`) oraz strzałkę `›`; w drugim wierszu statystyki
-  „założył: N zgłoszeń · wydał: N rowerów".
+  „założył: N zgłoszeń · wydał: N rowerów" (3.9: neutralnie „wydał: N sprzętów").
 - **`loadUsers()`** — GET `API_UZYTKOWNICY` przez `apiFetch` z hintem „Wczytywanie…";
   sukces → `usersCache = data.data`, `renderUsers()` i **odświeżenie otwartej karty**
   (`if (openUserId !== null) fillUserCard(openUserId)`); błąd → wyczyszczenie listy i
@@ -3037,7 +3096,7 @@ z historią). Pracownik nie widzi zakładki „Użytkownicy" — `switchSettings
 - **`window.openScanModal()`** — otwiera skaner:
   1. bramka modułu: `if (!modulOn('skaner')) return;`
   2. wyczyszczenie poprzedniego wyszukiwania (`searchQuery`, `input`), reset `scanTick.warned`,
-     hint „Skieruj aparat na kod QR z numerem serwisowym (naklejka na rowerze).", otwarcie modala;
+     hint „Skieruj aparat na kod QR z numerem serwisowym (naklejka na sprzęcie).", otwarcie modala;
   3. sprawdzenie `navigator.mediaDevices.getUserMedia` (inaczej wyjątek „Ta przeglądarka nie
      udostępnia aparatu."), `getUserMedia({ video: { facingMode: { ideal: 'environment' } },
      audio: false })`, podpięcie strumienia do `<video>`, `await scanVideo.play()`,

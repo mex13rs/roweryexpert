@@ -1,5 +1,5 @@
         // --- RENDERING LISTY HISTORYCZNEJ ---
-        // Wyszukiwanie po tekście (nazwa, telefon, opis, NUMER SERWISOWY, notatki)
+        // Wyszukiwanie po tekście (nazwa, telefon, opis, NUMER SERWISOWY, notatki, numer seryjny)
         function itemMatchesSearch(item) {
             if (!searchQuery) return true;
             const query = searchQuery.toLowerCase();
@@ -7,6 +7,7 @@
                 || item.customerPhone.toLowerCase().includes(query)
                 || item.faultDescription.toLowerCase().includes(query)
                 || (item.serviceNo || '').toLowerCase().includes(query)
+                || (item.numerSeryjny || '').toLowerCase().includes(query)
                 || (item.serviceNotes || '').toLowerCase().includes(query)
                 || (item.servicesDone || []).join(' ').toLowerCase().includes(query);
         }
@@ -34,12 +35,20 @@
             renderUserFilters();   // 3.8.8: ikonki użytkowników (mogą zdjąć wygasły filtr)
             updateFilterCounts();
 
+            // 3.9: stan filtru typu (przyciski Rower/Hulajnoga/Wszystkie typy)
+            document.querySelectorAll('.typ-btn').forEach(btn =>
+                btn.classList.toggle('active', btn.dataset.typFilter === filterTyp));
+
             // Filtruj i szukaj
             let filteredDb = db.filter(item => {
                 const deleted = !!item.deleted;
 
                 // 3.8.8: filtr po ikonce użytkownika (kto założył zgłoszenie)
                 if (filterUserId !== null && item.createdById !== filterUserId) return false;
+
+                // 3.9: filtr typu sprzetu (modul hulajnogi; bez niego zawsze 'all')
+                if (modulOn('hulajnogi') && filterTyp !== 'all'
+                    && (item.typ || 'rower') !== filterTyp) return false;
 
                 if (currentFilter === 'trash') {
                     if (!deleted) return false;
@@ -83,12 +92,15 @@
                 (sorters[currentSort] || sorters.planned_asc)(a, b) || (b.id - a.id));
 
             if (filteredDb.length === 0) {
-                const noCriteria = !searchQuery && currentFilter === 'all';
+                // 3.9: filtr typu tez jest kryterium - wtedy leci komunikat "brak wynikow"
+                const noCriteria = !searchQuery && currentFilter === 'all' && filterTyp === 'all';
                 servicesListContainer.innerHTML = noCriteria
                     ? `
                     <div class="empty-state">
-                        <div class="empty-icon">🚲</div>
-                        <p>Tu pojawią się przyjęte rowery. Zacznij od formularza „Przyjmij nowy rower”.</p>
+                        <div class="empty-icon">${modulOn('hulajnogi') ? '🚲🛴' : '🚲'}</div>
+                        <p>${modulOn('hulajnogi')
+                            ? 'Tu pojawią się przyjęte sprzęty. Zacznij od formularza „Przyjmij nowy”.'
+                            : 'Tu pojawią się przyjęte rowery. Zacznij od formularza „Przyjmij nowy rower”.'}</p>
                     </div>
                 `
                     : currentFilter === 'trash'
@@ -203,14 +215,22 @@
                 const intakeHtml = item.createdBy
                     ? `<span class="chip-inline">${userChip(item.createdBy)}<span class="chip-name">${escapeHtml(item.createdBy)}</span></span>`
                     : userChip(null, 'Konto sprzed wdrożenia użytkowników');
+                // 3.9: tytul plakietki wg typu sprzetu (dla roweru tekst jak wczesniej)
+                const ktoWydał = item.typ === 'hulajnoga' ? 'Hulajnogę wydał' : 'Rower wydał';
                 const issuerHtml = item.confirmedBy
-                    ? `<span class="chip-inline" title="Rower wydał: ${escapeHtml(item.confirmedBy)}">${userChip(item.confirmedBy)}</span>`
+                    ? `<span class="chip-inline" title="${ktoWydał}: ${escapeHtml(item.confirmedBy)}">${userChip(item.confirmedBy)}</span>`
+                    : '';
+
+                // 3.9: ikona typu przy nazwie (modul hulajnogi wlaczony)
+                const typHul = item.typ === 'hulajnoga';
+                const typBadge = modulOn('hulajnogi')
+                    ? `<span class="typ-badge" title="${typHul ? 'Hulajnoga' : 'Rower'}">${typHul ? '🛴' : '🚲'}</span>`
                     : '';
 
                 card.innerHTML = `
                     <div class="item-header">
                         <div class="item-info">
-                            <h3>${escapeHtml(item.bikeName)}${item.serviceNo ? `<span class="service-no" title="Numer serwisowy">${escapeHtml(item.serviceNo)}</span>` : ''}</h3>
+                            <h3>${typBadge}${escapeHtml(item.bikeName)}${item.serviceNo ? `<span class="service-no" title="Numer serwisowy">${escapeHtml(item.serviceNo)}</span>` : ''}</h3>
                             <a href="tel:${escapeHtml(item.customerPhone)}" class="phone-link">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 14px; height: 14px;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.802-5.194-4.174-6.996-7.002l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
@@ -332,7 +352,8 @@
                     item.status = next;
                 }
                 renderServicesList();
-                showToast(`Zmieniono status roweru: ${item.bikeName}`);
+                // 3.9: toast o zmianie statusu - komunikat wg typu sprzetu
+                showToast(`Zmieniono status ${item.typ === 'hulajnoga' ? 'hulajnogi' : 'roweru'}: ${item.bikeName}`);
 
                 // Wydanie roweru z listy — druk karty wydania, gdy włączone
                 // moduły druku i Karty wydania

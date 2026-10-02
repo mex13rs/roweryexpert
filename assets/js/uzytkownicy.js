@@ -101,7 +101,7 @@
                         <span style="color: var(--text-secondary); font-size: 1.1rem; line-height: 1;">›</span>
                     </div>
                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.35rem;">
-                        założył: ${Number(u.zgloszenia || 0)} zgłoszeń · wydał: ${Number(u.wydane || 0)} rowerów
+                        założył: ${Number(u.zgloszenia || 0)} zgłoszeń · wydał: ${Number(u.wydane || 0)} sprzętów
                     </div>
                 </div>`;
             }).join('');

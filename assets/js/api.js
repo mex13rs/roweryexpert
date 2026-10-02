@@ -3,6 +3,9 @@
             const formData = new FormData();
             formData.append('action', 'create');
             formData.append('bike_name', item.bikeName);
+            // 3.9: typ sprzetu i numer seryjny (pusty = NULL w bazie)
+            formData.append('typ', item.typ || 'rower');
+            formData.append('numer_seryjny', item.numerSeryjny || '');
             formData.append('date_in', item.dateIn);
             formData.append('date_planned', item.datePlanned);
             formData.append('customer_phone', item.customerPhone);
@@ -39,6 +42,12 @@
 
             return {
                 bikeName: bikeNameInput.value.trim(),
+                // 3.9: typ = wybrany przy przyjeciu; numer seryjny wylacznie
+                // dla hulajnogi (przy rowerze zawsze pusty)
+                typ: aktywnyTyp(),
+                numerSeryjny: aktywnyTyp() === 'hulajnoga'
+                    ? (document.getElementById('numer-seryjny')?.value || '').trim()
+                    : '',
                 dateIn: dateInInput.value,
                 datePlanned: datePlannedInput.value,
                 customerPhone: customerPhoneInput.value.trim(),
@@ -64,6 +73,12 @@
             planned.setDate(now.getDate() + 2);
             dateInInput.value = formatDateForInput(now);
             datePlannedInput.value = modulOn('kalendarz') ? formatDateForInput(planned) : '';
+
+            // 3.9: po zapisie wracamy do "wybierz typ" (modul hulajnogi wlaczony)
+            wybranyTyp = null;
+            const serialEl = document.getElementById('numer-seryjny');
+            if (serialEl) serialEl.value = '';
+            if (typeof zastosujTypSprzetu === 'function') zastosujTypSprzetu();
         }
 
         // --- INTEGRACJA GOOGLE CALENDAR ---
