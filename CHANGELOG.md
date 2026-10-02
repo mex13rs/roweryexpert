@@ -12,6 +12,21 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.8.10 — 2026-10-01
+
+### Naprawione
+- **Fałszywy toast „Nie udało się pobrać listy usług." po każdym odświeżeniu
+  dla użytkowników nie-admin** — `renderServiceList()` dotykał elementu
+  `#service-list`, który istnieje tylko w Ustawieniach widocznych dla admina
+  (u pozostałych użytkowników = `null`). Wyjątek lądował w tym samym
+  `catch` co błędy pobierania, więc mimo poprawnie renderowanych checkboxów
+  usług w formularzu przyjęcia wyświetlał się komunikat o nieudanym ładowaniu.
+  Naprawa: strażnik `if (!serviceListEl) return;` + rozdzielenie pobrania
+  i renderu w `loadServices()` (błąd renderu nie udaje już błędu sieci;
+  401 nie podwójnie toasuje).
+
+---
+
 ## 3.8.9 — 2026-10-01
 
 ### Nowe

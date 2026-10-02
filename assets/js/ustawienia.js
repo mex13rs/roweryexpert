@@ -156,16 +156,27 @@
         let services = [];
 
         async function loadServices() {
+            // 3.8.10: pobranie i render rozdzielone - wcześniej wyjątek z
+            // renderServiceList() (element tylko dla admina, null u pozostałych
+            // użytkowników) lądował w catch i po każdym odświeżeniu pokazywał
+            // fałszywy toast "Nie udało się pobrać listy usług.", mimo że
+            // checkboxy w formularzu renderowały się poprawnie.
+            let lista = null;
             try {
                 const res = await apiFetch(API_USLUGI);
                 const data = await res.json();
-                if (data.success) {
-                    services = data.data;
-                    renderFormServiceCheckboxes();
-                    renderServiceList();
-                }
+                if (data.success) lista = data.data;
             } catch (err) {
-                showToast('Nie udało się pobrać listy usług.', 'error');
+                // 401 już pokazał własny toast i wymusza przeładowanie
+                if (err.message !== 'Unauthorized') {
+                    showToast('Nie udało się pobrać listy usług.', 'error');
+                }
+                return;
+            }
+            if (lista) {
+                services = lista;
+                renderFormServiceCheckboxes();
+                renderServiceList();
             }
         }
 
@@ -191,6 +202,9 @@
 
         // Lista usług w zakładce "Dodaj usługi"
         function renderServiceList() {
+            // 3.8.10: katalog usług w Ustawieniach widzi tylko admin - u
+            // pozostałych użytkowników #service-list nie istnieje w DOM
+            if (!serviceListEl) return;
             serviceListEl.innerHTML = '';
             if (!services.length) {
                 serviceListEl.innerHTML = '<li class="service-list-empty">Brak dodanych usług.</li>';
