@@ -332,8 +332,7 @@ try {
 
     json_fail('Metoda nieobsługiwana.', 405);
 } catch (Throwable $e) {
-    error_log('[zgloszenia.php] ' . $e->getMessage());
-    json_fail('Błąd serwera: ' . $e->getMessage(), 500);
+    json_fail_internal('zgloszenia.php', $e);
 }
 
 function record_exists(int $id): bool

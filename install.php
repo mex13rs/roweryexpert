@@ -615,6 +615,31 @@ function inst_render_step6(): void
     inst_render(6);
 }
 
+/**
+ * Host panelu zapisywany w config.php (3.10.0).
+ *
+ * Link potwierdzający w mailu resetu hasła musi wskazywać prawdziwą domenę.
+ * Budowany z nagłówka żądania można go podstawić ("Host: evil.example" =>
+ * właściciel dostaje maila z prawdziwym tokenem na cudzej domenie), więc host
+ * zapisujemy w pliku, do którego klient nie ma dostępu. Kolejność: adres
+ * podany przez administratora przy instalacji, a gdy pusty - host, na którym
+ * właśnie instaluje. Pusty string = host nieznany (panel działa, ale mail
+ * resetu nie leci, dopóki ustawisz „Adres URL panelu").
+ */
+function inst_panel_host(string $site): string
+{
+    $site = trim($site);
+    if ($site !== '') {
+        $host = parse_url($site, PHP_URL_HOST);
+        if (is_string($host) && preg_match('/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/', $host) === 1) {
+            return strtolower($host);
+        }
+    }
+    $host = strtolower(trim((string) ($_SERVER['HTTP_HOST'] ?? '')));
+    $host = (string) preg_replace('/:\d{1,5}$/', '', $host);
+    return preg_match('/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/', $host) === 1 ? $host : '';
+}
+
 /** Zapisuje config.php z podanymi danymi — bez uruchamiania setupu bazy.
  *  (require config.php i db() muszą działać na poziomie pliku, nie w funkcji.) */
 function inst_write_config(array $db, array $dane, string $pass): void
@@ -632,6 +657,7 @@ function inst_write_config(array $db, array $dane, string $pass): void
         'SERVICE_PHONE'  => $dane['phone'],
         'GOOGLE_MAPS_URL'=> $dane['maps'],
         'SITE_URL'       => $dane['site'],
+        'PANEL_HOST'     => inst_panel_host($dane['site']),
     ]);
 
     if (@file_put_contents(__DIR__ . '/config.php', $cfg) === false) {

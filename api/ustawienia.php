@@ -80,8 +80,8 @@ try {
                 json_fail('Link do wizytowki Google musi byc poprawnym adresem URL.');
             }
             if ($klucz === 'site_url' && $wartosc !== ''
-                && filter_var($wartosc, FILTER_VALIDATE_URL) === false) {
-                json_fail('Adres URL panelu musi byc poprawnym adresem URL.');
+                && panel_url_poprawny($wartosc) === false) {
+                json_fail('Adres URL panelu musi byc poprawnym adresem http:// lub https://.');
             }
             if ($klucz === 'reset_email' && $wartosc !== ''
                 && filter_var($wartosc, FILTER_VALIDATE_EMAIL) === false) {
@@ -96,6 +96,5 @@ try {
 
     json_fail('Nieznane żądanie.', 400);
 } catch (Throwable $e) {
-    error_log('[ustawienia.php] ' . $e->getMessage());
-    json_fail('Błąd serwera: ' . $e->getMessage(), 500);
+    json_fail_internal('ustawienia.php', $e);
 }

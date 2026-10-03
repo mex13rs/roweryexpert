@@ -97,6 +97,13 @@
                 <div class="form-group">
                     <label for="inst-site">Adres URL panelu (opcjonalnie)</label>
                     <input type="url" id="inst-site" maxlength="255" placeholder="https://serwis.twojadomena.pl">
+                    <p class="settings-hint" style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.4rem;">
+                        3.10.0: pole warto uzupełnić — dzięki niemu link potwierdzający
+                        w mailu resetu hasła zawsze prowadzi na właściwy adres. Bez tego
+                        panel musi zgadywać domenę z nagłówka żądania, a przy pustym polu
+                        mail z resetem nie zostanie w ogóle wysłany (bezpieczniej niż
+                        wysłać link na cudzą domenę).
+                    </p>
                 </div>
                 <div class="form-group">
                     <label for="inst-reset-email">E-mail do resetu hasła administratora</label>

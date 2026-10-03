@@ -46,9 +46,9 @@ declare(strict_types=1);
  |           rownolegle ze stara wersja) + rozdrobnienie serwis.php na assets/
  |   3.8  -> instalator install.php (wizard), dane instancji jako stale w config
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
- |           w serwis.php i api/*, README + LICENSE (dystrybucja publiczna)
+ |           w serwis.php i katalogu api, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.9.0';
+const APP_VERSION = '3.10.0';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -75,6 +75,12 @@ const SERVICE_CITY = 'UZUPELNIJ';
 const SERVICE_PHONE = 'UZUPELNIJ';
 const GOOGLE_MAPS_URL = 'UZUPELNIJ';
 const SITE_URL = '';
+// 3.10.0: host panelu zapisywany przy instalacji (install.php). Używany do
+// budowy linku potwierdzającego w mailu resetu hasła - ten plik jest
+// jedynym źródłem, którego klient nie może podsunąć nagłówkiem żądania.
+// Pusty = host nieznany (działa starszy panel albo ręczna instalacja) →
+// wtedy host pochodzi z serwera (SERVER_NAME) i musi się zgadzać z HTTP_HOST.
+const PANEL_HOST = '';
 
 const UPLOAD_DIR = __DIR__ . '/uploads/zdjecia';
 const UPLOAD_URL = 'uploads/zdjecia';
@@ -88,6 +94,9 @@ const ALLOWED_PHOTO_MIME = [
     'image/gif'  => 'gif',
 ];
 const STATUSES = ['in_progress', 'completed', 'picked_up'];
+// 3.10.0: górna granica telefonu. Kolumna customer_phone to VARCHAR(32),
+// a sama wartość to cyfry + ewentualne spacje, kropki i myślniki.
+const PHONE_MAX_DIGITS = 15;
 
 /* ---------------------------------------------------------------
  | Uwierzytelnianie 3.0: konta użytkowników + sesje w bazie (14 dni)
@@ -483,15 +492,117 @@ function reset_nowe_haslo(int $dlugosc = 12): string
     return $haslo;
 }
 
-/** Bazowy adres panelu w linku: ustawiony „Adres URL panelu" albo bieżące żądanie. */
-function reset_baza(): string
+/** Czy host to poprawna nazwa domeny albo adres IP (bez portu, ścieżki, userinfo). */
+function panel_host_poprawny(string $host): bool
 {
-    $site = rtrim(setting_get('site_url', SITE_URL), '/');
-    if ($site !== '') {
-        return $site;
+    if ($host === '' || strlen($host) > 253) {
+        return false;
+    }
+    // Tylko litery, cyfry, kropki i myślniki - IDN w postaci punycode.
+    // Odcina ścieżkę/User hasla, cudzysłowy, CRLF, spacje - czyli wszystko,
+    // czym da się podstawić cudzy host.
+    return (bool) preg_match('/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/', $host);
+}
+
+/** Czy podany URL nadaje się na bazę panelu (http/https, bez userinfo). */
+function panel_url_poprawny(string $url): bool
+{
+    $url = trim($url);
+    if ($url === '' || strlen($url) > 255) {
+        return false;
+    }
+    $c = parse_url($url);
+    if (!is_array($c) || !isset($c['scheme'], $c['host'])) {
+        return false;
+    }
+    if (!in_array(strtolower($c['scheme']), ['http', 'https'], true)) {
+        return false;
+    }
+    if (isset($c['user']) || isset($c['pass'])) {
+        return false;
+    }
+    return panel_host_poprawny((string) $c['host']);
+}
+
+/**
+ * Zaufany host panelu (bez portu). Pusty string = hostu nie da się ustalić
+ * bezpiecznie - wtedy link resetu hasła NIE jest budowany i mail nie leci
+ * (fail-closed), zamiast lecieć z linkiem na cudzą domenę.
+ *
+ * Skąd bierzemy host:
+ *  1. skonfigurowany „Adres URL panelu" (Ustawienia -> Dane serwisu),
+ *  2. stała PANEL_HOST z config.php (zapisana przez install.php),
+ *  3. SERVER_NAME - z konfiguracji vhostu, nie od klienta,
+ *  4. HTTP_HOST - **tylko** gdy pokrywa się z SERVER_NAME.
+ *
+ * Bez pkt 3 klient wysyła "Host: evil.example", a właściciel dostaje maila
+ * z prawdziwym tokenem resetu na cudzej domenie (password-reset poisoning):
+ * kliknięcie loguje token u atakującego, który odtwarza go na prawdziwym
+ * panelu i przejmuje konto admina.
+ *
+ * UWAGA (resztkowe ryzyko): jeśli serwer ustawia SERVER_NAME z nagłówka Host
+ * (Apache z `UseCanonicalName Off`), to pkt 3 i 4 przepuszczą podszyty host,
+ * bo oba pochodzą od klienta. Dlatego PANEL_HOST (z config.php, zapisany
+ * przez install.php) ma pierwszeństwo przed nimi, a dla paneli instalowanych
+ * przed 3.10.0 trzeba po aktualizacji ustawić „Adres URL panelu" w Ustawieniach.
+ *
+ * $skonfigurowany_url = null -> czytamy z ustawień. Argument podaje się
+ * tylko w testach, żeby ta funkcja (i bazująca na niej reset_baza) dała się
+ * sprawdzić bez bazy.
+ */
+function panel_host(?string $skonfigurowany_url = null): string
+{
+    $kandydaci = [];
+    $site = $skonfigurowany_url ?? trim((string) setting_get('site_url', SITE_URL));
+    $site = trim($site);
+    if ($site !== '' && panel_url_poprawny($site)) {
+        $kandydaci[] = (string) parse_url($site, PHP_URL_HOST);
+    }
+    // config.php - jedyne miejsce, do którego klient nie ma dostępu
+    $kandydaci[] = trim((string) (defined('PANEL_HOST') ? PANEL_HOST : ''));
+    $server = panel_host_bez_portu((string) ($_SERVER['SERVER_NAME'] ?? ''));
+    if ($server !== '') {
+        $kandydaci[] = $server;
+    }
+    $host = panel_host_bez_portu((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    if ($host !== '' && $host === $server) {
+        $kandydaci[] = $host;
+    }
+    foreach ($kandydaci as $h) {
+        if (panel_host_poprawny($h)) {
+            return strtolower($h);
+        }
+    }
+    return '';
+}
+
+/** Host z „domena:port" (albo „[::1]:8080") bez portu, małymi literami. */
+function panel_host_bez_portu(string $wartosc): string
+{
+    $wartosc = strtolower(trim($wartosc));
+    if ($wartosc === '') {
+        return '';
+    }
+    if ($wartosc[0] === '[') {           // adres IPv6 w nawiasach
+        $koniec = strpos($wartosc, ']');
+        return $koniec === false ? '' : substr($wartosc, 1, $koniec - 1);
+    }
+    return (string) preg_replace('/:\d{1,5}$/', '', $wartosc);
+}
+
+/** Bazowy adres panelu w linku: ustawiony „Adres URL panelu" albo bieżące żądanie. */
+function reset_baza(?string $skonfigurowany_url = null): string
+{
+    $site = $skonfigurowany_url ?? trim((string) setting_get('site_url', SITE_URL));
+    $site = trim($site);
+    if ($site !== '' && panel_url_poprawny($site)) {
+        return rtrim($site, '/');
+    }
+    $host = panel_host($skonfigurowany_url);
+    if ($host === '') {
+        return '';
     }
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
     $dir = rtrim(str_replace('\\', '/', dirname((string) ($_SERVER['SCRIPT_NAME'] ?? '/'))), '/');
     return $scheme . '://' . $host . $dir;
 }
@@ -505,7 +616,11 @@ function reset_link(string $baza, string $token): string
 /** Wysyłka maila (skrzynka hostingu, UTF-8, nadawca = domena panelu). */
 function wyslij_mail(string $do, string $temat, string $tresc): bool
 {
-    $host = preg_replace('/:\d+$/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    $host = panel_host();
+    if ($host === '') {
+        error_log('[mail] pominieto wysylke - nie da sie ustalic zaufanej domeny panelu');
+        return false;
+    }
     $headers = 'From: RoweryExpert <no-reply@' . $host . ">\r\n"
         . "Content-Type: text/plain; charset=UTF-8\r\n";
     return @mail($do, '=?UTF-8?B?' . base64_encode($temat) . '?=', $tresc, $headers);
@@ -560,6 +675,15 @@ function reset_wyslij(string $login): string
         return 'ok';
     }
 
+    // Fail-closed: bez zaufanej domeny panelu nie ma bezpiecznego linku
+    // potwierdzajacego (patrz panel_host). Tokenu nie zapisujemy wtedy w ogole,
+    // a komunikat jest identyczny jak przy nieistniejacym koncie.
+    $baza = reset_baza();
+    if ($baza === '') {
+        error_log('[reset] brak zaufanej domeny panelu - ustaw "Adres URL panelu" w Ustawieniach');
+        return 'ok';
+    }
+
     $haslo = reset_nowe_haslo();
     $token = bin2hex(random_bytes(32));
     db()->prepare(
@@ -577,7 +701,7 @@ function reset_wyslij(string $login): string
         . "(login: {$login}).\n\n"
         . "Nowe hasło: {$haslo}\n\n"
         . "Aby je aktywować, kliknij link (ważny 30 minut):\n"
-        . reset_link(reset_baza(), $token) . "\n\n"
+        . reset_link($baza, $token) . "\n\n"
         . "Stare hasło działa do czasu kliknięcia powyższego linku.\n"
         . "Jeśli to nie Ty prosiłeś o reset - zignoruj tę wiadomość.\n";
 
@@ -954,8 +1078,52 @@ function db(): PDO
     if (!is_dir(UPLOAD_DIR)) {
         mkdir(UPLOAD_DIR, 0755, true);
     }
+    htaccess_zdjecia_zapisz();
 
     return $pdo;
+}
+
+/**
+ * .htaccess dla katalogu zdjęć (3.10.0) - serwuje wyłącznie pliki graficzne.
+ *
+ * Katalog zdjęć leży w publicznym drzewie i bez tej ochrony każdy plik, który
+ * tam trafi, mógłby zostać wykonany jako PHP (skompromitowany Release +
+ * kliknięcie „Aktualizuj" = RCE na serwisie). Do tej pory jedyną obroną były
+ * losowe nazwy plików z bin2hex(random_bytes(16)).
+ *
+ * UWAGA: `uploads/` jest wyłączone z gita, więc pliku nie da się dostarczyć
+ * w paczce aktualizacji - dlatego powstaje tutaj, przy pierwszym połączeniu
+ * z bazą (czyli też przy instalacji i po aktualizacji, bo do_update() woła db()).
+ *
+ * Składnia: tylko `Require` (Apache/LiteSpeed 2.4). Na tym hostingu nie wolno
+ * mieszać `Require` z `Order/Deny` - Apache 2.4 zwraca wtedy 500 (patrz
+ * wpis o uploads/backup z 3.8.4).
+ */
+function htaccess_zdjecia_zapisz(): void
+{
+    static $sprawdzone = false;
+    if ($sprawdzone || !is_dir(UPLOAD_DIR)) {
+        return;
+    }
+    $sprawdzone = true;
+    $plik = UPLOAD_DIR . '/.htaccess';
+    if (is_file($plik)) {
+        return;
+    }
+    $obraz = '\.(jpe?g|png|webp|gif)$';
+    $skrypt = '\.(php[0-9]?|phtml|phar|cgi|pl|py|sh|shtml|htaccess|htpasswd|ini)$';
+    $tresc = "# Zakaz wykonywania skryptow w katalogu zdjec (3.10.0).\n"
+        . "# Zdjecia sa serwowane jako <img>, wiec otwieramy tylko pliki graficzne.\n"
+        . "Require all granted\n"
+        . "<FilesMatch \"" . $obraz . "\">\n"
+        . "    Require all granted\n"
+        . "</FilesMatch>\n"
+        . "<FilesMatch \"" . $skrypt . "\">\n"
+        . "    Require all denied\n"
+        . "</FilesMatch>\n"
+        . "Options -Indexes\n";
+    @file_put_contents($plik, $tresc);
+    @chmod($plik, 0644);
 }
 
 /** Wysyła odpowiedź JSON i kończy skrypt. */
@@ -967,6 +1135,7 @@ function json_out(mixed $data, int $httpCode = 200): never
     // dostaje STALE wersje/dane instancji (jak wczesniej z serwis.php).
     header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
     header('Pragma: no-cache');
+    naglowki_bezpieczenstwa(true);
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
@@ -974,6 +1143,40 @@ function json_out(mixed $data, int $httpCode = 200): never
 function json_fail(string $error, int $httpCode = 400): never
 {
     json_out(['success' => false, 'error' => $error], $httpCode);
+}
+
+/**
+ * Błąd wewnętrzny (500): szczegóły tylko do logu serwera.
+ *
+ * 3.10.0: `$e->getMessage()` trafiał prosto do odpowiedzi i klient dostawał
+ * "SQLSTATE[22001] ... Data too long for column 'customer_phone'" - nazwy
+ * kolumn i treść zapytań to informacja o schemacie bazy i pomoc dla atakującego.
+ * Użytkownik dostaje teraz komunikat ogólny; pełny komunikat idzie do error_log.
+ */
+function json_fail_internal(string $where, Throwable $e): never
+{
+    error_log('[' . $where . '] ' . $e->getMessage());
+    json_fail('Błąd serwera. Spróbuj ponownie lub zgłoś administratorowi.', 500);
+}
+
+/** Nagłówki bezpieczeństwa (3.10.0) - wspólne dla HTML i JSON. */
+function naglowki_bezpieczenstwa(bool $json = false): void
+{
+    // Panel z poufnymi danymi klientów: zakaz osadzania w ramce (clickjacking),
+    // zakaz sniffowania typu, brak wysyłania referrera na obce domeny.
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: same-origin');
+    if ($json) {
+        header('Content-Security-Policy: default-src \'none\'; frame-ancestors \'none\'');
+    }
+    // HSTS tylko przy HTTPS - nagłówek na HTTP jest ignorowany i tylko
+    // utrudnia debugowanie.
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    if ($https) {
+        header('Strict-Transport-Security: max-age=31536000');
+    }
 }
 
 /** Lista zdjęć (z bazą plików) przypisanych do zgłoszenia. */
@@ -1093,13 +1296,23 @@ function store_photos(int $zgloszenieId, array $files): array
 }
 
 /** Usuwa plik zdjęcia z dysku i wiersz z bazy. */
-function delete_photo(int $photoId): bool
+/**
+ * Usuwa zdjęcie. $guard = true (3.10.0) sprawdza własność zgłoszenia i to,
+ * że nie leży w koszu - dokładnie jak owner_guard w zgloszenia.php.
+ * Bez tego pracownik mógł usunąć zdjęcie cudzego zgłoszenia (potwierdzone
+ * w audycie: HTTP 200), choć przy kasowaniu zgłoszenia dostawał 403.
+ */
+function delete_photo(int $photoId, bool $guard = false): bool
 {
     $stmt = db()->prepare('SELECT id, zgloszenie_id, filename FROM zdjecia WHERE id = ?');
     $stmt->execute([$photoId]);
     $row = $stmt->fetch();
     if (!$row) {
         return false;
+    }
+
+    if ($guard) {
+        zdjecie_owner_guard((int) $row['zgloszenie_id']);
     }
 
     $path = UPLOAD_DIR . '/' . $row['filename'];
@@ -1109,6 +1322,26 @@ function delete_photo(int $photoId): bool
 
     db()->prepare('DELETE FROM zdjecia WHERE id = ?')->execute([$photoId]);
     return true;
+}
+
+/**
+ * Własność zgłoszenia przy operacjach na zdjęciach (3.10.0). Admin przechodzi
+ * bez ograniczeń; pracownik tylko przy własnym zgłoszeniu i poza koszem.
+ */
+function zdjecie_owner_guard(int $zgloszenieId): void
+{
+    if (auth_is_admin()) {
+        return;
+    }
+    $stmt = db()->prepare('SELECT created_by, deleted_at FROM zgloszenia WHERE id = ?');
+    $stmt->execute([$zgloszenieId]);
+    $row = $stmt->fetch();
+    if (!$row || $row['deleted_at'] !== null) {
+        json_fail('Możesz usuwać zdjęcia tylko własnych zgłoszeń.', 403);
+    }
+    if ($row['created_by'] === null || (int) $row['created_by'] !== (int) (auth_user()['id'] ?? 0)) {
+        json_fail('Możesz usuwać zdjęcia tylko własnych zgłoszeń.', 403);
+    }
 }
 
 /** Usuwa wszystkie zdjęcia zgłoszenia (pliki + wpisy). */
@@ -1228,6 +1461,20 @@ function validate_zgloszenie(array $in): array
         $serial = '';   // numer seryjny tylko przy hulajnodze
     }
 
+    // 3.10.0: telefon sprawdzany PRZED modul() -> modul() idzie do bazy,
+    // a błędy walidacji powinny być testowalne i najtańsze możliwe.
+    // Górna granica: kolumna to VARCHAR(32), a sama wartość to cyfry +
+    // ewentualne spacje, kropki i myślniki. Dawniej było tylko minimum,
+    // więc dłuższy numer kończył się wyjątkiem bazy ("Data too long for
+    // column 'customer_phone'") = HTTP 500 zamiast czytelnego komunikatu.
+    $phoneDigits = preg_replace('/\D/', '', $phone) ?? '';
+    if (strlen($phoneDigits) < 9) {
+        json_fail('Podaj poprawny numer telefonu (min. 9 cyfr).');
+    }
+    if (strlen($phoneDigits) > PHONE_MAX_DIGITS) {
+        json_fail('Numer telefonu jest za długi (max. ' . PHONE_MAX_DIGITS . ' cyfr).');
+    }
+
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateIn) || !checkdate(
         (int) substr($dateIn, 5, 2),
         (int) substr($dateIn, 8, 2),
@@ -1247,10 +1494,6 @@ function validate_zgloszenie(array $in): array
     } elseif (!$plannedOk) {
         // Modul kalendarza wylaczony: pusty termin dozwolony (NULL w bazie)
         $datePlanned = '';
-    }
-    $phoneDigits = preg_replace('/\D/', '', $phone) ?? '';
-    if (strlen($phoneDigits) < 9) {
-        json_fail('Podaj poprawny numer telefonu (min. 9 cyfr).');
     }
     if ($fault === '') {
         json_fail($hulajnoga ? 'Opisz usterkę hulajnogi.' : 'Opisz usterkę roweru.');
@@ -1347,7 +1590,7 @@ function config_przebuduj(string $staryCfg, string $wzorzec): array
         'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS',
         'APP_PASSWORD', 'AUTH_COOKIE',
         'SERVICE_ADDRESS', 'SERVICE_CITY', 'SERVICE_PHONE',
-        'GOOGLE_MAPS_URL', 'SITE_URL',
+        'GOOGLE_MAPS_URL', 'SITE_URL', 'PANEL_HOST',
     ];
 
     $tresc = $wzorzec;
@@ -1358,9 +1601,15 @@ function config_przebuduj(string $staryCfg, string $wzorzec): array
             continue;   // starego pliku nie obslugiwala ta stala - zostaje wartosc wzorca
         }
         $nowy = 0;
-        $tresc = preg_replace(
+        // UWAGA: w wartosci zastępującej NIE wolno użyć $m[1] bezpośrednio -
+        // preg_replace interpretuje tam znaki \\ i $n, więc sekret z
+        // backslashem (albo $) bylby zniekształcony, a cudzysłów w cudzym
+        // stringu zamykałby linię i powstałby config.php z błędem składni
+        // (panel padał na 500 przy każdym żądaniu). Callback zwraca
+        // dosłowną treść, bez żadnej interpretacji.
+        $tresc = preg_replace_callback(
             "/const\s+" . preg_quote($k, '/') . "\s*=\s*'[^']*'/",
-            'const ' . $k . ' = ' . $m[1],
+            static fn() => 'const ' . $k . ' = ' . $m[1],
             $tresc,
             1,
             $nowy
@@ -1391,6 +1640,21 @@ function config_przebuduj(string $staryCfg, string $wzorzec): array
     // Sprawdzamy sam naglowek - fraza zywije tez w komentarzu tej funkcji
     if ($tresc === null || preg_match('/^\/\* UWAGA: to jest WZORZEC/m', $tresc) === 1) {
         return ['ok' => false, 'tresc' => '', 'blad' => 'Nie udalo sie przerobic komentarza wzorca.'];
+    }
+
+    // Ostateczna bramka: plik musi dać się sparsować przez PHP. Walidacja
+    // napisowa wyżej (brak UZUPELNIJ, obecność db()) przepuszczała np. sekret
+    // z cudzysłowem lub backslashem - a taki config.php wywracał się na parse
+    // error i kładł panel przy każdym żądaniu, w trakcie aktualizacji.
+    $parsowanie = 'brak bledow parsowania';
+    try {
+        token_get_all($tresc, TOKEN_PARSE);
+    } catch (\Throwable $e) {
+        $parsowanie = $e->getMessage();
+    }
+    if ($parsowanie !== 'brak bledow parsowania') {
+        return ['ok' => false, 'tresc' => '',
+            'blad' => 'Przebudowany config.php jest bledny skladniowo: ' . $parsowanie];
     }
 
     return ['ok' => true, 'tresc' => $tresc, 'blad' => ''];
@@ -1426,11 +1690,18 @@ function check_update(bool $force = false): ?array
     );
 
     if ($response === false) {
+        // 3.10.0: zapisujemy czas próby także po błędzie. Bez tego każde
+        // wejście na panel ponawiało request do GitHuba, a limit 60/h jest
+        // liczony per IP - i współdzielony z innymi panelami na hostingu.
+        setting_set($cacheKey, (string) time());
+        error_log('[check_update] GitHub nie odpowiedzial poprawnie');
         return null;
     }
 
     $data = json_decode($response, true);
     if (!is_array($data) || empty($data['tag_name'])) {
+        setting_set($cacheKey, (string) time());
+        error_log('[check_update] nieczytelna odpowiedz GitHuba');
         return null;
     }
 
@@ -1456,6 +1727,33 @@ function check_update(bool $force = false): ?array
     setting_set($resultKey, json_encode($cache));
 
     return $result;
+}
+
+/**
+ * Czy ścieżka z paczki aktualizacji zostaje wewnątrz katalogu panelu (3.10.0).
+ *
+ * Zip Slip: po zdjęciu prefiksu katalogu (GitHub zipball) nie było ŻADNEJ
+ * kontroli "..", a `@mkdir($dir, 0755, true)` tworzył brakujące katalogi.
+ * Wpis "../../../../tmp/x/uciek.php" lądował więc poza panelem - potwierdzone
+ * testem audytowym ("ZAPISANO ... POZA KATALOGIEM").
+ *
+ * Dopuszczamy zwykłą ścieżkę relacyjną: bez "..", bez pustych segmentów
+ * (ścieżka bezwzględna), bez backslashy (Windows) i bez segmentu ".".
+ */
+function sciezka_w_zipie_bezpieczna(string $relative): bool
+{
+    if ($relative === '' || str_starts_with($relative, '/')) {
+        return false;
+    }
+    if (str_contains($relative, '\\') || str_contains($relative, "\0")) {
+        return false;
+    }
+    foreach (explode('/', $relative) as $segment) {
+        if ($segment === '' || $segment === '.' || $segment === '..') {
+            return false;
+        }
+    }
+    return true;
 }
 
 /** Pobiera i instaluje aktualizacje. Zwraca tablica wyniku. */
@@ -1613,6 +1911,10 @@ function do_update(): array
         // Wpisy katalogow (koncza sie na /) - file_put_contents na katalogu
         // zwraca false, wiec musza byc pominiete przed kontrola zapisu
         if (str_ends_with($relative, '/')) {
+            continue;
+        }
+        // Zip Slip (3.10.0) - patrz sciezka_w_zipie_bezpieczna()
+        if (!sciezka_w_zipie_bezpieczna($relative)) {
             continue;
         }
         // Nie nadpisuj config.php, uploads/, .user.ini

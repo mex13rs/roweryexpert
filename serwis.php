@@ -17,6 +17,9 @@ define('SERWIS_PANEL', true);
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
+// 3.10.0: panel z poufnymi danymi klientów - zakaz ramki (clickjacking),
+// zakaz sniffowania typu, brak wysyłania referrera na obce domeny.
+naglowki_bezpieczenstwa();
 
 // Obsługa logowania / wylogowania
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'login') {

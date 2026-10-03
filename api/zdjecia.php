@@ -59,7 +59,9 @@ try {
         if ($id <= 0) {
             json_fail('Brak identyfikatora zdjęcia.');
         }
-        if (!delete_photo($id)) {
+        // 3.10.0: guard własności (jak w zgloszenia.php) - pracownik usuwa
+        // zdjęcia tylko własnych zgłoszeń i nie z kosza.
+        if (!delete_photo($id, true)) {
             json_fail('Zdjęcie nie istnieje.', 404);
         }
         json_out(['success' => true, 'id' => $id]);
@@ -67,6 +69,5 @@ try {
 
     json_fail('Metoda nieobsługiwana.', 405);
 } catch (Throwable $e) {
-    error_log('[zdjecia.php] ' . $e->getMessage());
-    json_fail('Błąd serwera: ' . $e->getMessage(), 500);
+    json_fail_internal('zdjecia.php', $e);
 }

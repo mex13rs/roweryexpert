@@ -122,7 +122,14 @@
                 icon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 20px; height: 20px; color: var(--danger);"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM3.75 6.75A2.25 2.25 0 0 1 6 4.5h12a2.25 2.25 0 0 1 2.25 2.25v10.5A2.25 2.25 0 0 1 18 19.5H6a2.25 2.25 0 0 1-2.25-2.25V6.75Zm3 0v.008h.008V6.75H6.75Zm7.5 0v.008h.008V6.75h-.984Zm-3.75 0v.008h.008V6.75h-.984Z" /></svg>`;
             }
             
-            toast.innerHTML = `${icon}<span>${message}</span>`;
+            // Tresc przez textContent: komunikaty moga zawierac dane z bazy
+            // (np. nazwa roweru zapisana przez uzytkownika) - innerHTML dalo
+            // wykonanie HTML, czyli XSS z prawami zalogowanego (lista.js,
+            // skaner.js). Ikona to statyczny SVG, wiec zostaje w innerHTML.
+            toast.innerHTML = icon;
+            const tresc = document.createElement('span');
+            tresc.textContent = String(message ?? '');
+            toast.appendChild(tresc);
             // Jeden toast na raz - skumulowane toasty zaslaniały ekran telefonu
             toastContainer.querySelectorAll('.toast').forEach(t => t.remove());
             toastContainer.appendChild(toast);

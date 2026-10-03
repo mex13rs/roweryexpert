@@ -12,6 +12,107 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.10.0 — 2026-10-03 — bezpieczeństwo
+
+Wersja z naprawami po audycie kodu 3.9.0 ( wszystkie poniższe punkty były
+potwierdzone uruchomieniem, nie tylko czytaniem kodu).
+
+### Naprawione
+
+- **Stored XSS przez nazwę roweru** (krytyczne) — `showToast()` wstawiał
+  komunikat przez `innerHTML`, a dwa wywołania podawały nazwę sprzętu z bazy
+  (zmiana statusu na liście, skan QR). Nazwa zgłoszenia nie ma ograniczeń
+  znakowych, więc payload wykonywał się po cichu, bez błędu w konsoli, i mógł
+  wołać dowolne API z uprawnieniami zalogowanego (dla admina także
+  zmiana hasła i `do_update`). Treść komunikatu idzie teraz przez `textContent`.
+- **Przejęcie konta przez podstawiony nagłówek `Host`** (krytyczne) — przy
+  pustym „Adres URL panelu" link potwierdzający z maila resetu (i nagłówek
+  `From`) budowały się z `HTTP_HOST`. Atakujący wysyła żądanie z
+  `Host: evil.example`, właściciel dostaje maila z **prawdziwym tokenem**
+  na cudzej domenie, kliknięcie loguje token u atakującego, który odtwarza go
+  na prawdziwym panelu. Teraz host pochodzi z: skonfigurowanego adresu panelu →
+  `SERVER_NAME` (z vhostu) → `HTTP_HOST` **tylko** gdy pokrywa się z
+  `SERVER_NAME`. Brak zaufanego hostu = fail-closed: mail nie leci wcale,
+  a komunikat jest ten sam co przy nieistniejącym koncie (bez enumeracji).
+  Pole „Adres URL panelu" waliduje teraz schemat (tylko `http`/`https`,
+  bez `login@`) — samo `FILTER_VALIDATE_URL` przepuszczało podmianę hosta.
+- **Zip Slip w `do_update()`** (krytyczne) — po zdjęciu prefiksu katalogu z
+  paczki nie było żadnej kontroli `..`, a `mkdir(..., true)` tworzył brakujące
+  katalogi, więc wpis `../../../../tmp/x/uciek.php` zapisywał się **poza
+  katalogiem panelu** (potwierdzone testem). Ścieżka musi teraz być zwykłą
+  ścieżką relacyjną (bez `..`, `.`, pustych segmentów, bezwzględna, backslashy).
+- **Aktualizacja potrafiła zepsuć `config.php`** (krytyczne) — wartości
+  sekretów były wstawiane przez `preg_replace` jako `replacement`, który
+  interpretuje `\\` i `$n`. Sekret z backslashem dawał `const DB_PASS = 'abc\';`
+  = parse error, czyli **500 na każdym endpoincie**, w trakcie aktualizacji;
+  `$1` znikał bez śladu. Wartości idą teraz przez `preg_replace_callback`
+  (dosłowna treść), a przed zapisem plik musi przejść `token_get_all(...,
+  TOKEN_PARSE)` — zepsuty config zatrzymuje aktualizację przed podmianą plików.
+- **Wyciek wewnętrznych błędów bazy do klienta** — `catch` wysyłał
+  `$e->getMessage()` w odpowiedzi, czyli np.
+  `SQLSTATE[22001] ... Data too long for column 'customer_phone'` (nazwy kolumn
+  i kawałki zapytań to informacja o schemacie). Teraz klient dostaje komunikat
+  ogólny, szczegóły do `error_log` (`json_fail_internal()`).
+- **Telefon dłuższy niż kolumna = HTTP 500** — `VARCHAR(32)`, a walidacja
+  sprawdzała tylko minimum 9 cyfr. Dłuższy numer dawał wyjątek bazy zamiast
+  komunikatu (zdarzało się przy wklejaniu numeru z długiej wizytówki). Teraz
+  `PHONE_MAX_DIGITS = 15` z czytelnym komunikatem; sprawdzane **przed**
+  zapytaniem do bazy.
+- **Usuwanie zdjęć bez sprawdzenia własności** — pracownik mógł usunąć zdjęcie
+  z cudzego zgłoszenia (HTTP 200), choć przy kasowaniu zgłoszenia dostawał 403.
+  `delete_photo()` ma teraz `zdjecie_owner_guard()` (jak `owner_guard` przy
+  zgłoszeniach): admin bez ograniczeń, pracownik tylko własne i nie z kosza.
+- **„Konto nie istnieje" to był martwy kod** — `execute()` na `UPDATE` zwraca
+  `true` także gdy nie zmienił żadnego wiersza, więc zmiana hasła/roli/przełącznika
+  na nieistniejącym koncie zwracała `{"success":true}` i HTTP 200.
+  Nowy `users_istnieje()` → 404.
+- **Brak `try/catch` w `api/uzytkownicy.php`** — wyjątek PDO dawał stack trace
+  na stronie hostingu przy włączonym `display_errors`.
+- **Nagłówki bezpieczeństwa** — `X-Frame-Options: DENY` (clickjacking),
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`,
+  `Strict-Transport-Security` (tylko przy HTTPS) oraz `Content-Security-Policy:
+  default-src 'none'` dla odpowiedzi JSON.
+- **Brak blokady wykonania skryptów w `uploads/zdjecia/`** — katalog jest
+  publiczny, a jedyną ochroną były losowe nazwy plików. Powstaje `.htaccess`
+  przepuszczający wyłącznie `jpg/png/webp/gif` (deny dla `php`, `phtml`,
+  `phar`, `cgi`, `sh`, …). `uploads/` jest poza gitem, więc plik zakłada
+  `db()` przy pierwszym połączeniu — czyli też przy instalacji i po aktualizacji.
+  UWAGA dla administratora serwera: składnia `Require` (Apache/LiteSpeed 2.4)
+  potwierdzona na tym hostingu 29.09 (`uploads/backup`).
+- **`check_update()` bez odstępu przy błędzie** — czas próby nie był zapisywany,
+  więc każde wejście na panel ponawiało request do GitHuba, a limit 60/h jest
+  liczony per IP i współdzielony na hostingu.
+
+### Drobne
+
+- **UWAGA BEZPIECZEŃSTWA:** `DOKUMENTACJA.md` od 3.8.5 podawał jako przykład
+  **prawdziwe hasło do bazy** (w tabeli stałych `config.php`). W tej wersji
+  dokumentacja nie zawiera już prawdziwych sekretów, ale hasło jest w **historii
+  gita i w paczkach Release 3.8.5 – 3.9.0** (także w repo publicznym).
+  **Hasło do bazy należy zmienić** w panelu hostingu.
+
+- `config.php`: w komentarzu blokowym było `api/*` — znak `*/` zamykałby
+  komentarz przy każdej edycji (ten sam defekt, który w 2.7 wywrócił panel).
+  Kontrola „liczba `/*` = liczba `*/`" znów działa.
+- `api/uzytkownicy.php`: `u.rola = "admin"` → apostrofy (padłoby przy
+  `ANSI_QUOTES`).
+
+### Testy
+
+- Nowy `tests/BezpieczenstwoTest.php` — walidacja hosta i URL (w tym
+  odrzucenie `Host:` z innej domeny), `config_przebuduj()` z sekretami
+  zawierającymi backslash, cudzysłów i `$1` (sprawdzane przez `token_get_all`),
+  kontrola ścieżek z Zip Slip, granica długości telefonu.
+- PHPUnit: **71 testów** (było 53), wszystkie zielone.
+
+### Zalecane po wdrożeniu
+
+- Ustawić **„Adres URL panelu"** w Ustawieniach → Dane serwisu
+  (np. `https://host91573.iqhs.pl/rower`) — to jedyne źródło hostu, którego
+  nie da się podać w nagłówku żądania.
+
+---
+
 ## 3.9.0 — 2026-10-02
 
 ### Nowe

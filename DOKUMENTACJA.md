@@ -378,18 +378,73 @@ Siedem tabel MySQL (tworzonych/modyfikowanych automatycznie przez migracje w `co
 
 ## 18. Bezpieczeństwo — zestawienie
 
+Stan na 3.10.0 (po audycie kodu 3.9.0).
+
+**Uwierzytelnianie i sesje**
+
 - PDO z **prepared statements** wszędzie; `declare(strict_types=1)`.
 - Hasła: `password_hash()` (bcrypt); sesje: SHA-256 token + sliding TTL.
 - Cookie: `HttpOnly`, `SameSite=Lax`, `Secure` przy HTTPS (wykrywanie też przez nagłówek
   reverse proxy).
 - Brak CSRF w API — ochrona z `SameSite=Lax`; token CSRF (`hash_equals`) tylko
   w instalatorze.
-- Anti brute-force 5 prób / 15 minut; brak funkcji e-mail (aplikacja nie wysyła maili).
-- `config.php` wykluczony z kopii zapasowej i podmiany aktualizacji; `uploads/backup/`
-  z `.htaccess` „Require all denied”.
+- Anti brute-force 5 prób / 15 minut.
+- Reset hasła: token jednorazowy z TTL 30 min, anty-enumeracja (licznik rośnie dla
+  **każdego** żądania), hasło wchodzi dopiero po kliknięciu linku.
+
+**Dane wprowadzane przez użytkownika**
+
+- `showToast()` wstawia treść przez `textContent` (3.10.0) — nazwa roweru z bazy
+  nie może wykonać HTML (wcześniej `innerHTML` = stored XSS z uprawnieniami
+  zalogowanego).
+- Pozostałe wstawki HTML w JS używają `escapeHtml()`.
+
+**Reset hasła i domena panelu (3.10.0)**
+
+- Host linku potwierdzającego i nagłówka `From` pochodzi z: `site_url`
+  (Ustawienia → Dane serwisu) → stała `PANEL_HOST` w `config.php` (wpisuje ją
+  `install.php`) → `SERVER_NAME` → `HTTP_HOST` **tylko** gdy pokrywa się
+  z `SERVER_NAME`. Brak zaufanego hostu = fail-closed (mail nie leci wcale,
+  komunikat identyczny jak przy nieistniejącym koncie).
+- `site_url` walidowane: tylko `http`/`https`, bez `login@` w URL.
+
+**Aktualizacje**
+
+- `config_przebuduj()` przenosi sekrety przez `preg_replace_callback` (dosłowna
+  treść, bez interpretacji `\\` i `$n`), a przed zapisem sprawdza plik przez
+  `token_get_all(..., TOKEN_PARSE)` — zepsuty `config.php` zatrzymuje aktualizację
+  przed podmianą plików.
+- Ścieżki z paczki sprawdzane przez `sciezka_w_zipie_bezpieczna()` (Zip Slip: `..`,
+  ścieżki bezwzględne, backslashy, pusty segment) — plik nie wypadnie poza katalog panelu.
+- `uploads/`, `config.php` i `.user.ini` pomijane przy podmianie.
+
+**Pliki i nagłówki HTTP**
+
+- `uploads/zdjecia/.htaccess` przepuszcza wyłącznie `jpg/png/webp/gif` (blokada
+  wykonania skryptów). Plik zakłada `db()`, więc powstaje też przy instalacji
+  i po aktualizacji (`uploads/` jest poza gitem).
+- `uploads/backup/.htaccess` z `Require all denied` (kopiuje `config.php`).
+- Nagłówki: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: same-origin`, `Strict-Transport-Security` (tylko HTTPS) oraz
+  `Content-Security-Policy: default-src 'none'` dla odpowiedzi JSON.
 - Odpowiedzi API i strony z nagłówkami `no-store/no-cache` (ochrona przed cache LiteSpeed).
+- Błędy wewnętrzne idą do `error_log`, klient dostaje komunikat ogólny
+  (`json_fail_internal()`); każdy `api/*` ma `try/catch`.
+
+**Uprawnienia**
+
+- `owner_guard()` przy kasowaniu/przywracaniu zgłoszeń; `zdjecie_owner_guard()`
+  przy usuwaniu zdjęć (3.10.0) — pracownik tylko własne i nie z kosza.
+- `users_istnieje()` przed zmianą hasła/roli/przełącznika (3.10.0) — `execute()`
+  na `UPDATE` zwraca `true` także przy 0 wierszy, więc dawniej nieistniejące
+  konto dostawało `{"success":true}`.
 - Moduły wyłączone blokowane też po stronie serwera; gate instalacji: brak `config.php`
   → 503 JSON / przekierowanie do instalatora.
+- `purge` (trwałe kasowanie) tylko dla admina.
+
+**Sekrety**
+
+- `config.php` wykluczony z kopii zapasowej i podmiany plików z paczki.
 
 ---
 
@@ -663,7 +718,9 @@ Co się dzieje po kliknięciu:
      (1 wystąpienie) podmienia stałe: **`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`,
      `DB_PASS`, `APP_PASSWORD`, `AUTH_COOKIE`** (losowy `'re_sess_' .
      bin2hex(random_bytes(8))`), **`SERVICE_ADDRESS`, `SERVICE_CITY`, `SERVICE_PHONE`,
-     `GOOGLE_MAPS_URL`, `SITE_URL`**;
+     `GOOGLE_MAPS_URL`, `SITE_URL`**, a od 3.10.0 także **`PANEL_HOST`**
+     (`inst_panel_host($dane['site'])` — host z podanego adresu panelu, a gdy
+     pusty z nagłówka żądania);
    * komentarz wzorca („UWAGA: to jest WZORZEC…”) zastępuany jest tekstem
      „Plik konfiguracji wygenerowany przez install.php. Zawiera sekrety (hasla) —
      nie udostepniaj nikomu i nie wrzucaj do gita.”;
@@ -1419,6 +1476,8 @@ Dokumentacja fragmentaryczna (część A) aplikacji **RoweryExpert** — panelu 
 | `SERVICE_PHONE` | `'344454554'` | Telefon serwisu — stopka wydruku (klucz `service_phone`). |
 | `GOOGLE_MAPS_URL` | `https://maps.app.goo.gl/...` | Link do wizytówki Google; służy do kodu QR „Oceń nas” na wydruku (klucz `google_maps_url`). |
 | `SITE_URL` | `''` | Opcjonalny adres URL panelu; puste = bez zmian (klucz `site_url`). |
+| `PANEL_HOST` | `''` | **3.10.0.** Host panelu wpisany przez `install.php` (`inst_panel_host()`). Źródło hostu dla linku resetu hasła i nagłówka `From`, którego klient nie może podsunąć nagłówkiem żądania. Pusty = host z `SERVER_NAME` (musi się zgadzać z `HTTP_HOST`). |
+| `PHONE_MAX_DIGITS` | `15` | **3.10.0.** Górna granica telefonu klienta; kolumna `customer_phone` to `VARCHAR(32)`, wcześniej sprawdzano tylko minimum 9 cyfr (dłuższy numer → wyjątek bazy = HTTP 500). |
 | `UPLOAD_DIR` | `__DIR__ . '/uploads/zdjecia'` | Katalog fizyczny na wgrane zdjęcia (tworzony przez `db()` z uprawnieniami `0755`). |
 | `UPLOAD_URL` | `'uploads/zdjecia'` | Ścieżka URL do zdjęć (składana w polu `url` zdjęcia). |
 | `MAX_PHOTO_BYTES` | `10 * 1024 * 1024` (10 MB) | Maksymalny rozmiar jednego zdjęcia w bajtach. |
@@ -1426,8 +1485,8 @@ Dokumentacja fragmentaryczna (część A) aplikacji **RoweryExpert** — panelu 
 | `MAX_PHOTOS_PER_REQUEST` | `20` | Maksymalna liczba plików w jednym wgraniu (limit serwera `max_file_uploads`). |
 | `ALLOWED_PHOTO_MIME` | `image/jpeg→jpg`, `image/png→png`, `image/webp→webp`, `image/gif→gif` | Biała lista formatów zdjęć wraz z docelowym rozszerzeniem pliku. |
 | `STATUSES` | `['in_progress', 'completed', 'picked_up']` | Dozwolone statusy zgłoszenia: w trakcie / zakończone / odebrane. |
-| `APP_PASSWORD` | `'mamdostep'` | Hasło konta `admin` tworzonego przy pierwszym uruchomieniu (seed hasła aplikacji — sekret). |
-| `AUTH_COOKIE` | `'re_sess_1ad4bdb4d2bd8b04'` | **Własna** nazwa cookie sesji (path `/`) — fork działa równolegle ze starą wersją bez kolidowania sesjami. |
+| `APP_PASSWORD` | sekret | Hasło konta `admin` tworzonego przy pierwszym uruchomieniu (seed hasła aplikacji). **3.10.0: w tej dokumentacji nie podajemy prawdziwych wartości sekretów** — poprzednie wydania dokumentu zawierały hasło do bazy jako przykład. |
+| `AUTH_COOKIE` | `'re_sess_<losowe>'` | **Własna** nazwa cookie sesji (path `/`) — fork działa równolegle ze starą wersją bez kolidowania sesjami. |
 | `SESSION_TTL` | `14 * 86400` (14 dni) | Czas życia sesji w sekundach; sesja jest **ślizgająca** (przedłużana). |
 | `LOGIN_MAX_ATTEMPTS` | `5` | Liczba nieudanych prób logowania blokująca klucz. |
 | `LOGIN_ATTEMPT_WINDOW` | `15 * 60` (15 min) | Okno (w sekundach), w którym liczą się nieudane próby. |
@@ -1588,7 +1647,13 @@ Migracje są **idempotentne** (wykrywanie stanu przez `SHOW COLUMNS` / `SELECT`)
 - **`photos_stats(): array`** — `['photos' => liczba, 'bytes' => suma size_bytes]` dla całej tabeli `zdjecia`.
 - **`photos_for(int $zgloszenieId): array`** — zdjęcia danego zgłoszenia jako `[{id, url, name, created}]` (`url = UPLOAD_URL . '/' . filename`), kolejność rosnąca po id.
 - **`store_photos(int $zgloszenieId, array $files): array`** — zapis wgranych plików z `$_FILES['photos']` i wpisów w `zdjecia`. Sprawdza: liczbę plików (`> MAX_PHOTOS_PER_REQUEST` → fail), **łączny limit 100 MB** (przed pętlą, żeby nie zapisać części partii), błędy wgrywania (`UPLOAD_ERR_*` z mapą komunikatów), rozmiar `MAX_PHOTO_BYTES`, `is_uploaded_file()`, **MIME przez `finfo`** (fallback `getimagesize`) w `ALLOWED_PHOTO_MIME`, poprawność obrazu (`getimagesize`), a następnie zapisuje pod losową nazwą `bin2hex(random_bytes(16)).ext` z `chmod 0644`. Zwraca tablicę zapisanych zdjęć `[{id, url, name, created}]`; błędy przez `json_fail()`.
-- **`delete_photo(int $photoId): bool`** — usuwa plik z dysku (`@unlink`) i wiersz z `zdjecia`; `false` gdy nie istnieje.
+- **`delete_photo(int $photoId, bool $guard = false): bool`** — usuwa plik z dysku (`@unlink`) i wiersz z `zdjecia`; `false` gdy nie istnieje. **`$guard = true`** (3.10.0, wołane przez `api/zdjecia.php`) sprawdza najpierw `zdjecie_owner_guard()` — pracownik usuwa zdjęcia tylko własnych zgłoszeń i nie z kosza (admin bez ograniczeń).
+- **`zdjecie_owner_guard(int $zgloszenieId): void`** — 403 „Możesz usuwać zdjęcia tylko własnych zgłoszeń.” dla pracownika, gdy zgłoszenie go nie jest, nie istnieje albo leży w koszu.
+- **`htaccess_zdjecia_zapisz(): void`** — tworzy `uploads/zdjecia/.htaccess` (przepuszcza tylko `jpg/png/webp/gif`, blokuje `php`/`phtml`/`phar`/`cgi`/…), wolane z `db()` raz na proces. `uploads/` jest poza gitem, więc pliku nie da się dostarczyć paczką.
+- **`sciezka_w_zipie_bezpieczna(string $relative): bool`** — kontrola ścieżki z paczki aktualizacji (Zip Slip): odrzuca `..`, `.`, pusty segment, ścieżkę bezwzględną, backslashy i bajt ` `.
+- **`naglowki_bezpieczenstwa(bool $json = false): void`** — `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin`, `Strict-Transport-Security` (tylko HTTPS), a dla JSON dodatkowo `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`. Wywoływane w `serwis.php` i `json_out()`.
+- **`json_fail_internal(string $where, Throwable $e): never`** — `error_log` + generyczny komunikat 500 (bez treści wyjątku w odpowiedzi).
+- **`panel_host_poprawny(string $host): bool`** / **`panel_url_poprawny(string $url): bool`** / **`panel_host(?string $skonfigurowany_url = null): string`** / **`panel_host_bez_portu(string $wartosc): string`** — zaufany host panelu dla linku resetu hasła i nagłówka `From` (3.10.0). Kolejność: `site_url` → `PANEL_HOST` → `SERVER_NAME` → `HTTP_HOST` tylko gdy pokrywa się z `SERVER_NAME`; brak zaufanego hostu = pusty string (fail-closed). Argument pozwala testować te funkcje bez bazy.
 - **`delete_photos_of(int $zgloszenieId): void`** — usuwa **wszystkie** zdjęcia zgłoszenia (pliki + wpisy) — używane przy trwałym kasowaniu zgłoszenia.
 
 ### 2.6. Mapowanie i walidacja
@@ -1605,7 +1670,7 @@ Migracje są **idempotentne** (wykrywanie stanu przez `SHOW COLUMNS` / `SELECT`)
 ### 2.8. Automatyczne aktualizacje (v2)
 
 - **`wersja_normalizuj(string $v): string`** — normalizacja do semver `X.Y.Z` („3.8” → „3.8.0”, „3.8-instalator” → „3.8.0”, brak = `0.0.0`) — bez tego `version_compare` źle porównuje sufiksy.
-- **`config_przebuduj(string $staryCfg, string $wzorzec): array`** — przebudowuje `config.php` z **nowego** `config.example.php`, przenosząc 1:1 sekrety i dane instancji z pliku starego (lista stałych: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_PASSWORD`, `AUTH_COOKIE`, `SERVICE_ADDRESS`, `SERVICE_CITY`, `SERVICE_PHONE`, `GOOGLE_MAPS_URL`, `SITE_URL`). Twarda walidacja: żadna stała nie może zostać `'UZUPELNIJ'`, muszą istnieć `function db(` i `const APP_VERSION`, komentarz wzorca musi zostać przerobiony. Zwraca `['ok' => bool, 'tresc' => string, 'blad' => string]`.
+- **`config_przebuduj(string $staryCfg, string $wzorzec): array`** — przebudowuje `config.php` z **nowego** `config.example.php`, przenosząc 1:1 sekrety i dane instancji z pliku starego (lista stałych: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, `APP_PASSWORD`, `AUTH_COOKIE`, `SERVICE_ADDRESS`, `SERVICE_CITY`, `SERVICE_PHONE`, `GOOGLE_MAPS_URL`, `SITE_URL`). Sekrety wstawiane są przez `preg_replace_callback` (3.10.0 — `replacement` w `preg_replace` interpretuje `\\` i `$n`, a sekret z backslashem psuł składnię `config.php` i kładł panel na 500). Twarda walidacja: żadna stała nie może zostać `'UZUPELNIJ'`, muszą istnieć `function db(` i `const APP_VERSION`, komentarz wzorca musi zostać przerobiony, a dodatkowo (3.10.0) plik musi przejść `token_get_all($tresc, TOKEN_PARSE)` — zepsuty config zatrzymuje aktualizację **przed** podmianą plików. Zwraca `['ok' => bool, 'tresc' => string, 'blad' => string]`.
 - **`check_update(bool $force = false): ?array`** — sprawdza `https://api.github.com/repos/mex13rs/roweryexpert/releases/latest` (User-Agent `RoweryExpert-Updater`, timeout 10 s); cache 24 h w `update_check_at` / `update_check_result` (bez pola `opis` — kolumna ma 255 znaków). Zwraca `['dostepna', 'nowa_wersja', 'obecna_wersja', 'url', 'opis']` albo `null` przy błędzie sieci/parsowania.
 - **`do_update(): array`** — pełny proces aktualizacji: pobiera release z GitHuba, waliduje format tagu `^v\d+\.\d+(\.\d+)?$`, **blokuje aktualizację wstecz i pętlę** (`version_compare <=`), pobiera zipball, zapisuje plik tymczasowy, weryfikuje ZIP (musi zawierać `serwis.php` i `install.php`), odczytuje nowy `config.example.php` z paczki i **przed podmianą plików** przebudowuje nowy `config.php` (przerwanie = „Nic sie nie zmienilo”). Następnie: kopia zapasowa do `uploads/backup/backup-<data>.zip` (pomija `config.php`, `uploads/`, `.git/`, backupy) z tworzeniem `.htaccess` „Require all denied”, rozpakowanie paczki z pominięciem `config.php`, `uploads/`, `.user.ini`, zapis z obsługą błędu prawa zapisu, `opcache_invalidate()` na plikach i `opcache_reset()`, wywołanie `db()` (migracje), zapis `installed_version`, wyczyszczenie cache aktualizacji. Zwraca `['success' => bool, ...]` (błąd: `'error'`, sukces: `'data' => ['nowa_wersja']`).
 
@@ -1652,7 +1717,7 @@ Uwierzytelnienie: `auth_require()`; **dodatkowa bramka na poziomie całego pliku
 |---|---|---|---|
 | **GET** | `?zgloszenie_id=N` | każda zalogowana rola (moduł `zdjecia`) | `{success, data: [{id, url, name, created}]}`; brak/nieprawidłowe `zgloszenie_id` → 400. |
 | **POST** | multipart: `zgloszenie_id`, pliki `photos` | każda zalogowana rola (moduł `zdjecia`) | Weryfikacja istnienia zgłoszenia (404), `$_FILES['photos']` niepuste (400), `store_photos()` z pełną walidacją limitów. Odp. **201** `{success, data: [<zapisane zdjęcia>]}`. **Brak `owner_guard` — każdy zalogowany doda/usunie zdjęcie do każdego zgłoszenia.** |
-| **DELETE** | `?id=N` | każda zalogowana rola (moduł `zdjecia`) | `delete_photo()` — kasuje plik i wiersz; nie istnieje → 404. Odp.: `{success, id}`. |
+| **DELETE** | `?id=N` | każda zalogowana rola (moduł `zdjecia`) | `delete_photo($id, true)` — kasuje plik i wiersz; nie istnieje → 404; **3.10.0: pracownik tylko dla własnych zgłoszeń i nie z kosza → 403** (`zdjecie_owner_guard`). Odp.: `{success, id}`. |
 | inne metody | — | — | **405** „Metoda nieobsługiwana.” |
 
 ### 3.3. `api/uslugi.php` — katalog usług
@@ -1692,12 +1757,12 @@ Uwierzytelnienie: `auth_require()` na starcie; konkretne akcje dodatkowo wymagaj
 | **POST** | `check_update` | każda zalogowana rola | `check_update(true)` (wymuszenie odpytania GitHuba). Odp.: `{success, data: {update: ...|null}}`. |
 | **POST** | `do_update` | **admin** | `do_update()` — odpowiedź przekazywana wprost: `{success:false, error}` lub `{success:true, data:{nowa_wersja}}`. **Efekty uboczne:** pobranie paczki z GitHuba, kopia zapasowa ZIP w `uploads/backup/` (+ `.htaccess` blokujący dostęp), podmiana plików (z pominięciem `config.php`, `uploads/`, `.user.ini`), przebudowa `config.php` z nowego wzorca ze starymi sekretami + kopia `config-<data>.php.bak`, `opcache_reset()`, migracje `db()`, zapis `installed_version`, wyczyszczenie cache aktualizacji. |
 | **POST** | `modules` | **admin** | Pole `moduly` = JSON; wejście **sanityzowane do listy `moduly_dostepne()`** (brak klucza = `modul_domyslnie($m)`, tj. `hulajnogi` startuje wyłączony, pozostałe włączone), zapis `setting_set('moduly', json)` + odświeżenie cache `moduly(true)`. Odp.: `{success, data: {moduly}}`. |
-| **POST** | `dane_instancji` | **admin** | Pola i limity: `service_address` ≤120, `service_city` ≤120, `service_phone` ≤32, `google_maps_url` ≤255 (**`FILTER_VALIDATE_URL`, puste dozwolone**), `site_url` ≤255 (**`FILTER_VALIDATE_URL`**). Zapis do `ustawienia`. Odp.: `{success, data: {dane_instancji}}`. |
+| **POST** | `dane_instancji` | **admin** | Pola i limity: `service_address` ≤120, `service_city` ≤120, `service_phone` ≤32, `google_maps_url` ≤255 (**`FILTER_VALIDATE_URL`, puste dozwolone**), `site_url` ≤255 (**3.10.0: `panel_url_poprawny()` — tylko `http`/`https`, bez `login@` w URL**), `reset_email` ≤255 (`FILTER_VALIDATE_EMAIL`). Zapis do `ustawienia`. Odp.: `{success, data: {dane_instancji}}`. |
 | **POST** | inne | — | **400** „Nieznane żądanie.” |
 
 ### 3.6. `api/konto.php` — konto bieżącego użytkownika
 
-Uwierzytelnienie: `auth_require()` na starcie. **Brak `try/catch`.**
+Uwierzytelnienie: `auth_require()` na starcie. **3.10.0: `try/catch` → `json_fail_internal()`** (także `api/uzytkownicy.php`, które wcześniej nie miał obsługi wyjątków).
 
 | Metoda | `action` / parametry | Uprawnienia | Odpowiedź / efekt |
 |---|---|---|---|
@@ -1716,6 +1781,7 @@ Istnieją **dwie role** w `users.rola`: `admin` i `pracownik` (domyślna). Nie m
 - `auth_require()` → 401 „Brak autoryzacji - zaloguj się.” (brak/nieprawidłowa sesja);
 - `auth_require_admin()` → 401, a następnie 403 „Brak uprawnień administratora.” (rola ≠ `admin`);
 - `owner_guard($id)` → 403 „Możesz kasować i przywracać tylko własne zgłoszenia.” (pracownik bez `created_by` = swojego);
+- `zdjecie_owner_guard($zgloszenie_id)` → 403 „Możesz usuwać zdjęcia tylko własnych zgłoszeń.” (3.10.0, `delete_photo($id, true)`);
 - bramki modułów `modul(...)` → 403 z komunikatem o wyłączonym module.
 
 | Uprawnienie | `admin` | `pracownik` |
@@ -1724,7 +1790,8 @@ Istnieją **dwie role** w `users.rola`: `admin` i `pracownik` (domyślna). Nie m
 | Tworzenie / edycja / notatki / checkboxy / zmiana statusu / potwierdzanie dowolnego zgłoszenia | tak | tak |
 | Soft delete (kosz) i przywracanie | każde zgłoszenie | **tylko własne** (`owner_guard`) |
 | Trwałe usunięcie (`purge=1`, z plikami) | **tak** | **nie** (403) |
-| Dodawanie / usuwanie zdjęć | każde zgłoszenie | każde zgłoszenie (brak `owner_guard`) |
+| Dodawanie zdjęć | każde zgłoszenie | każde zgłoszenie |
+| Usuwanie zdjęć | każde zgłoszenie, także z kosza | **tylko własne i nie z kosza** (`zdjecie_owner_guard`, 3.10.0) |
 | Odczyt katalogu usług | tak | tak |
 | Zapis / usunięcie usługi | **tak** | nie (403) |
 | Zarządzanie kontami (`uzytkownicy.php`) | **tak** (cały plik) | nie (401/403) |
