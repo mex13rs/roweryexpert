@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i katalogu api, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.10.1';
+const APP_VERSION = '3.11.0';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -87,6 +87,12 @@ const UPLOAD_URL = 'uploads/zdjecia';
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024; // 10 MB na zdjęcie
 const MAX_PHOTOS_TOTAL_BYTES = 100 * 1024 * 1024; // 100 MB łącznie na wszystkie zdjęcia
 const MAX_PHOTOS_PER_REQUEST = 20;        // maks. zdjęć w jednym wgraniu (limit serwera max_file_uploads)
+// 3.10.1: miniatury. Lista pokazuje zdjęcia w 56 px, a pliki z telefonu
+// mają 3–5 MB, więc bez miniatur panel ściągał przy otwarciu wszystkie
+// zdjęcia ze wszystkich zgłoszeń (79,6 MB przy 20 zgłoszeniach).
+const THUMB_MAX_WIDTH = 320;        // szerokość miniatury w px (kafel w karcie ma ~120 px)
+const THUMB_JPEG_QUALITY = 78;      // jakość JPEG miniatury
+const THUMB_MAX_SOURCE_PX = 40_000_000;   // 4000x10000 - powyżej nie wczytujemy do pamięci (~50 MB na 4000x3000)
 const ALLOWED_PHOTO_MIME = [
     'image/jpeg' => 'jpg',
     'image/png'  => 'png',
@@ -818,6 +824,7 @@ function db(): PDO
             id            INT UNSIGNED NOT NULL AUTO_INCREMENT,
             zgloszenie_id INT UNSIGNED NOT NULL,
             filename      VARCHAR(255) NOT NULL,
+            thumb         VARCHAR(255) DEFAULT NULL,
             original_name VARCHAR(255) DEFAULT NULL,
             size_bytes    BIGINT UNSIGNED DEFAULT NULL,
             created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -915,11 +922,15 @@ function db(): PDO
             ->execute(['admin', app_password_hash()]);
     }
 
-    // Migracja na istniejących bazach: dodanie kolumny size_bytes + uzupełnienie z dysku
+    // Migracja na istniejących bazach: size_bytes (z dysku) + thumb (3.10.1)
     $hasSize = false;
+    $hasThumb = false;
     foreach ($pdo->query('SHOW COLUMNS FROM zdjecia') as $col) {
         if (($col['Field'] ?? '') === 'size_bytes') {
             $hasSize = true;
+        }
+        if (($col['Field'] ?? '') === 'thumb') {
+            $hasThumb = true;
         }
     }
     if (!$hasSize) {
@@ -931,6 +942,12 @@ function db(): PDO
                 $upd->execute([$bytes, $row['id']]);
             }
         }
+    }
+    if (!$hasThumb) {
+        $pdo->exec('ALTER TABLE zdjecia ADD COLUMN thumb VARCHAR(255) DEFAULT NULL AFTER filename');
+        // Starych zdjęć nie przetwarzamy tu (dla kazdego trzeba GD i czas);
+        // zostaną z thumb = NULL, a frontend pokaże pełne zdjęcie. Uzupełnia
+        // je funcja miniaturki_zdjecia() wołana ze skryptu operatora.
     }
 
     // Migracje tabeli zgloszenia (wykrywanie kolumn przez SHOW COLUMNS):
@@ -1183,7 +1200,7 @@ function naglowki_bezpieczenstwa(bool $json = false): void
 function photos_for(int $zgloszenieId): array
 {
     $stmt = db()->prepare(
-        'SELECT id, filename, original_name, created_at
+        'SELECT id, filename, thumb, original_name, created_at
            FROM zdjecia
           WHERE zgloszenie_id = ?
           ORDER BY id ASC'
@@ -1193,13 +1210,136 @@ function photos_for(int $zgloszenieId): array
     $photos = [];
     foreach ($stmt->fetchAll() as $row) {
         $photos[] = [
-            'id'      => (int) $row['id'],
-            'url'     => UPLOAD_URL . '/' . $row['filename'],
-            'name'    => $row['original_name'],
-            'created' => $row['created_at'],
+            'id'       => (int) $row['id'],
+            'url'      => UPLOAD_URL . '/' . $row['filename'],
+            // 3.10.1: miniatura do listy i karty (pełne zdjęcie zostaje
+            // w lightboxie). Gdy brak miniatury (np. stary wpis, serwer bez
+            // GD) frontend dostaje thumb_url = null i użyje pełnego zdjęcia.
+            'thumb_url' => ($row['thumb'] ?? null) !== null && $row['thumb'] !== ''
+                ? UPLOAD_URL . '/' . $row['thumb']
+                : null,
+            'name'     => $row['original_name'],
+            'created'  => $row['created_at'],
         ];
     }
     return $photos;
+}
+
+/** Ścieżka bezwzględna miniatury dla pliku oryginału (albo null). */
+function miniaturka_sciezka(string $nazwaOryginalu): string
+{
+    $kropka = strrpos($nazwaOryginalu, '.');
+    $bezRozszerzenia = $kropka === false ? $nazwaOryginalu : substr($nazwaOryginalu, 0, $kropka);
+    return UPLOAD_DIR . '/thumb_' . $bezRozszerzenia . '.jpg';
+}
+
+/**
+ * Generuje miniaturę zdjęcia (3.10.1).
+ *
+ * Zdjęcia z telefonu mają 3–5 MB i 4000+ px, a lista zgłoszeń wstawia je
+ * jako miniatury 56 px. Bez miniatur panel ściągał przy każdym otwarciu
+ * **wszystkie** zdjęcia ze wszystkich zgłoszeń: przy 20 zgłoszeniach to
+ * 79,6 MB (pomiar na danych produkcyjnych). Miniatura 320 px z takiego pliku
+ * waży ok. 16 kB, czyli ~300 razy mniej.
+ *
+ * Zasady:
+ * - oryginału nie ruszamy (lightbox pokazuje pełne zdjęcie),
+ * - brak GD na serwerze albo błąd => null, wgrywanie działa dalej (frontend
+ *   pokaże pełne zdjęcie); funkcja nigdy nie wywala wgrywania,
+ * - pamięć: obraz 4000×3000 to ~50 MB, stąd limit `THUMB_MAX_SOURCE_PX`
+ *   (powyżej nie próbujemy wcale),
+ * - EXIF orientation: zdjęcia z telefonu bywają obrócone, a miniatura
+ *   musi być pionowa poziomo (Orientation 3/6/8).
+ */
+function zrob_miniaturke(string $sciezka): ?string
+{
+    // Brak GD **lub** brak obsługi JPEG = miniatury nie robimy.
+    // (Są PHP z GD zbudowanym bez JPEG - wtedy imagejpeg() nie istnieje.)
+    if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+        return null;
+    }
+    $info = @getimagesize($sciezka);
+    if (!is_array($info) || empty($info[0]) || empty($info[1])) {
+        return null;
+    }
+    $szer = (int) $info[0];
+    $wys = (int) $info[1];
+    if ($szer <= 0 || $wys <= 0 || $szer * $wys > THUMB_MAX_SOURCE_PX) {
+        return null;   // za duży plik, żeby bezpiecznie wczytać do pamięci
+    }
+
+    // Wybór funkcji wczytującej; brak obsługi formatu to nie jest błąd,
+    // tylko "nie robimy miniatury" (frontend pokaże pełne zdjęcie)
+    $wczytaj = match ($info['mime'] ?? '') {
+        'image/jpeg' => function_exists('imagecreatefromjpeg') ? 'imagecreatefromjpeg' : null,
+        'image/png'  => function_exists('imagecreatefrompng') ? 'imagecreatefrompng' : null,
+        'image/webp' => function_exists('imagecreatefromwebp') ? 'imagecreatefromwebp' : null,
+        'image/gif'  => function_exists('imagecreatefromgif') ? 'imagecreatefromgif' : null,
+        default      => null,
+    };
+    if ($wczytaj === null) {
+        return null;
+    }
+
+    $zrodlo = null;
+    try {
+        $zrodlo = @$wczytaj($sciezka);
+        if (!$zrodlo instanceof GdImage) {
+            return null;
+        }
+
+        // Orientacja z EXIF (1 = normalna; 3/6/8 = obrócone)
+        $obrot = 0;
+        if (function_exists('exif_read_data')) {
+            $exif = @exif_read_data($sciezka);
+            $orientacja = (int) ($exif['Orientation'] ?? 1);
+            $obrot = match ($orientacja) {
+                3 => 180,
+                6 => -90,
+                8 => 90,
+                default => 0,
+            };
+        }
+
+        $skala = min(1.0, THUMB_MAX_WIDTH / max(1, $szer));
+        $nw = max(1, (int) round($szer * $skala));
+        $nh = max(1, (int) round($wys * $skala));
+        if ($obrot !== 0) {
+            [$nw, $nh] = [$nh, $nw];
+        }
+
+        $mini = imagecreatetruecolor($nw, $nh);
+        // przezroczystość PNG/GIF -> białe tło, inaczej JPEG daje czarne
+        $bialy = imagecolorallocate($mini, 255, 255, 255);
+        imagefilledrectangle($mini, 0, 0, $nw, $nh, $bialy);
+        imagecopyresampled($mini, $zrodlo, 0, 0, 0, 0, $nw, $nh, $szer, $wys);
+        if ($obrot !== 0) {
+            $obrocona = imagerotate($mini, $obrot, $bialy);
+            if ($obrocona instanceof GdImage) {
+                imagedestroy($mini);
+                $mini = $obrocona;
+            }
+        }
+
+        $cel = miniaturka_sciezka(basename($sciezka));
+        ob_start();
+        $ok = imagejpeg($mini, $cel, THUMB_JPEG_QUALITY);
+        ob_end_clean();
+        imagedestroy($mini);
+
+        if ($ok !== true || !is_file($cel)) {
+            return null;
+        }
+        @chmod($cel, 0644);
+        return basename($cel);
+    } catch (Throwable $e) {
+        error_log('[miniatura] ' . $e->getMessage());
+        return null;
+    } finally {
+        if ($zrodlo instanceof GdImage) {
+            imagedestroy($zrodlo);
+        }
+    }
 }
 
 /** Zapisuje wgrane pliki ($_FILES['photos']) i wpisy w tabeli zdjecia. */
@@ -1219,8 +1359,8 @@ function store_photos(int $zgloszenieId, array $files): array
     ];
 
     $insert = db()->prepare(
-        'INSERT INTO zdjecia (zgloszenie_id, filename, original_name, size_bytes)
-         VALUES (?, ?, ?, ?)'
+        'INSERT INTO zdjecia (zgloszenie_id, filename, thumb, original_name, size_bytes)
+         VALUES (?, ?, ?, ?, ?)'
     );
 
     $saved = [];
@@ -1282,13 +1422,20 @@ function store_photos(int $zgloszenieId, array $files): array
         $originalNameShort = function_exists('mb_substr')
             ? mb_substr($originalName, 0, 255)
             : substr($originalName, 0, 255);
-        $insert->execute([$zgloszenieId, $filename, $originalNameShort, $files['size'][$i]]);
+
+        // 3.10.1: miniatura do listy i karty (pełne zdjęcie zostaje w
+        // lightboxie). Brak GD albo błąd => thumb = null, wgrywanie działa
+        // dalej, a frontend pokaże pełne zdjęcie.
+        $thumb = zrob_miniaturke($dest);
+
+        $insert->execute([$zgloszenieId, $filename, $thumb, $originalNameShort, $files['size'][$i]]);
 
         $saved[] = [
-            'id'      => (int) db()->lastInsertId(),
-            'url'     => UPLOAD_URL . '/' . $filename,
-            'name'    => $originalName,
-            'created' => date('Y-m-d H:i:s'),
+            'id'        => (int) db()->lastInsertId(),
+            'url'       => UPLOAD_URL . '/' . $filename,
+            'thumb_url' => $thumb !== null ? UPLOAD_URL . '/' . $thumb : null,
+            'name'      => $originalName,
+            'created'   => date('Y-m-d H:i:s'),
         ];
     }
 
@@ -1304,7 +1451,7 @@ function store_photos(int $zgloszenieId, array $files): array
  */
 function delete_photo(int $photoId, bool $guard = false): bool
 {
-    $stmt = db()->prepare('SELECT id, zgloszenie_id, filename FROM zdjecia WHERE id = ?');
+    $stmt = db()->prepare('SELECT id, zgloszenie_id, filename, thumb FROM zdjecia WHERE id = ?');
     $stmt->execute([$photoId]);
     $row = $stmt->fetch();
     if (!$row) {
@@ -1319,6 +1466,8 @@ function delete_photo(int $photoId, bool $guard = false): bool
     if (is_file($path)) {
         @unlink($path);
     }
+    // 3.10.1: miniatura leży obok oryginału - bez tego zostawałyby sieroty
+    miniaturka_usun((string) $row['filename'], $row['thumb'] ?? null);
 
     db()->prepare('DELETE FROM zdjecia WHERE id = ?')->execute([$photoId]);
     return true;
@@ -1344,18 +1493,64 @@ function zdjecie_owner_guard(int $zgloszenieId): void
     }
 }
 
-/** Usuwa wszystkie zdjęcia zgłoszenia (pliki + wpisy). */
+/** Usuwa wszystkie zdjęcia zgłoszenia (pliki + miniatury + wpisy). */
 function delete_photos_of(int $zgloszenieId): void
 {
-    $stmt = db()->prepare('SELECT filename FROM zdjecia WHERE zgloszenie_id = ?');
+    $stmt = db()->prepare('SELECT filename, thumb FROM zdjecia WHERE zgloszenie_id = ?');
     $stmt->execute([$zgloszenieId]);
     foreach ($stmt->fetchAll() as $row) {
         $path = UPLOAD_DIR . '/' . $row['filename'];
         if (is_file($path)) {
             @unlink($path);
         }
+        miniaturka_usun((string) $row['filename'], $row['thumb'] ?? null);
     }
     db()->prepare('DELETE FROM zdjecia WHERE zgloszenie_id = ?')->execute([$zgloszenieId]);
+}
+
+/**
+ * Kasuje plik miniatury zdjęcia (3.10.1). Bezpieczne, gdy `thumb` jest puste
+ * (stary wpis bez miniatury) albo gdy wpis wskazuje nazwę spoza katalogu zdjęć.
+ */
+function miniaturka_usun(string $nazwaOryginalu, ?string $thumb): void
+{
+    $nazwa = ($thumb !== null && $thumb !== '') ? $thumb : basename(miniaturka_sciezka($nazwaOryginalu));
+    if (!str_starts_with(basename($nazwa), 'thumb_') || !str_ends_with(strtolower($nazwa), '.jpg')) {
+        return;
+    }
+    $sciezka = UPLOAD_DIR . '/' . basename($nazwa);
+    if (is_file($sciezka)) {
+        @unlink($sciezka);
+    }
+}
+
+/**
+ * Uzupełnia brakujące miniatury zdjęć, które już są w bazie (3.10.1).
+ * Używane przez skrypt operatora po aktualizacji — samo `db()` tego nie robi,
+ * bo na dużej bazie generacja potrafiłaby trwać minuty.
+ *
+ * Zwraca [zrobionych, pominietych, bajty_z miniatur].
+ */
+function miniaturki_zdjecia(int $limit = 500, bool $tylkoBrak = true): array
+{
+    $sql = 'SELECT id, filename FROM zdjecia'
+        . ($tylkoBrak ? ' WHERE thumb IS NULL OR thumb = \'\'' : '')
+        . ' ORDER BY id ASC LIMIT ' . max(1, (int) $limit);
+    $zrobionych = 0;
+    $pominietych = 0;
+    $bajty = 0;
+    foreach (db()->query($sql) as $row) {
+        $nazwa = zrob_miniaturke(UPLOAD_DIR . '/' . $row['filename']);
+        if ($nazwa === null) {
+            $pominietych++;
+            continue;
+        }
+        db()->prepare('UPDATE zdjecia SET thumb = ? WHERE id = ?')
+            ->execute([$nazwa, (int) $row['id']]);
+        $zrobionych++;
+        $bajty += (int) @filesize(UPLOAD_DIR . '/' . $nazwa);
+    }
+    return [$zrobionych, $pominietych, $bajty];
 }
 
 /** Buduje rekord zgłoszenia w formacie oczekiwanym przez frontend. */

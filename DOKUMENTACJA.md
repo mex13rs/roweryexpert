@@ -230,6 +230,24 @@ Szczegóły techniczne w Częściach III–VI.
 
 - Wgrywanie z formularza i z modala (multi-file), miniatury na liście i w karcie, powiększenie
   w **lightboxie**.
+- **3.10.1 — miniatury generowane przy wgraniu.** Zdjęcia z telefonu mają 3–5 MB
+  i 4000+ px, a kafel na liście ma 56 px, więc bez miniatur panel ściągał przy
+  otwarciu **wszystkie** zdjęcia ze wszystkich zgłoszeń (pomiar: 79,6 MB przy
+  20 zgłoszeniach). Teraz `zrob_miniaturke()` robi miniaturę 320 px
+  (`THUMB_MAX_WIDTH`, JPEG `THUMB_JPEG_QUALITY`), z respektowaniem orientacji EXIF
+  (zdjęcia z telefonu bywają obrócone). Oryginał zostaje nietknięty — lightbox
+  pokazuje pełne zdjęcie.
+  - Kolumna `zdjecia.thumb` (migracja `SHOW COLUMNS`, idempotentna).
+  - `photos_for()` i odpowiedź `POST` zwracają `thumb_url`; frontend używa
+    `thumb_url || url`, więc stare wpisy bez miniatury działają.
+  - Bez GD (lub bez obsługi JPEG) miniatura jest pomijana, a wgrywanie działa dalej.
+  - `miniaturka_usun()` kasuje plik przy usuwaniu zdjęcia i przy trwałym
+    kasowaniu zgłoszenia (`delete_photos_of`), walidując prefiks `thumb_`.
+  - `miniaturki_zdjecia()` uzupełnia miniatury dla zdjęć już w bazie
+    (wołane ze skryptu operatora po aktualizacji, nie z `db()` — na dużej bazie
+    trwałoby to minuty).
+  - Limit pamięci: `THUMB_MAX_SOURCE_PX` (4000×3000 to ~50 MB w pamięci);
+    `memory_limit` na hostingu to 1024 MB.
 - **Limity**: 100 MB łącznego zużycia (`FOTO_LIMIT_MB`), do 20 plików na zgłoszenie,
   ostrzeżenie przy **80%** (`FOTO_WARN_PCT`), podgląd zużycia („12,4 MB / 100 MB”).
 - Usuwanie zdjęcia z potwierdzeniem; „Usuń trwale” kasuje też zdjęcia zgłoszenia.
@@ -1483,6 +1501,9 @@ Dokumentacja fragmentaryczna (część A) aplikacji **RoweryExpert** — panelu 
 | `MAX_PHOTO_BYTES` | `10 * 1024 * 1024` (10 MB) | Maksymalny rozmiar jednego zdjęcia w bajtach. |
 | `MAX_PHOTOS_TOTAL_BYTES` | `100 * 1024 * 1024` (100 MB) | Łączny limit wszystkich zdjęć **wszystkich** zgłoszeń (sprawdzany przed zapisem partii). |
 | `MAX_PHOTOS_PER_REQUEST` | `20` | Maksymalna liczba plików w jednym wgraniu (limit serwera `max_file_uploads`). |
+| `THUMB_MAX_WIDTH` | `320` | **3.10.1.** Szerokość miniatury zdjęcia w px (kafel na liście ma 56 px, w karcie ~120 px). |
+| `THUMB_JPEG_QUALITY` | `78` | **3.10.1.** Jakość JPEG miniatury. |
+| `THUMB_MAX_SOURCE_PX` | `40_000_000` | **3.10.1.** Powyżej tej liczby pikseli obraz nie jest wczytywany do pamięci (4000×3000 to ~50 MB). |
 | `ALLOWED_PHOTO_MIME` | `image/jpeg→jpg`, `image/png→png`, `image/webp→webp`, `image/gif→gif` | Biała lista formatów zdjęć wraz z docelowym rozszerzeniem pliku. |
 | `STATUSES` | `['in_progress', 'completed', 'picked_up']` | Dozwolone statusy zgłoszenia: w trakcie / zakończone / odebrane. |
 | `APP_PASSWORD` | sekret | Hasło konta `admin` tworzonego przy pierwszym uruchomieniu (seed hasła aplikacji). **3.10.0: w tej dokumentacji nie podajemy prawdziwych wartości sekretów** — poprzednie wydania dokumentu zawierały hasło do bazy jako przykład. |

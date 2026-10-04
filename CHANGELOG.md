@@ -12,29 +12,42 @@ i wyświetlany w stopce strony.
 
 ---
 
-## 3.10.1 — 2026-10-04 — szybkość otwarcia panelu
+## 3.11.0 — 2026-10-04 — miniatury zdjęć i szybkość otwarcia panelu
+
+### Nowe
+- **Miniatury zdjęć generowane przy wgraniu** (3.10.1 → wydane jako 3.11.0).
+  Zdjęcia z telefonu mają 3–5 MB i 4000+ px, a kafel zgłoszenia na liście ma
+  56 px — bez miniatur panel ściągał przy każdym otwarciu **wszystkie** zdjęcia
+  ze wszystkich zgłoszeń. `zrob_miniaturke()` robi miniaturę 320 px
+  (JPEG, jakość 78), respektując orientację EXIF (telefony często obracają).
+  Oryginał zostaje nietknięty — lightbox pokazuje pełne zdjęcie.
+  - Nowa kolumna `zdjecia.thumb` (migracja przez `SHOW COLUMNS`, idempotentna).
+  - `photos_for()` i odpowiedź po wgraniu zwracają `thumb_url`; frontend używa
+    `thumb_url || url`, więc zdjęcia bez miniatury (stare wpisy) działają.
+  - Usuwanie zdjęcia i trwałe kasowanie zgłoszenia kasują też plik miniatury.
+  - `miniaturki_zdjecia()` uzupełnia miniatury dla zdjęć już w bazie — wołane
+    ze skryptu operatora po aktualizacji (nie z `db()`, bo na dużej bazie
+    generacja trwałaby minuty).
+  - Bez GD albo bez obsługi JPEG miniatura jest pomijana, a wgrywanie działa
+    normalnie (frontend pokaże pełne zdjęcie).
+  - Limit pamięci: `THUMB_MAX_SOURCE_PX` (4000×3000 to ~50 MB w pamięci).
 
 ### Zmienione
-- **Zdjęcia na liście i w karcie ładowane są leniwie** (`loading="lazy"`,
-  `decoding="async"` w `lista.js` i `zdjecia.js`). Zdjęcia wgrane z telefonu
-  mają 3–5 MB, a panel wstawiał je do DOM od razu — przeglądarka ściągała
-  **wszystkie** zdjęcia ze wszystkich zgłoszeń, także te poza ekranem.
+- **Zdjęcia ładowane leniwie** (`loading="lazy"`, `decoding="async"`) na liście
+  i w karcie — nie pobieramy zdjęć spoza widoku.
 
-### Pomiar (dane z produkcji: 20 zgłoszeń, po jednym zdjęciu 4 MB)
+### Pomiar (20 zgłoszeń, po jednym zdjęciu 4 MB — dane z produkcji)
 
-| Widok | Przed | Po |
+| Wariant | komputer 1280×900 | telefon 390×844 |
 |---|---|---|
-| komputer 1280×900 | 20 zdjęć, **79,6 MB** | 9 zdjęć, **36,0 MB** |
-| telefon 390×844 | 20 zdjęć, **79,6 MB** | 4 zdjęcia, **16,9 MB** |
+| przed | 20 zdjęć, **79,6 MB** | 20 zdjęć, **79,6 MB** |
+| samo `loading="lazy"` | 9 zdjęć, 36,0 MB | 4 zdjęcia, 16,9 MB |
+| **lazy + miniatury** | 9 zdjęć, **0,2 MB** | 4 zdjęcia, **0,1 MB** |
 
-Na telefonie z LTE to różnica między ~3,5 minuty a ~20 sekundami czekania
-na zdjęcia pod listą. Kliknięcie miniatury nadal otwiera pełnowymiarowe zdjęcie
-w lightboxie (sprawdzone w przeglądarce).
+### Diagnostyka wydajności (dlaczego to nie naprawy bezpieczeństwa)
 
-### Diagnostyka wydajności (to samo zdalnie, 120 prób na wariant, A/B przeplatane)
-
-Naprawy z 3.10.0 **nie spowalniają** panelu — mediany różnią się o ±0,2 ms
-poza granicą szumu:
+A/B na tych samych danych, 120 prób na wariant, zapytania przeplatane
+(3.9.0 vs 3.10.0, opcache włączony jak na serwerze) — różnice ±0,2 ms, w granicy szumu:
 
 | Scenariusz | 3.9.0 | 3.10.0 | różnica |
 |---|---|---|---|
@@ -43,16 +56,18 @@ poza granicą szumu:
 | znacznik pollingu | 5,86 ms | 5,71 ms | −2,6% |
 | ustawienia | 6,93 ms | 6,98 ms | +0,7% |
 
-Pozostałe liczby z produkcji: TTFB panelu ~230 ms (to hosting + TLS + MySQL,
-nie PHP — sam PHP ~13 ms), zapytania do bazy: pełna lista 0,8 ms, znacznik
-pollingu 0,3 ms, odpowiedź listy 1,8 kB (3 zgłoszenia). Narzut dodanych
-nagłówków i sprawdzenia `.htaccess` to 0,0002 ms na żądanie.
+Pozostałe liczby z produkcji: TTFB panelu ~230 ms (hosting + TLS + MySQL, sam PHP
+~13 ms), pełna lista z bazy 0,8 ms, znacznik pollingu 0,3 ms, odpowiedź listy
+1,8 kB przy 3 zgłoszeniach, narzut nagłówków i sprawdzenia `.htaccess` to
+0,0002 ms na żądanie. Blokada `.htaccess` w katalogu zdjęć nie kosztuje
+nic (HEAD: 141 ms z i bez niej).
 
-**Wniosek:** wąskim gardłem są zdjęcia (3–5 MB sztuka, brak miniaturek),
-a nie kod panelu. Następny krok to generowanie miniaturek przy wgraniu
-(na serwerze jest GD z JPEG i WebP).
-
----
+### Testy
+- PHPUnit **81** (nowy `tests/MiniaturyTest.php`: nazwy plików, kasowanie,
+  fallback bez GD, parametry) — 7 pominiętych (ścieżki z MySQL i GD).
+- E2E: lista używa miniatury i **nie pobiera pełnych zdjęć**; lightbox pokazuje
+  pełne zdjęcie w pełnej rozdzielczości; karta zgłoszenia używa miniaturek;
+  usuwanie zdjęcia i `delete_photos_of()` kasują też pliki miniaturek.
 
 ## 3.10.0 — 2026-10-03 — bezpieczeństwo
 
