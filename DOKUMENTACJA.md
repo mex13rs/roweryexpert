@@ -248,6 +248,20 @@ Szczegóły techniczne w Częściach III–VI.
     trwałoby to minuty).
   - Limit pamięci: `THUMB_MAX_SOURCE_PX` (4000×3000 to ~50 MB w pamięci);
     `memory_limit` na hostingu to 1024 MB.
+- **3.12.0 — oryginały JPEG zmniejszane do `PHOTO_MAX_PX` (2000 px)**
+  przy wgraniu, jakość `PHOTO_JPEG_QUALITY = 82`. Zdjęcia z telefonu
+  (4080×3072, 3–5 MB) schodzą do ~0,5 MB — pomiar na trzech prawdziwych
+  zdjęciach produkcji: 12,02 MB → 1,61 MB.
+  - Tylko JPEG (`foto_czy_do_skalowania()`); PNG/WebP/GIF nietknięte.
+  - Pliki poniżej limitu nietknięte (brak straty jakości).
+  - `zmniejsz_oryginal()`: zapis atomowy (`.tmp` + `rename`), każdy błąd
+    zwraca `null` i zostawia plik w niezmienionej postaci.
+  - Orientacja z EXIF (`foto_obrot_exif()`) zastosowana jawnie — po zrzuceniu
+    metadanych zdjęcie z aparatu pionowego wyglądałoby inaczej.
+  - Efekt uboczny: znika blok EXIF, razem z GPS-em i modelem telefonu.
+  - `size_bytes` po zapisie odzwierciedla rozmiar na dysku (limit 100 MB).
+  - `skaluj_oryginaly_zdjecia()` — jednorazowy przebieg dla zdjęć już w bazie
+    (skrypt operatora po aktualizacji, nie `db()`), odświeża też `size_bytes`.
 - **Limity**: 100 MB łącznego zużycia (`FOTO_LIMIT_MB`), do 20 plików na zgłoszenie,
   ostrzeżenie przy **80%** (`FOTO_WARN_PCT`), podgląd zużycia („12,4 MB / 100 MB”).
 - Usuwanie zdjęcia z potwierdzeniem; „Usuń trwale” kasuje też zdjęcia zgłoszenia.
@@ -1504,6 +1518,8 @@ Dokumentacja fragmentaryczna (część A) aplikacji **RoweryExpert** — panelu 
 | `THUMB_MAX_WIDTH` | `320` | **3.10.1.** Szerokość miniatury zdjęcia w px (kafel na liście ma 56 px, w karcie ~120 px). |
 | `THUMB_JPEG_QUALITY` | `78` | **3.10.1.** Jakość JPEG miniatury. |
 | `THUMB_MAX_SOURCE_PX` | `40_000_000` | **3.10.1.** Powyżej tej liczby pikseli obraz nie jest wczytywany do pamięci (4000×3000 to ~50 MB). |
+| `PHOTO_MAX_PX` | `2000` | **3.12.0.** Oryginał JPEG większy niż limit jest zmniejszany przy wgraniu. |
+| `PHOTO_JPEG_QUALITY` | `82` | **3.12.0.** Jakość zapisanego oryginału po zmniejszeniu. |
 | `ALLOWED_PHOTO_MIME` | `image/jpeg→jpg`, `image/png→png`, `image/webp→webp`, `image/gif→gif` | Biała lista formatów zdjęć wraz z docelowym rozszerzeniem pliku. |
 | `STATUSES` | `['in_progress', 'completed', 'picked_up']` | Dozwolone statusy zgłoszenia: w trakcie / zakończone / odebrane. |
 | `APP_PASSWORD` | sekret | Hasło konta `admin` tworzonego przy pierwszym uruchomieniu (seed hasła aplikacji). **3.10.0: w tej dokumentacji nie podajemy prawdziwych wartości sekretów** — poprzednie wydania dokumentu zawierały hasło do bazy jako przykład. |

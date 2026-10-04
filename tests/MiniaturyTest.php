@@ -112,4 +112,74 @@ final class MiniaturyTest extends TestCase
         // 4000x3000 to ~50 MB w pamięci, wiec limit musi to przepuszczać
         self::assertGreaterThan(12_000_000, THUMB_MAX_SOURCE_PX);
     }
+
+    /* ---------------- zmniejszanie oryginałów (3.12.0) ---------------- */
+
+    public function testKwalifikacjaDoSkalowania(): void
+    {
+        // typowe zdjęcie z telefonu - kwalifikuje się
+        self::assertTrue(foto_czy_do_skalowania(4080, 3072));
+        self::assertTrue(foto_czy_do_skalowania(3000, 4000));   // pionowe
+        // już małe - nie ruszamy, żeby nie degradować jakości
+        self::assertFalse(foto_czy_do_skalowania(1600, 1200));
+        self::assertFalse(foto_czy_do_skalowania(PHOTO_MAX_PX, PHOTO_MAX_PX));
+        // granica: 1 px ponad limit kwalifikuje
+        self::assertTrue(foto_czy_do_skalowania(PHOTO_MAX_PX + 1, 100));
+        // tylko JPEG
+        self::assertFalse(foto_czy_do_skalowania(4080, 3072, 'image/png'));
+        self::assertFalse(foto_czy_do_skalowania(4080, 3072, 'image/webp'));
+        self::assertFalse(foto_czy_do_skalowania(4080, 3072, 'image/gif'));
+        // bzdury
+        self::assertFalse(foto_czy_do_skalowania(0, 0));
+        self::assertFalse(foto_czy_do_skalowania(-10, 100));
+    }
+
+    public function testZmniejszanieBezGdlubBezJpeg(): void
+    {
+        // serwer bez obsługi JPEG zostawia oryginał w spokoju
+        if (function_exists('imagejpeg') && function_exists('imagecreatefromjpeg')) {
+            self::markTestSkipped('to środowisko ma GD z JPEG - test degradacji nie ma tu zastosowania');
+        }
+        $znacznik = 'skala' . bin2hex(random_bytes(6));
+        $plik = UPLOAD_DIR . '/' . $znacznik . '.jpg';
+        file_put_contents($plik, "\xFF\xD8\xFF\xE0" . str_repeat("\x00", 64));
+        $przed = filesize($plik);
+        try {
+            self::assertNull(zmniejsz_oryginal($plik));
+            self::assertSame($przed, filesize($plik), 'plik musi zostać nietknięty');
+        } finally {
+            @unlink($plik);
+        }
+    }
+
+    public function testZmniejszanieNieRuszaMalychPlikow(): void
+    {
+        // nawet z GD funkcja nie dotyka pliku poniżej limitu
+        $znacznik = 'male' . bin2hex(random_bytes(6));
+        $plik = UPLOAD_DIR . '/' . $znacznik . '.jpg';
+        $png = imagecreatetruecolor(800, 600);
+        imagefilledrectangle($png, 0, 0, 800, 600, imagecolorallocate($png, 20, 120, 200));
+        imagepng($png, $plik . '.png');       // lokalnie GD ma PNG (JPEG nie)
+        // plik o nazwie .jpg, ale zawartość PNG => getimagesize mówi image/png
+        rename($plik . '.png', $plik);
+        $przed = filesize($plik);
+        try {
+            self::assertNull(zmniejsz_oryginal($plik), 'nie-JPEG nie jest skalowany');
+            self::assertSame($przed, filesize($plik));
+        } finally {
+            @unlink($plik);
+        }
+    }
+
+    public function testParametrySkalowania(): void
+    {
+        // 2000 px: do oglądania na monitorze wystarczy, a plik robi się
+        // około 7 razy lżejszy (pomiar na prawdziwych zdjęciach)
+        self::assertGreaterThanOrEqual(1600, PHOTO_MAX_PX);
+        self::assertLessThanOrEqual(2560, PHOTO_MAX_PX);
+        self::assertGreaterThanOrEqual(75, PHOTO_JPEG_QUALITY);
+        self::assertLessThanOrEqual(92, PHOTO_JPEG_QUALITY);
+        // limit pamięci musi przepuszczać typowe 4080x3072
+        self::assertGreaterThan(4080 * 3072, THUMB_MAX_SOURCE_PX);
+    }
 }

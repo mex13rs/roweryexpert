@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i katalogu api, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.11.0';
+const APP_VERSION = '3.12.0';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -93,6 +93,13 @@ const MAX_PHOTOS_PER_REQUEST = 20;        // maks. zdjęć w jednym wgraniu (lim
 const THUMB_MAX_WIDTH = 320;        // szerokość miniatury w px (kafel w karcie ma ~120 px)
 const THUMB_JPEG_QUALITY = 78;      // jakość JPEG miniatury
 const THUMB_MAX_SOURCE_PX = 40_000_000;   // 4000x10000 - powyżej nie wczytujemy do pamięci (~50 MB na 4000x3000)
+// 3.12.0: zmniejszanie oryginałów przy wgraniu. Zdjęcia z telefonu mają
+// 4080x3072 i 3-5 MB, a w serwisie ogląda się je w lightboxie - wystarczy
+// 2000 px. Przeskalowany oryginał jest od razu pozbawiony EXIF (GD nie
+// przepisuje metadanych), więc znikają też GPS i model telefonu.
+// Tylko JPEG: PNG/WebP/GIF bywają zrzutami ekranu, gdzie piksel ma znaczenie.
+const PHOTO_MAX_PX = 2000;           // po przekroczeniu tego wymiaru oryginał jest zmniejszany
+const PHOTO_JPEG_QUALITY = 82;      // jakość zapisanego JPEG-a (z oryginału zwykle 90+)
 const ALLOWED_PHOTO_MIME = [
     'image/jpeg' => 'jpg',
     'image/png'  => 'png',
@@ -1234,6 +1241,144 @@ function miniaturka_sciezka(string $nazwaOryginalu): string
 }
 
 /**
+ * Czy zdjęcie jest za duże, żeby trzymać je w oryginale (3.12.0).
+ * Czysta funkcja - testowalna bez GD i bez bazy.
+ */
+function foto_czy_do_skalowania(int $szer, int $wys, string $mime = 'image/jpeg'): bool
+{
+    // Tylko JPEG: PNG/WebP/GIF bywają zrzutami ekranu albo grafiką,
+    // gdzie zmniejszanie psuje ostrość i przezroczystość.
+    if ($mime !== 'image/jpeg') {
+        return false;
+    }
+    if ($szer <= 0 || $wys <= 0) {
+        return false;
+    }
+    return max($szer, $wys) > PHOTO_MAX_PX;
+}
+
+/**
+ * Zmniejsza oryginał JPEG-a do PHOTO_MAX_PX i zapisuje go w miejscu (3.12.0).
+ *
+ * Zdjęcia z telefonu mają 4080×3072 i 3–5 MB. W serwisie ogląda się je
+ * w lightboxie, więc 2000 px w zupełności wystarczy: na trzech prawdziwych
+ * zdjęciach produkcji 12,02 MB schodzi do 1,61 MB.
+ *
+ * Efekt uboczny korzystny: GD nie przepisuje metadanych, więc z pliku znika
+ * blok EXIF - razem z GPS-em i modelem telefonu (zapis zdjęcia mógł ujawniać
+ * dom klienta). Dlatego orientację z EXIF trzeba zastosować ręcznie przed
+ * zapisem - inaczej zdjęcie wyświetli się bokiem.
+ *
+ * Zapis jest atomowy (plik tymczasowy + rename), a każdy problem kończy się
+ * return null, czyli wgrywanie idzie dalej z oryginałem w niezmienionej
+ * postaci - nigdy nie zostawiamy uszkodzonego pliku.
+ *
+ * Zwraca ['width'=>, 'height'=>, 'bytes'=>] albo null.
+ */
+function zmniejsz_oryginal(string $sciezka): ?array
+{
+    if (!function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')
+        || !function_exists('imagecreatefromjpeg')) {
+        return null;   // serwer bez GD/JPEG - zostawiamy oryginał
+    }
+    $info = @getimagesize($sciezka);
+    if (!is_array($info) || ($info['mime'] ?? '') !== 'image/jpeg') {
+        return null;
+    }
+    $szer = (int) $info[0];
+    $wys = (int) $info[1];
+    if (!foto_czy_do_skalowania($szer, $wys, 'image/jpeg')) {
+        return null;   // już małe - nie ruszamy (nie degradujemy jakości)
+    }
+    if ($szer * $wys > THUMB_MAX_SOURCE_PX) {
+        return null;   // zbyt duże na wczytanie do pamięci
+    }
+
+    $zrodlo = null;
+    $wynik = null;
+    try {
+        $zrodlo = @imagecreatefromjpeg($sciezka);
+        if (!$zrodlo instanceof GdImage) {
+            return null;
+        }
+        $obrot = foto_obrot_exif($sciezka);
+
+        $skala = PHOTO_MAX_PX / max($szer, $wys);
+        $nw = max(1, (int) round($szer * $skala));
+        $nh = max(1, (int) round($wys * $skala));
+        if ($obrot !== 0) {
+            [$nw, $nh] = [$nh, $nw];
+        }
+
+        $nowy = imagecreatetruecolor($nw, $nh);
+        imagecopyresampled($nowy, $zrodlo, 0, 0, 0, 0, $nw, $nh, $szer, $wys);
+        if ($obrot !== 0) {
+            $bialy = imagecolorallocate($nowy, 255, 255, 255);
+            $obrocona = imagerotate($nowy, $obrot, $bialy);
+            if ($obrocona instanceof GdImage) {
+                imagedestroy($nowy);
+                $nowy = $obrocona;
+            }
+        }
+
+        // najpierw obok, potem podmiana - plik nigdy nie jest napisany
+        // w miejscu w trakcie zapisywania
+        $tymczasowy = $sciezka . '.tmp' . bin2hex(random_bytes(4));
+        $ok = imagejpeg($nowy, $tymczasowy, PHOTO_JPEG_QUALITY);
+        imagedestroy($nowy);
+        if ($ok !== true || !is_file($tymczasowy) || filesize($tymczasowy) === 0) {
+            @unlink($tymczasowy);
+            return null;
+        }
+
+        $rozmiarPrzed = (int) @filesize($sciezka);
+        if (!@rename($tymczasowy, $sciezka)) {
+            @unlink($tymczasowy);
+            error_log('[zdjecia] nie udalo sie podmienic pliku po przeskalowaniu: ' . $sciezka);
+            return null;
+        }
+        @chmod($sciezka, 0644);
+        clearstatcache(true, $sciezka);
+        $wynik = [
+            'width'  => $nw,
+            'height' => $nh,
+            'bytes'  => (int) @filesize($sciezka),
+            'was'    => $rozmiarPrzed,
+        ];
+        return $wynik;
+    } catch (Throwable $e) {
+        error_log('[zdjecia] zmniejszanie oryginalu: ' . $e->getMessage());
+        return null;
+    } finally {
+        if ($zrodlo instanceof GdImage) {
+            imagedestroy($zrodlo);
+        }
+    }
+}
+
+/**
+ * Orientacja z EXIF jako kąt obrotu (3.12.0): 0 = bez obrotu.
+ *
+ * Telefon trzyma aparat pionowo i zapisuje to w tagu Orientation, a nie
+ * obracając piksele. GD nie przepisuje metadanych, więc po przeskalowaniu
+ * (albo po miniaturze) trzeba obrót zastosować jawnie — inaczej zdjęcie
+ * wyświetla się bokiem.
+ */
+function foto_obrot_exif(string $sciezka): int
+{
+    if (!function_exists('exif_read_data')) {
+        return 0;
+    }
+    $exif = @exif_read_data($sciezka);
+    return match ((int) ($exif['Orientation'] ?? 1)) {
+        3 => 180,
+        6 => -90,
+        8 => 90,
+        default => 0,
+    };
+}
+
+/**
  * Generuje miniaturę zdjęcia (3.10.1).
  *
  * Zdjęcia z telefonu mają 3–5 MB i 4000+ px, a lista zgłoszeń wstawia je
@@ -1243,7 +1388,7 @@ function miniaturka_sciezka(string $nazwaOryginalu): string
  * waży ok. 16 kB, czyli ~300 razy mniej.
  *
  * Zasady:
- * - oryginału nie ruszamy (lightbox pokazuje pełne zdjęcie),
+ * - tylko do odczytu (od 3.12.0 oryginał bywa już przeskalowany do PHOTO_MAX_PX),
  * - brak GD na serwerze albo błąd => null, wgrywanie działa dalej (frontend
  *   pokaże pełne zdjęcie); funkcja nigdy nie wywala wgrywania,
  * - pamięć: obraz 4000×3000 to ~50 MB, stąd limit `THUMB_MAX_SOURCE_PX`
@@ -1288,18 +1433,7 @@ function zrob_miniaturke(string $sciezka): ?string
             return null;
         }
 
-        // Orientacja z EXIF (1 = normalna; 3/6/8 = obrócone)
-        $obrot = 0;
-        if (function_exists('exif_read_data')) {
-            $exif = @exif_read_data($sciezka);
-            $orientacja = (int) ($exif['Orientation'] ?? 1);
-            $obrot = match ($orientacja) {
-                3 => 180,
-                6 => -90,
-                8 => 90,
-                default => 0,
-            };
-        }
+        $obrot = foto_obrot_exif($sciezka);
 
         $skala = min(1.0, THUMB_MAX_WIDTH / max(1, $szer));
         $nw = max(1, (int) round($szer * $skala));
@@ -1419,6 +1553,11 @@ function store_photos(int $zgloszenieId, array $files): array
         }
         @chmod($dest, 0644);
 
+        // 3.12.0: zmniejszamy oryginał (tylko JPEG i tylko gdy przekracza
+        // PHOTO_MAX_PX). Zapis jest atomowy, a błąd zostawia oryginał
+        // w niezmienionej postaci - wgrywanie nigdy nie pada.
+        zmniejsz_oryginal($dest);
+
         $originalNameShort = function_exists('mb_substr')
             ? mb_substr($originalName, 0, 255)
             : substr($originalName, 0, 255);
@@ -1428,7 +1567,15 @@ function store_photos(int $zgloszenieId, array $files): array
         // dalej, a frontend pokaże pełne zdjęcie.
         $thumb = zrob_miniaturke($dest);
 
-        $insert->execute([$zgloszenieId, $filename, $thumb, $originalNameShort, $files['size'][$i]]);
+        // size_bytes ma odzwierciedlać to, co jest na dysku - inaczej limit
+        // 100 MB i statystyki kłamią (po zmniejszeniu plik jest mniejszy).
+        clearstatcache(true, $dest);
+        $rozmiarNaDysku = (int) @filesize($dest);
+        if ($rozmiarNaDysku <= 0) {
+            $rozmiarNaDysku = (int) $files['size'][$i];
+        }
+
+        $insert->execute([$zgloszenieId, $filename, $thumb, $originalNameShort, $rozmiarNaDysku]);
 
         $saved[] = [
             'id'        => (int) db()->lastInsertId(),
@@ -1551,6 +1698,55 @@ function miniaturki_zdjecia(int $limit = 500, bool $tylkoBrak = true): array
         $bajty += (int) @filesize(UPLOAD_DIR . '/' . $nazwa);
     }
     return [$zrobionych, $pominietych, $bajty];
+}
+
+/**
+ * Przeskalowuje JPEG-i, które są za duże (3.12.0) — jednorazowo, ze skryptu
+ * operatora po aktualizacji, nie z `db()` (na dużej bazie trwałoby to minuty).
+ *
+ * Poprawia też `size_bytes` w bazie, żeby limit 100 MB i statystyki
+ * odzwierciedlały to, co jest na dysku. Miniatury przelicza tylko tam, gdzie
+ * jeszcze ich nie ma - po zmniejszeniu oryginału stara miniatura jest
+ * wystarczająca, ale dla spójności robimy ją od nowa, gdy jeszcze istnieje.
+ *
+ * Zwraca [przeskalowane, pominiete, bajty_przed, bajty_po].
+ */
+function skaluj_oryginaly_zdjecia(int $limit = 500): array
+{
+    $wiersze = db()->query(
+        'SELECT id, filename FROM zdjecia ORDER BY id ASC LIMIT ' . max(1, (int) $limit)
+    )->fetchAll();
+    $przeskalowanych = 0;
+    $pominietych = 0;
+    $przed = 0;
+    $po = 0;
+    $upd = db()->prepare('UPDATE zdjecia SET size_bytes = ? WHERE id = ?');
+    foreach ($wiersze as $w) {
+        $sciezka = UPLOAD_DIR . '/' . $w['filename'];
+        $rozmiar = (int) @filesize($sciezka);
+        if ($rozmiar <= 0) {
+            $pominietych++;
+            continue;
+        }
+        $przed += $rozmiar;
+        $wynik = zmniejsz_oryginal($sciezka);
+        if ($wynik === null) {
+            $po += $rozmiar;
+            $pominietych++;
+            // i tak porządkujemy bazę, gdy rozmiar się rozjechał z dyskiem
+            $upd->execute([$rozmiar, (int) $w['id']]);
+            continue;
+        }
+        $po += $wynik['bytes'];
+        $przeskalowanych++;
+        $upd->execute([$wynik['bytes'], (int) $w['id']]);
+        // miniatura pasuje do nowego oryginału - przeliczamy, jeśli była
+        if (is_file(miniaturka_sciezka($w['filename']))) {
+            @unlink(miniaturka_sciezka($w['filename']));
+        }
+        zrob_miniaturke($sciezka);
+    }
+    return [$przeskalowanych, $pominietych, $przed, $po];
 }
 
 /** Buduje rekord zgłoszenia w formacie oczekiwanym przez frontend. */

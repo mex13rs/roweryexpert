@@ -12,6 +12,37 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.12.0 — 2026-10-04 — zmniejszanie oryginałów zdjęć
+
+### Zmienione
+- **Oryginały JPEG są zmniejszane przy wgraniu** do 2000 px (`PHOTO_MAX_PX`,
+  jakość `PHOTO_JPEG_QUALITY = 82`). Zdjęcia z telefonu mają 4080×3072 i 3–5 MB,
+  a w serwisie ogląda się je w lightboxie — 2000 px w zupełności wystarczy.
+  Pomiar na trzech prawdziwych zdjęciach produkcji: **12,02 MB → 1,61 MB**.
+  - **Tylko JPEG.** PNG/WebP/GIF zostają nietknięte — bywają zrzutami ekranu
+    lub grafiką, gdzie zmniejszanie psuje ostrość i przezroczystość.
+  - **Małe pliki nietknięte** — skalowanie tylko gdy bok przekracza limit,
+    żeby nie degradować jakości zdjęć już małych.
+  - **Zapis atomowy** (plik tymczasowy + `rename`); błąd zostawia oryginał
+    w niezmienionej postaci, wgrywanie nigdy nie pada.
+  - **Orientacja EXIF zastosowana jawnie** przed zapisem. Bez tego po zrzuceniu
+    metadanych zdjęcia z aparatu trzymanego pionowo wyświetlałyby się bokiem.
+  - **Bonus: znika blok EXIF** (GD nie przepisuje metadanych), razem z GPS-em
+    i modelem telefonu — zapis zdjęcia nie ujawnia już miejsca ani urządzenia.
+  - `size_bytes` w bazie odzwierciedla to, co jest na dysku, więc limit 100 MB
+    i statystyki zdjęć przestały kłamać.
+- `skaluj_oryginaly_zdjecia()` — jednorazowe przeskalowanie zdjęć już w bazie,
+  wołane ze skryptu operatora po aktualizacji (nie z `db()`, bo na dużej bazie
+  trwałoby to minuty). Odświeża też `size_bytes`.
+
+### Testy
+- PHPUnit **85** (+4 przypadki: kwalifikacja do skalowania, brak GD/JPEG,
+  nietknięcie małych plików i nie-JPEG, parametry).
+- Testy degradacji sprawdzają, że bez obsługi JPEG funkcja zwraca `null`
+  i **nie rusza pliku** — na serwisie z GD bez JPEG wgrywanie działa po staremu.
+- E2E bez zmian: lista używa miniaturek, lightbox pokazuje pełne zdjęcie,
+  usuwanie kasuje oba pliki.
+
 ## 3.11.0 — 2026-10-04 — miniatury zdjęć i szybkość otwarcia panelu
 
 ### Nowe
