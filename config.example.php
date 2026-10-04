@@ -48,7 +48,7 @@ declare(strict_types=1);
  |           (adres/telefon/link Google/URL), gate brakujacego config.php
  |           w serwis.php i katalogu api, README + LICENSE (dystrybucja publiczna)
  --------------------------------------------------------------- */
-const APP_VERSION = '3.12.0';
+const APP_VERSION = '3.12.1';
 
 /* ---------------------------------------------------------------
  | Konfiguracja bazy danych (MySQL) i pomocnicze funkcje wspólne
@@ -1241,6 +1241,26 @@ function miniaturka_sciezka(string $nazwaOryginalu): string
 }
 
 /**
+ * Docelowe wymiary obrazu po skalowaniu, po ewentualnym obrocie (3.12.1).
+ *
+ * UWAGA (błąd, który tu naprawiamy): zamiana `$nw`/`$nh` **przed** rysowaniem
+ * wyciskała zdjęcie - rysowaliśmy poziomy kadr (2000x1506) na pionowym
+ * płótnie (1506x2000), a potem obrót i tak zamieniał wymiary z powrotem.
+ * Wynik na produkcji: miniatura 320x241 zamiast 241x320, czyli zniekształcone
+ * i bokiem zdjęcie z aparatu trzymanego pionowo. Teraz rysujemy zawsze
+ * proporcjonalnie (bez zamiany), a obrót robi GD, który sam podmienia
+ * wymiary. Ta funkcja tylko opisuje, co wyjdzie z pliku.
+ *
+ * Czysta funkcja - testowalna bez GD.
+ *
+ * @return array{0:int,1:int} [szerokosc, wysokosc]
+ */
+function foto_po_obrocie_px(int $nw, int $nh, int $obrot): array
+{
+    return ($obrot === -90 || $obrot === 90) ? [$nh, $nw] : [$nw, $nh];
+}
+
+/**
  * Czy zdjęcie jest za duże, żeby trzymać je w oryginale (3.12.0).
  * Czysta funkcja - testowalna bez GD i bez bazy.
  */
@@ -1306,9 +1326,8 @@ function zmniejsz_oryginal(string $sciezka): ?array
         $skala = PHOTO_MAX_PX / max($szer, $wys);
         $nw = max(1, (int) round($szer * $skala));
         $nh = max(1, (int) round($wys * $skala));
-        if ($obrot !== 0) {
-            [$nw, $nh] = [$nh, $nw];
-        }
+        // 3.12.1: NIE zamieniamy $nw/$nh tutaj - rysujemy proporcjonalnie.
+        // Wymiary podmienia sam imagerotate() (opis: foto_po_obrocie_px).
 
         $nowy = imagecreatetruecolor($nw, $nh);
         imagecopyresampled($nowy, $zrodlo, 0, 0, 0, 0, $nw, $nh, $szer, $wys);
@@ -1438,9 +1457,8 @@ function zrob_miniaturke(string $sciezka): ?string
         $skala = min(1.0, THUMB_MAX_WIDTH / max(1, $szer));
         $nw = max(1, (int) round($szer * $skala));
         $nh = max(1, (int) round($wys * $skala));
-        if ($obrot !== 0) {
-            [$nw, $nh] = [$nh, $nw];
-        }
+        // 3.12.1: bez zamiany $nw/$nh - obrót w imagerotate() sam podmieni
+        // wymiary (zamiana tutaj wyciskała miniaturę: 320x241 zamiast 241x320)
 
         $mini = imagecreatetruecolor($nw, $nh);
         // przezroczystość PNG/GIF -> białe tło, inaczej JPEG daje czarne

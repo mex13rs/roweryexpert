@@ -257,7 +257,10 @@ Szczegóły techniczne w Częściach III–VI.
   - `zmniejsz_oryginal()`: zapis atomowy (`.tmp` + `rename`), każdy błąd
     zwraca `null` i zostawia plik w niezmienionej postaci.
   - Orientacja z EXIF (`foto_obrot_exif()`) zastosowana jawnie — po zrzuceniu
-    metadanych zdjęcie z aparatu pionowego wyglądałoby inaczej.
+    metadanych zdjęcie z aparatu pionowego wyglądałoby inaczej. **3.12.1:** obrót
+    robi `imagerotate()`, który sam podmienia wymiary; zamiana `$nw`/`$nh` przed
+    rysowaniem wyciskała obraz (błąd z 3.12.0, poprawiony).
+    Opisuje to `foto_po_obrocie_px()` (czysta funkcja, testowalna bez GD).
   - Efekt uboczny: znika blok EXIF, razem z GPS-em i modelem telefonu.
   - `size_bytes` po zapisie odzwierciedla rozmiar na dysku (limit 100 MB).
   - `skaluj_oryginaly_zdjecia()` — jednorazowy przebieg dla zdjęć już w bazie

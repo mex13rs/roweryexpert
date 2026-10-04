@@ -12,6 +12,27 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.12.1 — 2026-10-04 — poprawka obrotu zdjęć z aparatu pionowego
+
+### Naprawione
+- **Miniatury i oryginały po przeskalowaniu były zniekształcone.** Zdjęcia z
+  aparatu trzymanego pionowo mają w EXIF `Orientation=6`, a kod zamieniał
+  wymiary płótna **przed** rysowaniem (2000×1506 na płótnie 1506×2000), a
+  `imagerotate()` i tak zamieniał je z powrotem. Efekt na serwisie: miniatura
+  320×241 zamiast 241×320, czyli obraz wyciśnięty i pokazany bokiem.
+  Teraz rysujemy zawsze proporcjonalnie, a obrót robi GD, który sam podmienia
+  wymiary (opis w `foto_po_obrocie_px()`).
+  - Nieodwracalność: przeskalowane pliki z 3.12.0 trzeba odtworzyć z kopii
+    oryginałów i przeskalować ponownie — skrypt operatora robi to w całości.
+- Dotyczy obu ścieżek: `zrob_miniaturke()` (miniatura 320 px) oraz
+  `zmniejsz_oryginal()` (oryginał 2000 px).
+
+### Testy
+- PHPUnit **88**: `foto_po_obrocie_px()` (matematyka zamiany wymiarów) oraz
+  `foto_obrot_exif()` na syntetycznym JPEG-ie z doklejonym segmentem EXIF
+  `Orientation=6` (`tests/dane/orientacja-6.jpg`, 532 B — prawdziwych zdjęć
+  nie trzymamy w repo, bo mają w EXIF pozycję GPS).
+
 ## 3.12.0 — 2026-10-04 — zmniejszanie oryginałów zdjęć
 
 ### Zmienione

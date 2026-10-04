@@ -182,4 +182,45 @@ final class MiniaturyTest extends TestCase
         // limit pamięci musi przepuszczać typowe 4080x3072
         self::assertGreaterThan(4080 * 3072, THUMB_MAX_SOURCE_PX);
     }
+
+    /* --------------- obrót EXIF a wymiary (błąd 3.12.0) --------------- */
+
+    public function testWymiaryPoObrocie(): void
+    {
+        // zdjęcie z aparatu trzymanego pionowo: 4080x3072 z Orientation=6.
+        // Skalujemy proporcjonalnie do 320 px, obracamy o -90.
+        self::assertSame([320, 241], foto_po_obrocie_px(320, 241, 0));
+        self::assertSame([241, 320], foto_po_obrocie_px(320, 241, -90));
+        self::assertSame([241, 320], foto_po_obrocie_px(320, 241, 90));
+        self::assertSame([320, 241], foto_po_obrocie_px(320, 241, 180));
+        // obrót 180 stopni nie zmienia proporcji wymiarów
+        self::assertSame([1506, 2000], foto_po_obrocie_px(1506, 2000, 180));
+    }
+
+    public function testObrotExifCzytaTag(): void
+    {
+        // syntetyczny JPEG 60x40 z doklejonym segmentem EXIF Orientation=6
+        // (prawdziwych zdjec klienta nie trzymamy w repo - maja GPS w EXIF)
+        $plik = __DIR__ . '/dane/orientacja-6.jpg';
+        self::assertFileExists($plik);
+        $exif = @exif_read_data($plik);
+        self::assertSame(6, (int) ($exif['Orientation'] ?? 0), 'fixture musi mieć Orientation=6');
+        self::assertSame(-90, foto_obrot_exif($plik), 'Orientation=6 => obrot -90');
+    }
+
+    public function testObrotExifNaZwyklymJpeg(): void
+    {
+        // plik bez EXIF (np. juz przeskalowany) -> 0, czyli bez obrotu
+        $znacznik = 'noexif' . bin2hex(random_bytes(6));
+        $plik = UPLOAD_DIR . '/' . $znacznik . '.jpg';
+        $png = imagecreatetruecolor(600, 400);
+        imagefilledrectangle($png, 0, 0, 600, 400, imagecolorallocate($png, 10, 90, 160));
+        imagepng($png, $plik . '.png');
+        rename($plik . '.png', $plik);
+        try {
+            self::assertSame(0, foto_obrot_exif($plik));
+        } finally {
+            @unlink($plik);
+        }
+    }
 }
