@@ -142,9 +142,13 @@
                     : `<span class="status-badge status-${escapeHtml(item.status)}" onclick="cycleStatus(${item.id})" title="Kliknij, aby zmienić status">${statusLabel}</span>`;
 
                 // Miniatury zdjęć na karcie (moduł zdjęć może być wyłączony)
+                // 3.10.1: loading="lazy" - zdjęć są pełnowymiarowe (kilka MB),
+                // więc bez tego lista ściągała je wszystkie naraz, także te
+                // poniżej ekranu. Leniwe ładowanie ma tu realny wpływ na
+                // szybkość otwarcia panelu i transfer na telefonie.
                 const thumbs = modulOn('zdjecia') ? photos.map(p => `
                     <button class="photo-thumb" onclick="openLightbox('${escapeHtml(p.url)}')" title="${escapeHtml(p.name)}">
-                        <img src="${escapeHtml(p.url)}" alt="Zdjęcie zgłoszenia">
+                        <img src="${escapeHtml(p.url)}" alt="Zdjęcie zgłoszenia" loading="lazy" decoding="async">
                     </button>
                 `).join('') : '';
 

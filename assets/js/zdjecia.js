@@ -21,7 +21,7 @@
                 const tile = document.createElement('div');
                 tile.className = 'photo-tile';
                 tile.innerHTML = `
-                    <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.name || 'Zdjęcie')}" onclick="openLightbox('${escapeHtml(photo.url)}')">
+                    <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.name || 'Zdjęcie')}" onclick="openLightbox('${escapeHtml(photo.url)}')" loading="lazy" decoding="async">
                     <button class="delete-photo" title="Usuń zdjęcie" onclick="deletePhoto(${photo.id})">&times;</button>
                 `;
                 photosGrid.appendChild(tile);

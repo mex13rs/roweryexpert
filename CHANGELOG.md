@@ -12,6 +12,48 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.10.1 — 2026-10-04 — szybkość otwarcia panelu
+
+### Zmienione
+- **Zdjęcia na liście i w karcie ładowane są leniwie** (`loading="lazy"`,
+  `decoding="async"` w `lista.js` i `zdjecia.js`). Zdjęcia wgrane z telefonu
+  mają 3–5 MB, a panel wstawiał je do DOM od razu — przeglądarka ściągała
+  **wszystkie** zdjęcia ze wszystkich zgłoszeń, także te poza ekranem.
+
+### Pomiar (dane z produkcji: 20 zgłoszeń, po jednym zdjęciu 4 MB)
+
+| Widok | Przed | Po |
+|---|---|---|
+| komputer 1280×900 | 20 zdjęć, **79,6 MB** | 9 zdjęć, **36,0 MB** |
+| telefon 390×844 | 20 zdjęć, **79,6 MB** | 4 zdjęcia, **16,9 MB** |
+
+Na telefonie z LTE to różnica między ~3,5 minuty a ~20 sekundami czekania
+na zdjęcia pod listą. Kliknięcie miniatury nadal otwiera pełnowymiarowe zdjęcie
+w lightboxie (sprawdzone w przeglądarce).
+
+### Diagnostyka wydajności (to samo zdalnie, 120 prób na wariant, A/B przeplatane)
+
+Naprawy z 3.10.0 **nie spowalniają** panelu — mediany różnią się o ±0,2 ms
+poza granicą szumu:
+
+| Scenariusz | 3.9.0 | 3.10.0 | różnica |
+|---|---|---|---|
+| ekran logowania | 12,99 ms | 13,13 ms | +1,1% |
+| lista zgłoszeń (API) | 14,75 ms | 14,53 ms | −1,5% |
+| znacznik pollingu | 5,86 ms | 5,71 ms | −2,6% |
+| ustawienia | 6,93 ms | 6,98 ms | +0,7% |
+
+Pozostałe liczby z produkcji: TTFB panelu ~230 ms (to hosting + TLS + MySQL,
+nie PHP — sam PHP ~13 ms), zapytania do bazy: pełna lista 0,8 ms, znacznik
+pollingu 0,3 ms, odpowiedź listy 1,8 kB (3 zgłoszenia). Narzut dodanych
+nagłówków i sprawdzenia `.htaccess` to 0,0002 ms na żądanie.
+
+**Wniosek:** wąskim gardłem są zdjęcia (3–5 MB sztuka, brak miniaturek),
+a nie kod panelu. Następny krok to generowanie miniaturek przy wgraniu
+(na serwerze jest GD z JPEG i WebP).
+
+---
+
 ## 3.10.0 — 2026-10-03 — bezpieczeństwo
 
 Wersja z naprawami po audycie kodu 3.9.0 ( wszystkie poniższe punkty były
