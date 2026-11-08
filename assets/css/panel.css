@@ -34,6 +34,10 @@
                3,6:1, na #1d63b8 ma 6,0:1 (WCAG AA dla zwyklego tekstu) */
             --calendar-color: #1d63b8;
             --calendar-hover: #17518f;
+            /* 3.13.1: wariant "tekstowy" blekitu kalendarza - kolor uzywany jako
+               kolor LITER i obrysu przy tekscie, a nie jako tlo. #1d63b8 na
+               ciemnej karcie (#171717) ma 3,0:1, #6ba9f5 ma 7,4:1. */
+            --calendar-text: #6ba9f5;
             --locked: #c8f751; /* hi-viz z kamizelki rowerowej: zgłoszenie zablokowane */
             --card-lighter: rgba(255, 255, 255, 0.04);
             --radius-lg: 10px;
@@ -55,6 +59,8 @@
                kontrast liczony do tla jasnego (#ffffff / #f4f4f4) */
             --success-text: #0b7a4b;
             --danger-text: #b3261e;
+            /* 3.13.1: na bialej karcie ciemniejszy blekit - 5,95:1 */
+            --calendar-text: #1d63b8;
             --bg: var(--bg-light);
             --card: var(--card-light);
             --text-primary: var(--text-light-primary);
@@ -568,7 +574,7 @@
         .dash-tile.tile-ready strong { color: var(--success-text); }
         .dash-tile.tile-overdue strong { color: var(--danger-text); }
         .dash-tile.tile-today strong { color: var(--primary-text); }
-        .dash-tile.tile-tomorrow strong { color: var(--calendar-color); }
+        .dash-tile.tile-tomorrow strong { color: var(--calendar-text); }
 
         /* Sortowanie listy */
         .sort-box {
@@ -1351,8 +1357,8 @@
         }
 
         .btn-action.action-calendar:hover {
-            border-color: var(--calendar-color);
-            color: var(--calendar-color);
+            border-color: var(--calendar-text);
+            color: var(--calendar-text);
         }
 
         .empty-state {
@@ -1616,7 +1622,7 @@
         }
 
         .toast.info {
-            border-left-color: var(--calendar-color);
+            border-left-color: var(--calendar-text);
         }
 
         .toast.error {

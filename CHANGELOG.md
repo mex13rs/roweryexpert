@@ -12,6 +12,23 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.13.1 — 2026-11-08 — poprawka kontrastu: token `--calendar-text`
+
+### Kontrasty
+- **Nowy token `--calendar-text`** — wariant „tekstowy" błękitu kalendarza.
+  Motyw ciemny `#6ba9f5` (8,08:1 na `#0b0b0b`, 7,36:1 na `#171717`),
+  motyw jasny `#1d63b8` (5,95:1 na `#ffffff`, 5,41:1 na `#f4f4f4`).
+- Poprawka regresu z 3.13.0: `--calendar-color` przyciemnione do `#1d63b8`
+  dla przycisku kalendarza (biały tekst na tle), ale ten sam token był
+  używany także jako **kolor liter / obrysu przy tekście** — na ciemnym tle
+  dawał 3,31:1 (`#0b0b0b`) / 3,01:1 (`#171717`) zamiast poprzednich 5,44:1.
+- Podmienione na `var(--calendar-text)`: kafel `tile-tomorrow`,
+  `.btn-action.action-calendar:hover` (kolor i obrys), obrys `.toast.info`.
+- Bez zmian: `background: var(--calendar-color)` w `.btn-calendar`
+  (biały tekst na `#1d63b8` nadal 5,95:1) oraz `--calendar-hover`.
+
+---
+
 ## 3.13.0 — 2026-11-08 — grafika: kontrasty, ikony, PWA, wydruk
 
 ### Kontrasty
