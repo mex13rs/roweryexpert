@@ -12,6 +12,56 @@ i wyświetlany w stopce strony.
 
 ---
 
+## 3.13.0 — 2026-11-08 — grafika: kontrasty, ikony, PWA, wydruk
+
+### Kontrasty
+- **Nowe tokeny koloru tekstu** `--success-text` / `--danger-text`: motyw ciemny
+  `#34d399` / `#ff9a92`, motyw jasny `#0b7a4b` / `#b3261e`. `--success` i
+  `--danger` zostają dla tła i wypełnień — tam biały tekst ma poprawny kontrast,
+  a ten sam kolor użyty jako kolor liter na ciemnej karcie już nie.
+- Podmienione miejsca, gdzie kolor statusu był **kolorem tekstu**: kafle
+  `tile-ready` / `tile-overdue`, `.overdue-badge`, `.cal-chip.chip-ready`,
+  `.btn-danger-outline`, `.login-error`, kosz na liście usług.
+- `.overdue-badge` ma teraz **jeden** odcień czerwieni (tekst, obrys i tło z tej
+  samej rodziny) — wcześniej tekst `#e2001a`, a obrys `#ef4444`.
+- `--calendar-color` / `--calendar-hover` przyciemnione do `#1d63b8` / `#17518f`:
+  biały tekst na przycisku kalendarza ma 6,0:1 zamiast 3,6:1 (WCAG AA).
+
+### Ikony
+- Jedna grubość kreski: `stroke-width="2.5"` → `2` w 9 ikonach 24×24
+  (panel, modale, karta, lista, przełącznik motywu). Ilustracja rowerzysty na
+  wgrywaniu zdjęć zostaje bez zmian (`stroke-width="4"`, własny viewBox).
+- Stany puste listy rysowane **inline SVG** (48×48, `currentColor`,
+  `stroke-width="2"`) zamiast emoji 🚲 / 🗑️ — emoji renderowały się różnie na
+  każdym systemie i nie dawały się pokolorować motywem. Klasa `.empty-icon`
+  (opacity) bez zmian.
+
+### Kalendarz
+- `.cal-chip` na telefonie: `0.6rem` → `0.65rem` (na desktopie zostaje
+  `0.68rem`).
+- **Glif statusu** przed nazwą, dokładany przez `::before` (treść HTML bez
+  zmian): `●` w toku, `✓` gotowe, `!` po terminie, `—` odebrane. Kolor
+  przestaje być jedynym nośnikiem informacji.
+
+### PWA
+- `site.webmanifest` (nazwa, `start_url` `./serwis.php`, `display: standalone`,
+  kolory `#0b0b0b` / `#ffdd00`) + ikony `icon-192.png`, `icon-512.png`,
+  `icon-512-maskable.png` (znak na pełnym tle, margines ~15%) i
+  `apple-touch-icon.png` 180×180 — generowane z `logo.png`.
+- `favicon-32.png` z logo; dotychczasowy `favicon.png` zostaje jako ikona
+  podstawowa.
+- `partials/head.php`: `manifest`, `apple-touch-icon`, `theme-color`,
+  `apple-mobile-web-app-title`.
+
+### Wydruk
+- Monochromatyczny **znak roweru** (inline SVG, `stroke="#000"`, 34×24) nad
+  nagłówkiem obu kolumn wydruku A4 poziomo.
+- Numer serwisowy w obu kolumnach opakowany ramką (`1px solid #000`,
+  `padding 2px 8px`, `border-radius 3px`, `inline-block`). Treść pól wydruku
+  bez zmian — styl siedzi na komórce, bo JS nadpisuje jej `textContent`.
+
+---
+
 ## 3.12.1 — 2026-10-04 — poprawka obrotu zdjęć z aparatu pionowego
 
 ### Naprawione
