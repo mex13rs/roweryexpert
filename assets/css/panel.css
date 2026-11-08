@@ -22,10 +22,18 @@
             --primary-text: #ffdd00; /* zolty akcent tekstowy */
             --success: #10b981;
             --success-hover: #059669;
+            /* 3.13.0: warianty "tekstowe" tokenow statusu - kolor uzywany jako
+               kolor LITER (nie tlo, nie obrys). --success/--danger zostaja dla
+               wypelnien, bo bialy tekst na #10b981/#e2001a ma poprawny kontrast,
+               a ten sam kolor jako tekst na ciemnej karcie juz nie. */
+            --success-text: #34d399;
+            --danger-text: #ff9a92;
             --danger: #e2001a;
             --danger-hover: #bd0016;
-            --calendar-color: #3587ea;
-            --calendar-hover: #1f6fd6;
+            /* 3.13.0: ciemniejszy blekit kalendarza - bialy tekst na #3587ea mial
+               3,6:1, na #1d63b8 ma 6,0:1 (WCAG AA dla zwyklego tekstu) */
+            --calendar-color: #1d63b8;
+            --calendar-hover: #17518f;
             --locked: #c8f751; /* hi-viz z kamizelki rowerowej: zgłoszenie zablokowane */
             --card-lighter: rgba(255, 255, 255, 0.04);
             --radius-lg: 10px;
@@ -43,6 +51,10 @@
 
         body.light-theme {
             --primary-text: #8a7300; /* ciemne zloto - czytelne na bialym */
+            /* 3.13.0: na bialej karcie ciemne odpowiedniki - te same role,
+               kontrast liczony do tla jasnego (#ffffff / #f4f4f4) */
+            --success-text: #0b7a4b;
+            --danger-text: #b3261e;
             --bg: var(--bg-light);
             --card: var(--card-light);
             --text-primary: var(--text-light-primary);
@@ -435,8 +447,9 @@
 
         .btn-danger-outline {
             background: transparent;
-            border: 1px solid var(--danger);
-            color: var(--danger);
+            /* 3.13.0: tekst i obrys z jednego tokenu czytelnego na ciemnym tle */
+            border: 1px solid var(--danger-text);
+            color: var(--danger-text);
             padding: 0.5rem 0.75rem;
             font-size: 0.85rem;
             width: auto;
@@ -552,8 +565,8 @@
             color: rgba(0, 0, 0, 0.7);
         }
 
-        .dash-tile.tile-ready strong { color: var(--success); }
-        .dash-tile.tile-overdue strong { color: var(--danger); }
+        .dash-tile.tile-ready strong { color: var(--success-text); }
+        .dash-tile.tile-overdue strong { color: var(--danger-text); }
         .dash-tile.tile-today strong { color: var(--primary-text); }
         .dash-tile.tile-tomorrow strong { color: var(--calendar-color); }
 
@@ -636,9 +649,11 @@
             margin-left: 0.4rem;
             padding: 0.1rem 0.5rem;
             border-radius: 999px;
-            background: rgba(239, 68, 68, 0.15);
-            color: var(--danger);
-            border: 1px solid rgba(239, 68, 68, 0.35);
+            /* 3.13.0: jeden odcien czerwieni (tekst + obrys + tlo) zamiast
+               trzech roznych - wczesniej tekst #e2001a, obrys #ef4444 */
+            background: rgba(255, 154, 146, 0.14);
+            color: var(--danger-text);
+            border: 1px solid rgba(255, 154, 146, 0.35);
             font-size: 0.7rem;
             font-weight: 700;
             vertical-align: middle;
@@ -1806,7 +1821,7 @@
         }
 
         .login-error {
-            color: var(--danger);
+            color: var(--danger-text);
             font-size: 0.9rem;
             margin: -0.5rem 0 1rem;
             font-weight: 600;
@@ -1951,7 +1966,7 @@
             border: none;
             border-radius: 6px;
             background: rgba(220, 38, 38, 0.12);
-            color: var(--danger);
+            color: var(--danger-text);
             font-size: 1.1rem;
             line-height: 1;
             cursor: pointer;
