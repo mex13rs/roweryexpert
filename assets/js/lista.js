@@ -29,6 +29,48 @@
             return `<span class="user-chip" style="background: ${userChipColor(s)}" title="${escapeHtml(s)}">${escapeHtml(Array.from(s)[0].toUpperCase())}</span>`;
         }
 
+        // 3.13.0: ikony stanow pustych zamiast emoji - jedna grubosc kreski
+        // (2) i currentColor, jak w pozostalych ikonach panelu. Emoji renderowaly
+        // sie roznie na kazdym systemie i nie dalo sie ich pokolorowac motywem.
+        function emptyIcon(rodzaj) {
+            const atrybuty = 'xmlns="http://www.w3.org/2000/svg" width="48" height="48" '
+                + 'viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" '
+                + 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+
+            if (rodzaj === 'kosz') {
+                return `<svg ${atrybuty}>`
+                    + '<path d="M9 14h30" />'
+                    + '<path d="M19 14V9.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1V14" />'
+                    + '<path d="M13.5 14l2 24.5h17l2-24.5" />'
+                    + '<path d="M21 21v11M27 21v11" />'
+                    + '</svg>';
+            }
+
+            if (rodzaj === 'hulajnoga') {
+                return `<svg ${atrybuty}>`
+                    + '<circle cx="13" cy="34" r="4.5" />'
+                    + '<circle cx="35" cy="34" r="4.5" />'
+                    + '<path d="M13 34H27" />'
+                    + '<path d="M35 34 32 13" />'
+                    + '<path d="M32 13h5" />'
+                    + '<path d="M27 34 26 29" />'
+                    + '</svg>';
+            }
+
+            // domyslnie rower
+            return `<svg ${atrybuty}>`
+                + '<circle cx="10.5" cy="33" r="7.5" />'
+                + '<circle cx="37.5" cy="33" r="7.5" />'
+                + '<path d="M10.5 33H23" />'
+                + '<path d="M23 33 17 17" />'
+                + '<path d="M17 17 32.5 15" />'
+                + '<path d="M23 33 32.5 15" />'
+                + '<path d="M32.5 15 37.5 33" />'
+                + '<path d="M17 17 15.5 13h-3.5" />'
+                + '<path d="M32.5 15 34 11h3.5" />'
+                + '</svg>';
+        }
+
         function renderServicesList() {
             servicesListContainer.innerHTML = '';
 
@@ -97,7 +139,7 @@
                 servicesListContainer.innerHTML = noCriteria
                     ? `
                     <div class="empty-state">
-                        <div class="empty-icon">${modulOn('hulajnogi') ? '🚲🛴' : '🚲'}</div>
+                        <div class="empty-icon">${modulOn('hulajnogi') ? emptyIcon('rower') + emptyIcon('hulajnoga') : emptyIcon('rower')}</div>
                         <p>${modulOn('hulajnogi')
                             ? 'Tu pojawią się przyjęte sprzęty. Zacznij od formularza „Przyjmij nowy”.'
                             : 'Tu pojawią się przyjęte rowery. Zacznij od formularza „Przyjmij nowy rower”.'}</p>
@@ -106,7 +148,7 @@
                     : currentFilter === 'trash'
                     ? `
                     <div class="empty-state">
-                        <div class="empty-icon">🗑️</div>
+                        <div class="empty-icon">${emptyIcon('kosz')}</div>
                         <p>Kosz jest pusty. Usunięte zgłoszenia trafią tutaj i będzie można je przywrócić.</p>
                     </div>
                 `
@@ -237,7 +279,7 @@
                         <div class="item-info">
                             <h3>${typBadge}${escapeHtml(item.bikeName)}${item.serviceNo ? `<span class="service-no" title="Numer serwisowy">${escapeHtml(item.serviceNo)}</span>` : ''}</h3>
                             <a href="tel:${escapeHtml(item.customerPhone)}" class="phone-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 14px; height: 14px;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" style="width: 14px; height: 14px;">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.802-5.194-4.174-6.996-7.002l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
                                 </svg>
                                 tel. ${escapeHtml(item.customerPhone)}
@@ -269,7 +311,7 @@
                     card.innerHTML += `
                         <div class="pending-mask">
                             <span class="pending-note">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                                 </svg>
                                 Zgłoszenie zablokowane — ${IS_MOBILE ? 'wymaga potwierdzenia na komputerze' : 'wymaga potwierdzenia'}

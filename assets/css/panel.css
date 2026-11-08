@@ -1439,6 +1439,16 @@
             opacity: 0.5;
         }
 
+        /* 3.13.0: stan pusty rysowany ikonami SVG (48x48) zamiast emoji -
+           wyrownanie do linii tekstu i odstep miedzy dwiema ikonami */
+        .empty-icon svg {
+            vertical-align: middle;
+        }
+
+        .empty-icon svg + svg {
+            margin-left: 0.35rem;
+        }
+
         /* Footer */
         footer.app-footer {
             text-align: center;
