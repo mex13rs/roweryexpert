@@ -6,6 +6,20 @@
         <!-- LEWA KOLUMNA: egzemplarz dla klienta -->
         <div class="receipt-column receipt-column-client">
             <div class="receipt-header">
+                <!-- 3.13.0: monochromatyczny znak roweru nad nagłówkiem.
+                     stroke="#000" na sztywno - na wydruku currentColor bywa
+                     nadpisywany przez style przegladarki/ciemny motyw. -->
+                <svg class="receipt-bike-mark" viewBox="2 8 44 32" width="34" height="24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="10.5" cy="33" r="7.5" />
+                    <circle cx="37.5" cy="33" r="7.5" />
+                    <path d="M10.5 33H23" />
+                    <path d="M23 33 17 17" />
+                    <path d="M17 17 32.5 15" />
+                    <path d="M23 33 32.5 15" />
+                    <path d="M32.5 15 37.5 33" />
+                    <path d="M17 17 15.5 13h-3.5" />
+                    <path d="M32.5 15 34 11h3.5" />
+                </svg>
                 <h1>RoweryExpert</h1>
             </div>
 
@@ -31,7 +45,7 @@
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Numer serwisowy:</td>
-                    <td class="receipt-value" id="print-service-no" style="font-weight:bold;">RO-2026-0001</td>
+                    <td class="receipt-value print-service-box" id="print-service-no" style="font-weight:bold; border:1px solid #000; padding:2px 8px; border-radius:3px; display:inline-block;">RO-2026-0001</td>
                 </tr>
                 <tr>
                     <td colspan="2" class="receipt-label" style="padding-top: 8px; padding-bottom: 4px;">Opis usterki / zakres naprawy:</td>
@@ -83,6 +97,18 @@
         <!-- PRAWA KOLUMNA: egzemplarz dla serwisu -->
         <div class="receipt-column receipt-column-service">
             <div class="receipt-header">
+                <!-- 3.13.0: ten sam monochromatyczny znak roweru co w kolumnie klienta -->
+                <svg class="receipt-bike-mark" viewBox="2 8 44 32" width="34" height="24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="10.5" cy="33" r="7.5" />
+                    <circle cx="37.5" cy="33" r="7.5" />
+                    <path d="M10.5 33H23" />
+                    <path d="M23 33 17 17" />
+                    <path d="M17 17 32.5 15" />
+                    <path d="M23 33 32.5 15" />
+                    <path d="M32.5 15 37.5 33" />
+                    <path d="M17 17 15.5 13h-3.5" />
+                    <path d="M32.5 15 34 11h3.5" />
+                </svg>
                 <h1>RoweryExpert</h1>
             </div>
 
@@ -108,7 +134,7 @@
                 </tr>
                 <tr class="receipt-row">
                     <td class="receipt-label">Numer serwisowy:</td>
-                    <td class="receipt-value" id="print-service-no-service" style="font-weight:bold;">RO-2026-0001</td>
+                    <td class="receipt-value print-service-box" id="print-service-no-service" style="font-weight:bold; border:1px solid #000; padding:2px 8px; border-radius:3px; display:inline-block;">RO-2026-0001</td>
                 </tr>
                 <tr>
                     <td colspan="2" class="receipt-label" style="padding-top: 8px; padding-bottom: 4px;">Opis usterki / zakres naprawy:</td>

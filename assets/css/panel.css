@@ -2626,6 +2626,15 @@
                 margin-bottom: 12px;
             }
 
+            /* 3.13.0: znak roweru nad nagłówkiem - nadawany wprost atrybutami
+               width/height, tutaj tylko wysrodkowanie i odstep */
+            .receipt-header .receipt-bike-mark {
+                display: block;
+                margin: 0 auto 4px auto;
+                width: 34px;
+                height: 24px;
+            }
+
             .receipt-header h1 {
                 font-size: 17pt !important;
                 font-family: 'Barlow', sans-serif;
