@@ -928,7 +928,7 @@
 
         .cal-chip.chip-ready {
             background: rgba(34, 197, 94, 0.15);
-            color: var(--success);
+            color: var(--success-text);
             border-left: 3px solid var(--success);
         }
 
@@ -943,6 +943,14 @@
             border-left: 3px solid var(--text-secondary);
             opacity: 0.85;
         }
+
+        /* 3.13.0: glif statusu przed nazwa - kolor przestaje byc jedynym
+           nosnikiem informacji (dla osob nierozrozniajacych barw).
+           Tresc HTML bez zmian, znak dokladamy przez ::before. */
+        .cal-chip.chip-progress::before { content: "● "; }
+        .cal-chip.chip-ready::before { content: "✓ "; }
+        .cal-chip.chip-overdue::before { content: "! "; }
+        .cal-chip.chip-done::before { content: "— "; }
 
         .cal-more {
             font-size: 0.65rem;
@@ -2475,7 +2483,7 @@
             }
 
             .cal-chip {
-                font-size: 0.6rem;
+                font-size: 0.65rem;
                 padding: 2px 3px;
             }
             
