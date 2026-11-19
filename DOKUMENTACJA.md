@@ -3362,3 +3362,56 @@ Poniżej zwięzłe podsumowanie każdej wersji (kolejność od najnowszej).
 ---
 
 *Koniec dokumentacji. Źródła: kod aplikacji w `/rower/`, `instrukcja.html`, `CHANGELOG.md`, `README.md`.*
+
+---
+
+## 3.13.0 / 3.13.1 — grafika, PWA, wydruk (2026-11-08)
+
+Wydanie „graficzne": porządki w kontrastach i ikonach, instalacja panelu na
+telefonie (PWA) i szlif wydruku A4. Pełne wpisy: `CHANGELOG.md`.
+
+### Tokeny koloru tekstu
+
+- **`--success-text` / `--danger-text`** (3.13.0) — odpowiedniki `--success` /
+  `--danger` przeznaczone **na kolor liter**: ciemny `#34d399` / `#ff9a92`,
+  jasny `#0b7a4b` / `#b3261e`. `--success` i `--danger` zostają dla tła
+  i wypełnień — tam biały tekst ma poprawny kontrast. Powód: kolor statusu
+  użyty jako kolor tekstu na ciemnej karcie spadał poniżej WCAG AA.
+  Podmienione m.in. kafle `tile-ready` / `tile-overdue`,
+  `.overdue-badge` (jeden odcień czerwieni: tekst, obrys, tło),
+  `.cal-chip.chip-ready`, `.btn-danger-outline`, `.login-error`, kosz usług.
+- **`--calendar-text`** (3.13.1) — „tekstowy" wariant błękitu kalendarza:
+  ciemny `#6ba9f5`, jasny `#1d63b8`. Poprawka regresu 3.13.0:
+  `--calendar-color` przyciemniono dla przycisku kalendarza, ale ten token był
+  też kolorem liter i obrysu — na ciemnym tle dawał 3,31:1. **`--calendar-color`
+  zostaje dla tła**, tekst bierze `var(--calendar-text)` (kafel `tile-tomorrow`,
+  hover `.action-calendar`, obrys `.toast.info`).
+
+### Ikony i kalendarz
+
+- Jedna grubość kreski: `stroke-width="2"` zamiast `2.5` w 9 ikonach 24×24.
+- Emoji 🚲 / 🗑️ w stanach pustych list zastąpione **inline SVG**
+  (`emptyIcon()`, 48×48, `currentColor`) — emoji nie dawały się pokolorować
+  motywem i różnie renderowały się na systemach.
+- Chipy kalendarza: **glif statusu** przez `::before` (treść HTML bez zmian):
+  `●` w toku, `✓` gotowe, `!` po terminie, `—` odebrane — kolor przestaje być
+  jedynym nośnikiem informacji; na telefonie font chipa `0.6rem` → `0.65rem`.
+
+### PWA — panel na telefonie
+
+- `site.webmanifest` (`start_url` `./serwis.php`, `display: standalone`, kolory
+  `#0b0b0b` / `#ffdd00`) + `icon-192.png`, `icon-512.png`,
+  `icon-512-maskable.png` (znak na pełnym tle, margines ~15%),
+  `apple-touch-icon.png` (180×180), `favicon-32.png`; w `partials/head.php`
+  podpięte `manifest`, `apple-touch-icon`, `theme-color`,
+  `apple-mobile-web-app-title`.
+- **Hosting:** `.webmanifest` musi lecieć jako `application/manifest+json`;
+  gdy serwer zwraca `text/plain` (albo 404), dopisz do `.htaccess`:
+  `AddType application/manifest+json .webmanifest`.
+
+### Wydruk
+
+- Czarny **znak roweru** (inline SVG, `stroke="#000"`, 34×24) nad nagłówkiem
+  obu kolumn wydruku A4.
+- **Numer serwisowy w ramce** (`1px solid #000`, `padding 2px 8px`,
+  `border-radius 3px`) — styl na komórce, bo JS nadpisuje jej `textContent`.

@@ -5,15 +5,18 @@ kalendarz terminów, wydruk potwierdzenia zlecenia A4 z kodem QR, katalog usług
 i wydanie roweru z kartą na wydruku. **PHP 8 + MySQL**, bez builda i frameworka —
 wrzucasz pliki na hosting i działasz.
 
-## Wymagania
+## Wymagania hostingu
 
-- PHP **8.0** lub nowszy,
-- rozszerzenia: `pdo_mysql`, `mbstring`,
-- MySQL / MariaDB,
-- hosting z zapisem do katalogu projektu (klasyczny hosting FTP wystarczy —
-  SSH nie jest potrzebne).
+- PHP **8.0+** z rozszerzeniami `pdo_mysql` i `mbstring`,
+- **MySQL / MariaDB** (baza może być pusta — tabele utworzy instalator),
+- katalog projektu **zapisywalny** (zdjęcia + kopie zapasowe) — klasyczny
+  hosting FTP wystarczy, SSH nie jest potrzebne; opcjonalnie `gd` z obsługą
+  JPEG (miniatury i skalowanie zdjęć — bez GD panel działa, tylko bez miniatur).
 
 ## Instalacja (5 minut)
+
+Aktualna wersja to **3.13.1**, a gotowe paczki ZIP leżą w zakładce
+*Releases* (`3.13.1.zip`).
 
 1. **Pobierz kod** — z tej strony GitHuba: *Code → Download ZIP* (albo `git clone`).
 2. **Wgraj pliki** na hosting przez FTP do katalogu publicznego
@@ -83,8 +86,8 @@ do gita** (jest na liście `.gitignore`).
 
 ## Rozwój
 
-Kod źródłowy: `git clone`, zmiany na gałąź `main`, wersjonowanie `X.Y`
-(`APP_VERSION` w `config.php` + wpis w `CHANGELOG.md`). Komunikaty UI i
+Kod źródłowy: `git clone`, zmiany na gałęzi `main`, wersjonowanie `X.Y.Z`
+(semver) (`APP_VERSION` w `config.php` + wpis w `CHANGELOG.md`). Komunikaty UI i
 komentarze po polsku, `declare(strict_types=1)`, PDO z prepared statements.
 
 ## Licencja
