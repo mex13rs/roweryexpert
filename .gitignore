@@ -8,3 +8,6 @@ uploads/
 # testy: zaleznosci composerowe i cache phpunit (vendor/ instalowany lokalnie)
 /vendor/
 .phpunit.cache
+
+# artefakt wydania 3.12.0 - nie wraca do repo
+/3.12.0.zip
